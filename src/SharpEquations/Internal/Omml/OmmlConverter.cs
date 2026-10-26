@@ -54,7 +54,7 @@ namespace SharpEquations
                 throw new ArgumentException("Expected an m:oMath or m:oMathPara element, not " + omml.Name + ".", nameof(omml));
             }
 
-            var converted = equations.Select(e => EquationStylesheets.Transform("omml2mml.xsl", PrepareOmml(e))).ToList();
+            var converted = equations.Select(e => SingleRow(EquationStylesheets.Transform("omml2mml.xsl", PrepareOmml(e)))).ToList();
             XElement math;
             if (converted.Count == 1)
             {
@@ -85,13 +85,27 @@ namespace SharpEquations
             if (math.Name != Mml + "math")
                 throw new ArgumentException("Expected a MathML math element, not " + mathML.Name + ".", nameof(mathML));
 
-            var omml = EquationStylesheets.Transform("mml2omml.xsl", math);
+            var omml = EquationStylesheets.Transform("mml2omml.xsl", SingleRow(math));
             foreach (var value in omml.Descendants().Attributes(M + "val").Where(a => a.Value.Length == 0).ToList())
                 value.Remove();
             omml = Canonical(omml);
 
             var display = (string)math.Attribute("display") == "block" || (string)math.Attribute("mode") == "display";
             return display ? Canonical(new XElement(M + "oMathPara", omml)) : omml;
+        }
+
+        /// <summary>
+        /// Groups the children of the math element in one mrow: some consumers, LibreOffice among them,
+        /// lay out each child of math on a line of its own.
+        /// </summary>
+        private static XElement SingleRow(XElement math)
+        {
+            if (math.Elements().Count() > 1)
+            {
+                var row = new XElement(Mml + "mrow", math.Nodes());
+                math.ReplaceNodes(row);
+            }
+            return math;
         }
 
         private static XElement PrepareOmml(XElement oMath)
@@ -134,8 +148,40 @@ namespace SharpEquations
                 else
                     semantics.Remove();
             }
+            foreach (var limits in copy.Descendants().Where(IsNaryOperator).ToList())
+            {
+                var argument = limits.ElementsAfterSelf().FirstOrDefault();
+                if (argument != null && argument.Name != Mml + "mrow" && argument.Name != Mml + "mstyle")
+                    argument.ReplaceWith(new XElement(Mml + "mrow", argument));
+            }
             return copy;
         }
+
+        /// <summary>
+        /// Whether the element is an n-ary operator with limits (a sum, an integral, ...). mml2omml only
+        /// takes the operand of an m:nary from an mrow that follows the operator, as Word writes it.
+        /// </summary>
+        private static bool IsNaryOperator(XElement element)
+        {
+            switch (element.Name.LocalName)
+            {
+                case "munder":
+                case "mover":
+                case "munderover":
+                case "msub":
+                case "msup":
+                case "msubsup":
+                    var op = element.Elements().FirstOrDefault();
+                    if (element.Name.Namespace != Mml || op == null || op.Name != Mml + "mo")
+                        return false;
+                    var text = op.Value.Trim();
+                    return text.Length == 1 && NaryOperators.Contains(text);
+                default:
+                    return false;
+            }
+        }
+
+        private const string NaryOperators = "∫∬∭∮∯∰∲∳∱∩∪∏∐∑⋀⋁⋂⋃⨀⨁⨂⨃⨄⨅⨆";
 
         /// <summary>
         /// Rewrites the element with the m: and w: prefixes declared once on the root, as the OMML parsers expect.
