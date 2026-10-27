@@ -32,6 +32,7 @@ namespace SharpEquations.Mtef
         private int bits;
         private int bitCount;
         private int version;
+        private int depth;
 
         private MtefReader(byte[] data)
         {
@@ -73,13 +74,18 @@ namespace SharpEquations.Mtef
         /// </summary>
         private List<XElement> Records()
         {
+            if (++depth > EquationStylesheets.MaxDepth / 2)
+                throw new InvalidDataException("The MTEF equation is nested too deeply.");
             var records = new List<XElement>();
             while (true)
             {
                 var record = version == 5 ? Record5(out var type) : Record3(out type);
                 records.Add(record);
                 if (type == 0)
+                {
+                    depth--;
                     return records;
+                }
             }
         }
 

@@ -67,7 +67,7 @@ namespace SharpEquations
                         converted.Select(c => new XElement(Mml + "mtr", new XElement(Mml + "mtd", c.Nodes())))));
             }
             foreach (var token in math.Descendants().Where(e => !e.HasElements && e.Value.Length > 0 && e.Value.Trim().Length == 0).ToList())
-                token.Value = new string(' ', token.Value.Length);
+                token.Value = new string('\u00A0', token.Value.Length);
             if (display)
                 math.SetAttributeValue("display", "block");
             return math;
