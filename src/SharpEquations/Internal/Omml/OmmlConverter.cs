@@ -66,8 +66,17 @@ namespace SharpEquations
                     new XElement(Mml + "mtable",
                         converted.Select(c => new XElement(Mml + "mtr", new XElement(Mml + "mtd", c.Nodes())))));
             }
+            // Spaces are text: an identifier made of spaces is dropped or misread by consumers (LibreOffice
+            // reads it as an empty style), and a plain space token is collapsed.
             foreach (var token in math.Descendants().Where(e => !e.HasElements && e.Value.Length > 0 && e.Value.Trim().Length == 0).ToList())
+            {
                 token.Value = new string('\u00A0', token.Value.Length);
+                if (token.Name == Mml + "mi" || token.Name == Mml + "mn" || token.Name == Mml + "mo")
+                {
+                    token.Name = Mml + "mtext";
+                    token.Attributes().Where(a => a.Name.LocalName != "mathvariant").Remove();
+                }
+            }
             if (display)
                 math.SetAttributeValue("display", "block");
             return math;
