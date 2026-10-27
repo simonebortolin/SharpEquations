@@ -17,16 +17,25 @@ namespace SharpEquations
         private static readonly ConcurrentDictionary<string, Lazy<XslCompiledTransform>> Compiled =
             new ConcurrentDictionary<string, Lazy<XslCompiledTransform>>(StringComparer.Ordinal);
 
+        /// <summary>
+        /// Runs the stylesheet and parses its output, or returns null when the output is empty.
+        /// The output goes through text so that disable-output-escaping, used by mtef2mml.xsl
+        /// to write character references, takes effect.
+        /// </summary>
         public static XElement Transform(string name, XElement input)
         {
             var stylesheet = Compiled.GetOrAdd(name, n => new Lazy<XslCompiledTransform>(() => Load(n))).Value;
-            var result = new XDocument();
+            var output = new StringWriter();
             using (var reader = new XDocument(input).CreateReader())
-            using (var writer = result.CreateWriter())
             {
-                stylesheet.Transform(reader, writer);
+                stylesheet.Transform(reader, null, output);
             }
-            return result.Root;
+            var text = output.ToString();
+            if (text.Trim().Length == 0)
+                return null;
+            var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
+            using (var reader = XmlReader.Create(new StringReader(text), settings))
+                return XElement.Load(reader, LoadOptions.PreserveWhitespace);
         }
 
         private static XslCompiledTransform Load(string name)
