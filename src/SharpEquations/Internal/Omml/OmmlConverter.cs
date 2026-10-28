@@ -77,9 +77,66 @@ namespace SharpEquations
                     token.Attributes().Where(a => a.Name.LocalName != "mathvariant").Remove();
                 }
             }
+            LabelEquationNumbers(math);
             if (display)
                 math.SetAttributeValue("display", "block");
             return math;
+        }
+
+        /// <summary>
+        /// Word numbers an equation by writing "#" and the number after it, as "E=mc²#(1)" (in an equation
+        /// array, one per row): such rows become MathML labeled rows, the label in the first cell.
+        /// </summary>
+        private static void LabelEquationNumbers(XElement math)
+        {
+            foreach (var table in math.Descendants(Mml + "mtable").Where(t => t.Parent == math || t.Descendants(Mml + "maligngroup").Any()).ToList())
+            {
+                foreach (var row in table.Elements(Mml + "mtr").ToList())
+                {
+                    var cells = row.Elements(Mml + "mtd").ToList();
+                    var numbered = cells.Count == 1 ? SplitEquationNumber(cells[0]) : null;
+                    if (numbered != null)
+                    {
+                        row.ReplaceWith(new XElement(Mml + "mlabeledtr", row.Attributes(),
+                            new XElement(Mml + "mtd", numbered.Value.Label),
+                            new XElement(Mml + "mtd", cells[0].Attributes(), numbered.Value.Equation)));
+                    }
+                }
+            }
+            if (math.Elements(Mml + "mtable").Any())
+                return;
+            var single = SplitEquationNumber(math);
+            if (single != null)
+            {
+                math.ReplaceNodes(new XElement(Mml + "mtable",
+                    new XElement(Mml + "mlabeledtr",
+                        new XElement(Mml + "mtd", single.Value.Label),
+                        new XElement(Mml + "mtd", single.Value.Equation))));
+            }
+        }
+
+        /// <summary>
+        /// The equation and its number when the row of the element has a "#" operator followed by a number.
+        /// </summary>
+        private static (XElement Equation, XElement Label)? SplitEquationNumber(XElement element)
+        {
+            var row = element;
+            while (row.Elements().Count() == 1 && row.Elements().Single().Name == Mml + "mrow")
+                row = row.Elements().Single();
+            var items = row.Elements().ToList();
+            var hash = items.FindLastIndex(e => e.Name == Mml + "mo" && e.Value.Trim() == "#");
+            if (hash < 0)
+                return null;
+            bool IsSpace(XElement e) => e.Name == Mml + "mtext" && e.Value.Trim().Trim('\u00A0').Length == 0;
+            var equation = items.Take(hash).ToList();
+            var label = items.Skip(hash + 1).ToList();
+            while (equation.Count > 0 && IsSpace(equation[equation.Count - 1]))
+                equation.RemoveAt(equation.Count - 1);
+            while (label.Count > 0 && IsSpace(label[0]))
+                label.RemoveAt(0);
+            if (label.Count == 0)
+                return null;
+            return (new XElement(Mml + "mrow", equation.Select(e => new XElement(e))), new XElement(Mml + "mrow", label.Select(e => new XElement(e))));
         }
 
         /// <summary>
@@ -156,6 +213,18 @@ namespace SharpEquations
                     semantics.ReplaceWith(presentation);
                 else
                     semantics.Remove();
+            }
+            // Numbered equations: Word writes the number after a "#" in the row
+            foreach (var labeled in copy.Descendants(Mml + "mlabeledtr").ToList())
+            {
+                var cells = labeled.Elements(Mml + "mtd").ToList();
+                if (cells.Count < 2)
+                {
+                    labeled.Name = Mml + "mtr";
+                    continue;
+                }
+                labeled.ReplaceWith(new XElement(Mml + "mtr", labeled.Attributes(),
+                    new XElement(Mml + "mtd", cells.Skip(1).SelectMany(c => c.Nodes()), new XElement(Mml + "mo", "#"), cells[0].Nodes())));
             }
             foreach (var limits in copy.Descendants().Where(IsNaryOperator).ToList())
             {
