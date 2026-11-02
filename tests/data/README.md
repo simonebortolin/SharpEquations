@@ -14,3 +14,6 @@ Copyright (c) 2015 Jure Triglav, MIT License.
 https://github.com/jure/mathtype_to_mathml (commit db2030b16be7e429340b1b53eb615471441ed3d4,
 `spec/fixtures`). Some of the reference files were written by MathType's own MathML translator and differ
 in structure from what the stylesheets produce. Copyright (c) 2015 Jure Triglav, MIT License.
+
+`omml/` files with a descriptive name (`style-bold.omml`, `nary-no-limits.omml`, ...): written for SharpEquations,
+reduced by hand to the OMML constructs found in equations saved by Word and missing from the files above.

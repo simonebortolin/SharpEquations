@@ -11,6 +11,7 @@
   - added the entry template matching the document element;
   - isNaryOper: also the n-ary logical and set operators (U+22C0-U+22C3) and the n-ary circled and
     square operators (U+2A00-U+2A06), which OMML writes as m:nary.
+  - FIsEqArray: a table without alignment points is a matrix, not an equation array.
 -->
 <!-- Beta Version 070708 --><xsl:stylesheet xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -2575,6 +2576,7 @@
       <!-- There should be no frame, columnlines, or rowlines -->
     <xsl:choose>
          <xsl:when test="@columnalign!='center'">0</xsl:when>
+         <xsl:when test="not($ndCur/descendant::mml:maligngroup or $ndCur/descendant::mml:malignmark)">0</xsl:when>
          <xsl:when test="(not($ndCur/@frame) or $ndCur/@frame='' or $ndCur/@frame='none')                       
 			 and (not($ndCur/@mml:frame) or $ndCur/@mml:frame='' or $ndCur/@mml:frame='none')
 			 and (not($ndCur/@columnlines) or $ndCur/@columnlines='' or $ndCur/@columnlines='none')                       

@@ -3,6 +3,7 @@ namespace SharpEquations
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text.RegularExpressions;
     using System.Xml.Linq;
 
     /// <summary>
@@ -54,6 +55,9 @@ namespace SharpEquations
                 throw new ArgumentException("Expected an m:oMath or m:oMathPara element, not " + omml.Name + ".", nameof(omml));
             }
 
+            if (equations.Count > 1 && equations.Any(e => e.Descendants(M + "aln").Any(IsOn)))
+                equations = new List<XElement> { AlignedLines(equations) };
+
             var converted = equations.Select(e => SingleRow(EquationStylesheets.Transform("omml2mml.xsl", PrepareOmml(e)))).ToList();
             XElement math;
             if (converted.Count == 1)
@@ -62,9 +66,10 @@ namespace SharpEquations
             }
             else
             {
+                // the alignment point makes it an equation array again: mml2omml takes other tables for matrices
                 math = new XElement(Mml + "math",
                     new XElement(Mml + "mtable",
-                        converted.Select(c => new XElement(Mml + "mtr", new XElement(Mml + "mtd", c.Nodes())))));
+                        converted.Select(c => new XElement(Mml + "mtr", new XElement(Mml + "mtd", new XElement(Mml + "mrow", new XElement(Mml + "maligngroup"), c.Nodes()))))));
             }
             // Spaces are text: an identifier made of spaces is dropped or misread by consumers (LibreOffice
             // reads it as an empty style), and a plain space token is collapsed.
@@ -77,10 +82,90 @@ namespace SharpEquations
                     token.Attributes().Where(a => a.Name.LocalName != "mathvariant").Remove();
                 }
             }
+            // MathML also trims tokens and collapses their spaces: " ove " would touch the formula around it.
+            foreach (var text in math.Descendants(Mml + "mtext").Where(e => !e.HasElements))
+                text.Value = CollapsibleSpaces.Replace(text.Value, m => new string('\u00A0', m.Length));
+            JoinNumbers(math);
             LabelEquationNumbers(math);
             if (display)
                 math.SetAttributeValue("display", "block");
             return math;
+        }
+
+        private static readonly Regex CollapsibleSpaces = new Regex("^ +| +$| {2,}", RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// The lines of a display equation aligned with m:aln, as an equation array: the alignment mark of
+        /// an array is an "&amp;" before the aligned text.
+        /// </summary>
+        private static XElement AlignedLines(List<XElement> lines)
+        {
+            var rows = lines.Select(line =>
+            {
+                var row = new XElement(M + "e", line.Nodes());
+                var aligned = row.Elements(M + "r").FirstOrDefault(r => r.Descendants(M + "aln").Any(IsOn))?.Element(M + "t");
+                if (aligned != null)
+                    aligned.Value = "&" + aligned.Value;
+                row.Descendants(M + "aln").Remove();
+                return row;
+            });
+            return new XElement(M + "oMath", new XElement(M + "eqArr", rows));
+        }
+
+        private static bool IsOn(XElement property)
+        {
+            var value = property.Attribute(M + "val");
+            return value == null || IsTrue(value.Value);
+        }
+
+        /// <summary>
+        /// Word splits runs anywhere, so "0.09" or "20000" can arrive as several number tokens. They are one number.
+        /// </summary>
+        private static void JoinNumbers(XElement math)
+        {
+            foreach (var row in math.DescendantsAndSelf().Where(IsRow).ToList())
+            {
+                var items = row.Elements().ToList();
+                for (var i = 0; i < items.Count; i++)
+                {
+                    if (items[i].Name != Mml + "mn" || items[i].HasAttributes)
+                        continue;
+                    var number = items[i];
+                    while (i + 1 < items.Count)
+                    {
+                        var next = items[i + 1];
+                        var point = next.Name == Mml + "mo" && next.Value == ".";
+                        var digits = point && i + 2 < items.Count ? items[i + 2] : next;
+                        if (digits.Name != Mml + "mn" || digits.HasAttributes)
+                            break;
+                        number.Value += (point ? "." : "") + digits.Value;
+                        digits.Remove();
+                        if (point)
+                            next.Remove();
+                        items.RemoveRange(i + 1, point ? 2 : 1);
+                    }
+                }
+            }
+        }
+
+        private static bool IsRow(XElement element)
+        {
+            if (element.Name.Namespace != Mml)
+                return false;
+            switch (element.Name.LocalName)
+            {
+                case "math":
+                case "mrow":
+                case "mtd":
+                case "mstyle":
+                case "msqrt":
+                case "mpadded":
+                case "mphantom":
+                case "menclose":
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /// <summary>
@@ -154,10 +239,31 @@ namespace SharpEquations
             var omml = EquationStylesheets.Transform("mml2omml.xsl", SingleRow(math));
             foreach (var value in omml.Descendants().Attributes(M + "val").Where(a => a.Value.Length == 0).ToList())
                 value.Remove();
+            foreach (var nary in omml.DescendantsAndSelf(M + "nary"))
+            {
+                HideEmptyLimit(nary, "sub");
+                HideEmptyLimit(nary, "sup");
+            }
+            // the stylesheet writes the WordprocessingML properties first, the schema wants them after m:rPr
+            foreach (var properties in omml.Descendants(M + "rPr").Where(p => p.Parent.Name == M + "r" && p.ElementsBeforeSelf().Any()).ToList())
+            {
+                var run = properties.Parent;
+                properties.Remove();
+                run.AddFirst(properties);
+            }
             omml = Canonical(omml);
 
             var display = (string)math.Attribute("display") == "block" || (string)math.Attribute("mode") == "display";
             return display ? Canonical(new XElement(M + "oMathPara", omml)) : omml;
+        }
+
+        /// <summary>
+        /// An empty limit of an m:nary has to be hidden, or Word shows a placeholder box for it.
+        /// </summary>
+        private static void HideEmptyLimit(XElement nary, string limit)
+        {
+            if (nary.Element(M + limit)?.HasElements == false)
+                nary.Element(M + "naryPr")?.Element(M + limit + "Hide")?.SetAttributeValue(M + "val", "on");
         }
 
         /// <summary>
@@ -223,8 +329,10 @@ namespace SharpEquations
                     labeled.Name = Mml + "mtr";
                     continue;
                 }
+                var aligned = labeled.Parent.Descendants(Mml + "maligngroup").Any();
                 labeled.ReplaceWith(new XElement(Mml + "mtr", labeled.Attributes(),
-                    new XElement(Mml + "mtd", cells.Skip(1).SelectMany(c => c.Nodes()), new XElement(Mml + "mo", "#"), cells[0].Nodes())));
+                    new XElement(Mml + "mtd", aligned ? null : new XElement(Mml + "mrow", new XElement(Mml + "maligngroup")),
+                        cells.Skip(1).SelectMany(c => c.Nodes()), new XElement(Mml + "mo", "#"), cells[0].Nodes())));
             }
             foreach (var limits in copy.Descendants().Where(IsNaryOperator).ToList())
             {
@@ -232,7 +340,19 @@ namespace SharpEquations
                 if (argument != null && argument.Name != Mml + "mrow" && argument.Name != Mml + "mstyle")
                     argument.ReplaceWith(new XElement(Mml + "mrow", argument));
             }
+            // An n-ary operator without limits is a plain mo followed by its operand. Empty limits make it an m:nary again.
+            foreach (var op in copy.Descendants(Mml + "mo").Where(IsNaryWithoutLimits).ToList())
+                op.ReplaceWith(new XElement(Mml + "msubsup", new XElement(op), new XElement(Mml + "mrow"), new XElement(Mml + "mrow")));
             return copy;
+        }
+
+        private static bool IsNaryWithoutLimits(XElement op)
+        {
+            var text = op.Value.Trim();
+            if (text.Length != 1 || !NaryOperators.Contains(text) || BinaryOperators.Contains(text) || !IsRow(op.Parent))
+                return false;
+            var operand = op.ElementsAfterSelf().FirstOrDefault();
+            return operand != null && (operand.Name == Mml + "mrow" || operand.Name == Mml + "mstyle");
         }
 
         /// <summary>
@@ -260,6 +380,9 @@ namespace SharpEquations
         }
 
         private const string NaryOperators = "∫∬∭∮∯∰∲∳∱∩∪∏∐∑⋀⋁⋂⋃⨀⨁⨂⨃⨄⨅⨆";
+
+        // Also n-ary with limits, but between two operands when they have none.
+        private const string BinaryOperators = "∩∪";
 
         /// <summary>
         /// Rewrites the element with the m: and w: prefixes declared once on the root, as the OMML parsers expect.
