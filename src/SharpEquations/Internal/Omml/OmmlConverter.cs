@@ -21,6 +21,9 @@ namespace SharpEquations
         private static readonly XNamespace W = MathMLNamespaces.WordprocessingML;
         private static readonly XNamespace Mml = MathMLNamespaces.MathML;
 
+        // The OMML properties whose empty value means "none" instead of the default.
+        private static readonly HashSet<string> EmptyDelimiters = new HashSet<string>(StringComparer.Ordinal) { "begChr", "endChr", "sepChr" };
+
         // The OMML properties of type ST_OnOff. The stylesheets predate ISO 29500 and only understand "on" and "off".
         private static readonly HashSet<string> OnOffProperties = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -55,7 +58,8 @@ namespace SharpEquations
                 throw new ArgumentException("Expected an m:oMath or m:oMathPara element, not " + omml.Name + ".", nameof(omml));
             }
 
-            if (equations.Count > 1 && equations.Any(e => e.Descendants(M + "aln").Any(IsOn)))
+            var aligned = equations.Count > 1 && equations.Any(e => e.Descendants(M + "aln").Any(IsOn));
+            if (aligned)
                 equations = new List<XElement> { AlignedLines(equations) };
 
             var converted = equations.Select(e => SingleRow(EquationStylesheets.Transform("omml2mml.xsl", PrepareOmml(e)))).ToList();
@@ -63,12 +67,15 @@ namespace SharpEquations
             if (converted.Count == 1)
             {
                 math = converted[0];
+                if (aligned)
+                    math.Element(Mml + "mtable")?.SetAttributeValue("class", AlignedLinesClass);
             }
             else
             {
-                // the alignment point makes it an equation array again: mml2omml takes other tables for matrices
+                // the alignment point makes it an equation array again: mml2omml takes other tables for matrices;
+                // the class tells FromMathML to write the lines back as equations of their own
                 math = new XElement(Mml + "math",
-                    new XElement(Mml + "mtable",
+                    new XElement(Mml + "mtable", new XAttribute("class", AlignedLinesClass),
                         converted.Select(c => new XElement(Mml + "mtr", new XElement(Mml + "mtd", new XElement(Mml + "mrow", new XElement(Mml + "maligngroup"), c.Nodes()))))));
             }
             // Spaces are text: an identifier made of spaces is dropped or misread by consumers (LibreOffice
@@ -91,6 +98,9 @@ namespace SharpEquations
                 math.SetAttributeValue("display", "block");
             return math;
         }
+
+        // The class of the table that holds the lines of a display equation aligned with m:aln.
+        private const string AlignedLinesClass = "aligned-lines";
 
         private static readonly Regex CollapsibleSpaces = new Regex("^ +| +$| {2,}", RegexOptions.CultureInvariant);
 
@@ -236,8 +246,11 @@ namespace SharpEquations
             if (math.Name != Mml + "math")
                 throw new ArgumentException("Expected a MathML math element, not " + mathML.Name + ".", nameof(mathML));
 
+            var alignedLines = math.Elements().Count() == 1 && (string)math.Elements().First().Attribute("class") == AlignedLinesClass;
             var omml = EquationStylesheets.Transform("mml2omml.xsl", SingleRow(math));
-            foreach (var value in omml.Descendants().Attributes(M + "val").Where(a => a.Value.Length == 0).ToList())
+            // an empty delimiter means none (a brace without its closing one), as Word writes it; without the
+            // value the default parenthesis or bar would come back
+            foreach (var value in omml.Descendants().Attributes(M + "val").Where(a => a.Value.Length == 0 && !EmptyDelimiters.Contains(a.Parent.Name.LocalName)).ToList())
                 value.Remove();
             foreach (var nary in omml.DescendantsAndSelf(M + "nary"))
             {
@@ -254,7 +267,47 @@ namespace SharpEquations
             omml = Canonical(omml);
 
             var display = (string)math.Attribute("display") == "block" || (string)math.Attribute("mode") == "display";
+            if (alignedLines && omml.Elements().Count() == 1 && omml.Elements().First().Name == M + "eqArr")
+                return Canonical(new XElement(M + "oMathPara", LinesOf(omml.Elements().First())));
             return display ? Canonical(new XElement(M + "oMathPara", omml)) : omml;
+        }
+
+        /// <summary>
+        /// The rows of an equation array made from aligned lines (see AlignedLines) as equations of their own:
+        /// the "&amp;" that starts the text of a run becomes the m:aln of that run.
+        /// </summary>
+        private static IEnumerable<XElement> LinesOf(XElement equationArray)
+        {
+            foreach (var row in equationArray.Elements(M + "e"))
+            {
+                var line = new XElement(M + "oMath", row.Nodes());
+                var aligned = line.Elements(M + "r").FirstOrDefault(r => StartsWithAlignment((string)r.Element(M + "t")));
+                if (aligned != null)
+                {
+                    var text = aligned.Element(M + "t");
+                    text.Value = text.Value.Substring(1);
+                    // the stylesheet writes the mark as a run of its own: the run after it is the aligned one
+                    if (text.Value.Length == 0 && aligned.ElementsAfterSelf().FirstOrDefault()?.Name == M + "r")
+                    {
+                        var next = (XElement)aligned.ElementsAfterSelf().First();
+                        aligned.Remove();
+                        aligned = next;
+                    }
+                    var properties = aligned.Element(M + "rPr");
+                    if (properties == null)
+                    {
+                        properties = new XElement(M + "rPr");
+                        aligned.AddFirst(properties);
+                    }
+                    properties.Add(new XElement(M + "aln"));
+                }
+                yield return line;
+            }
+        }
+
+        private static bool StartsWithAlignment(string text)
+        {
+            return !string.IsNullOrEmpty(text) && text[0] == '&';
         }
 
         /// <summary>

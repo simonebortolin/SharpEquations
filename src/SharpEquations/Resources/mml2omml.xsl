@@ -12,6 +12,9 @@
   - isNaryOper: also the n-ary logical and set operators (U+22C0-U+22C3) and the n-ary circled and
     square operators (U+2A00-U+2A06), which OMML writes as m:nary.
   - FIsEqArray: a table without alignment points is a matrix, not an equation array.
+  - FIsEqArray, FFirstAlignAlreadyFound, ProcessEqArrayRow: the alignment points of a table nested in a row
+    (a system in braces) belong to that table, not to the row, which wrote them as '&' text.
+  - mtable: m:mcJc only for a table with a columnalign; without one it had an empty value, read as "left".
 -->
 <!-- Beta Version 070708 --><xsl:stylesheet xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -2576,7 +2579,7 @@
       <!-- There should be no frame, columnlines, or rowlines -->
     <xsl:choose>
          <xsl:when test="@columnalign!='center'">0</xsl:when>
-         <xsl:when test="not($ndCur/descendant::mml:maligngroup or $ndCur/descendant::mml:malignmark)">0</xsl:when>
+         <xsl:when test="not($ndCur/descendant::mml:maligngroup[count(ancestor::mml:mtable) = count($ndCur/ancestor-or-self::mml:mtable)] or $ndCur/descendant::mml:malignmark[count(ancestor::mml:mtable) = count($ndCur/ancestor-or-self::mml:mtable)])">0</xsl:when>
          <xsl:when test="(not($ndCur/@frame) or $ndCur/@frame='' or $ndCur/@frame='none')                       
 			 and (not($ndCur/@mml:frame) or $ndCur/@mml:frame='' or $ndCur/@mml:frame='none')
 			 and (not($ndCur/@columnlines) or $ndCur/@columnlines='' or $ndCur/@columnlines='none')                       
@@ -2622,9 +2625,10 @@
 	-->
   <xsl:template name="FFirstAlignAlreadyFound">
       <xsl:param name="ndCur" select="."/>
+      <xsl:variable name="cTables" select="count($ndCur/ancestor::mml:mtable)"/>
 
       <xsl:choose>
-         <xsl:when test="count($ndCur/preceding-sibling::*[descendant-or-self::mml:maligngroup                                                 or descendant-or-self::mml:malignmark]) &gt; 0">1</xsl:when>
+         <xsl:when test="count($ndCur/preceding-sibling::*[descendant-or-self::mml:maligngroup[count(ancestor::mml:mtable) = $cTables]                                                 or descendant-or-self::mml:malignmark[count(ancestor::mml:mtable) = $cTables]]) &gt; 0">1</xsl:when>
          <xsl:when test="not($ndCur/parent::mml:mtd)">
             <xsl:call-template name="FFirstAlignAlreadyFound">
                <xsl:with-param name="ndCur" select="$ndCur/parent::*"/>
@@ -2695,6 +2699,8 @@
       <xsl:param name="ndCur" select="."/>
 
       <xsl:for-each select="$ndCur/*">
+         <!-- the alignment marks of this row: the ones of a table nested in it belong to that table -->
+         <xsl:variable name="cTables" select="count(ancestor::mml:mtable)"/>
          <xsl:variable name="fSpecialCollection">
             <xsl:call-template name="FSpecialCollection">
                <xsl:with-param name="ndCur" select="."/>
@@ -2732,12 +2738,12 @@
             <!-- At this point we have some mathml structure (fraction, nary, non-grouping element, etc.) -->
         <!-- If this mathml structure has alignment groups or marks as children, then extract those since
 				     omml can't handle that. -->
-        <xsl:when test="descendant::mml:maligngroup or descendant::mml:malignmark">
+        <xsl:when test="descendant::mml:maligngroup[count(ancestor::mml:mtable) = $cTables] or descendant::mml:malignmark[count(ancestor::mml:mtable) = $cTables]">
                <xsl:variable name="cMalignGroups">
-                  <xsl:value-of select="count(descendant::mml:maligngroup)"/>
+                  <xsl:value-of select="count(descendant::mml:maligngroup[count(ancestor::mml:mtable) = $cTables])"/>
                </xsl:variable>
                <xsl:variable name="cMalignMarks">
-                  <xsl:value-of select="count(descendant::mml:malignmark)"/>
+                  <xsl:value-of select="count(descendant::mml:malignmark[count(ancestor::mml:mtable) = $cTables])"/>
                </xsl:variable>
                <!-- Output all maligngroups and malignmarks as '&amp;' -->
           <xsl:if test="$cMalignGroups + $cMalignMarks &gt; 0">
@@ -2833,7 +2839,9 @@
                                  <xsl:value-of select="$cMaxElmtsInRow"/>
                               </xsl:attribute>
                            </count>
-                           <mcJc m:val="{$alignment}"/>
+                           <xsl:if test="$alignment!=''">
+                              <mcJc m:val="{$alignment}"/>
+                           </xsl:if>
                         </mcPr>
                      </mc>
                   </mcs>
