@@ -47,7 +47,7 @@ the Apache License, Version 2.0.
 ----------------------------------------------------------------------------
 src/SharpEquations/Resources/mtef2mml.xsl
 src/SharpEquations/Internal/Mtef/* (ported from Ruby)
-tests/data/mtef/* (the "Equation Native" streams of the OLE objects of the fixtures)
+tests/data/mtef/records/*, tests/data/mtef/mathml/* (the "Equation Native" streams of the OLE objects of the fixtures)
 
 From https://github.com/jure/mathtype (the MTEF reader, ported to C#) and
 https://github.com/jure/mathtype_to_mathml (the stylesheets, merged into one file and
@@ -105,6 +105,46 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+----------------------------------------------------------------------------
+tests/data/mtef/poi/*
+
+"Equation Native" streams of the test documents of Apache POI, https://github.com/apache/poi,
+licensed under the Apache License, Version 2.0:
+
+Apache POI
+Copyright 2003-2026 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+----------------------------------------------------------------------------
+tests/data/mtef/invalid/*
+
+Test payloads from https://github.com/Mengfei-Li/document-equation-migration:
+
+Copyright (c) 2026 Document Equation Migration contributors
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ----------------------------------------------------------------------------
 Parlot.Generated (in the SharpEquations assembly)
