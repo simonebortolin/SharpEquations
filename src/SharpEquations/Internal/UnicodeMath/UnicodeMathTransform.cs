@@ -233,8 +233,10 @@ namespace SharpEquations.Internal.UnicodeMath
                     return Transform(dsty, value);
 
                 case "operator":
-                    attrs = Truthy(Get(value, "content")) ? GetAttrs(value, "") : new JsObject();
-                    val = Truthy(Get(value, "content")) ? Get(value, "content") : value;
+                    // an empty operator (the 〖 of an unclosed bracket) is content too, where JavaScript finds "" falsy
+                    var hasContent = Get(value, "content") is string || Truthy(Get(value, "content"));
+                    attrs = hasContent ? GetAttrs(value, "") : new JsObject();
+                    val = hasContent ? Get(value, "content") : value;
                     if (Eq(attrs["intent"], ":text") && Eq(val, "/"))
                     {
                         attrs["lspace"] = "0pt";

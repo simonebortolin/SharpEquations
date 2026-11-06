@@ -57,7 +57,7 @@ namespace SharpEquations.Tests.Property
             return failures;
         }
 
-        private static readonly string[] LaTeX =
+        internal static readonly string[] LaTeX =
         {
             @"\frac{a^2+b^2}{c}", @"\sqrt[3]{x+1}", @"\left(\frac{1}{2}\right)", @"\begin{pmatrix}a&b\\c&d\end{pmatrix}",
             @"\begin{cases}1&x>0\\0&\text{otherwise}\end{cases}", @"\sum_{i=1}^{n} i^2", @"\int_0^1 f(x)\,dx", @"\lim_{x\to0}\frac{\sin x}{x}",

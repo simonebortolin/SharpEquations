@@ -655,7 +655,8 @@ namespace SharpEquations.Internal.UnicodeMath
                     var n = Length(baseAtoms) is int count && baseAtoms is List<object> ? count : (int?)null;
                     if (n == null)
                         break;
-                    var retBaseAtoms = (List<object>)Get(ret["base"], "atoms");
+                    if (!(Get(DropSingletonLists(ret["base"]), "atoms") is List<object> retBaseAtoms))
+                        break;
                     var ret0 = new List<object>();
                     if (n > 1)
                     {
