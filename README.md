@@ -49,6 +49,10 @@ stream of its OLE object (`Equation.Parse(bytes, EquationFormat.Mtef)`); reading
 Equations compare by their normalized MathML: an equation written in its own format (UnicodeMath, OMML) reads back to
 the same equation, and one written in another format loses only what that format cannot hold.
 
+## Architecture
+
+How the conversions work, format by format, and how round trips are kept exact: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Building and testing
 
 ```bash
