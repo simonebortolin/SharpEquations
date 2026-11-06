@@ -1,0 +1,499 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  SOLUTION: SharpEquations.slnx
+  LIBRARY_PROJECT: src/SharpEquations/SharpEquations.csproj
+  TEST_PROJECT: tests/SharpEquations.Tests/SharpEquations.Tests.csproj
+  FEED_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+
+# Stages: Resolve Version -> Test (Linux, Windows, macOS) -> Pack NuGet
+#         -> Pre-release (pull requests) / Tag & Release (main)
+#         -> on a new release: Publish to GitHub Packages, Publish to nuget.org
+# Pre-release and release need every test and the package to succeed.
+jobs:
+  version:
+    name: Resolve Version
+    runs-on: ubuntu-latest
+    outputs:
+      # Full version stamped into the package: "X.Y.Z" (VersionPrefix) on main,
+      # "X.Y.Z-pr.12.34" (PR number, workflow run number) on a pull request.
+      version: ${{ steps.resolve.outputs.version }}
+      version_prefix: ${{ steps.resolve.outputs.version_prefix }}
+      version_suffix: ${{ steps.resolve.outputs.version_suffix }}
+      tag_exists: ${{ steps.resolve.outputs.tag_exists }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read version from BuildVersion.props
+        id: resolve
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          PREFIX=$(sed -n 's|.*<VersionPrefix>\(.*\)</VersionPrefix>.*|\1|p' BuildVersion.props | head -1)
+          if [ -z "$PREFIX" ]; then
+            echo "::error file=BuildVersion.props::No <VersionPrefix> found"
+            exit 1
+          fi
+
+          if [ -n "$PR_NUMBER" ]; then
+            SUFFIX="pr.${PR_NUMBER}.${RUN_NUMBER}"
+            VERSION="${PREFIX}-${SUFFIX}"
+          else
+            SUFFIX=""
+            VERSION="$PREFIX"
+          fi
+
+          {
+            echo "version=$VERSION"
+            echo "version_prefix=$PREFIX"
+            echo "version_suffix=$SUFFIX"
+          } >> "$GITHUB_OUTPUT"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/v$PREFIX" >/dev/null 2>&1; then
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+            if [ -n "$PR_NUMBER" ]; then
+              # Merging as-is wouldn't publish anything - say so while it's still cheap to fix.
+              echo "::warning file=BuildVersion.props::v$PREFIX is already released - bump <VersionPrefix> before merging, or main won't publish a new release (add [no-new-version] to the commit message if that is intended)."
+            else
+              echo "::notice::Tag v$PREFIX already present - skip"
+            fi
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "### Version \`$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+
+  test:
+    name: Test (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      checks: write # trx-parser publishes a check run per TRX file
+    # net10.0 tests the net10.0 build of the library; net8.0 (Linux) and net481 (Windows, where the
+    # test project targets net10.0 and net481) test the netstandard2.0 build.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            label: Linux x64
+            os: ubuntu-latest
+            tfms: net10.0 net8.0
+            dotnet: |
+              8.0.x
+              10.0.x
+          - rid: win-x64
+            label: Windows x64
+            os: windows-latest
+            tfms: net10.0 net481
+            dotnet: 10.0.x
+          - rid: osx-arm64
+            label: macOS arm64
+            os: macos-latest
+            tfms: net10.0
+            dotnet: 10.0.x
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ matrix.dotnet }}
+          dotnet-quality: 'ga'
+
+      - name: Cache NuGet
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props', 'Directory.Build.props', 'tests/Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Build
+        run: dotnet build "${{ env.SOLUTION }}" -c Release
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set -e
+          for TFM in ${{ matrix.tfms }}; do
+            echo "::group::$TFM"
+            dotnet run --project "$TEST_PROJECT" -c Release -f "$TFM" --no-build -- \
+              --report-trx --report-trx-filename "${{ matrix.rid }}.$TFM.trx" \
+              --results-directory "$GITHUB_WORKSPACE/TestResults"
+            echo "::endgroup::"
+          done
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.rid }}
+          path: |
+            TestResults/*.trx
+            TestResults/*.html
+          if-no-files-found: warn
+
+      # A fork's pull request gets a read-only token, which can't create check runs.
+      - name: Publish test reports
+        if: >-
+          always() && hashFiles('TestResults/*.trx') != '' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: NasAmin/trx-parser@v0.8.1
+        with:
+          TRX_PATH: ${{ github.workspace }}/TestResults
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPORT_PREFIX: ${{ matrix.label }}
+
+  pack:
+    name: Pack NuGet
+    runs-on: ubuntu-latest
+    needs: [version, test]
+    env:
+      VERSION_SUFFIX: ${{ needs.version.outputs.version_suffix }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'ga'
+
+      - name: Cache NuGet
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props', 'Directory.Build.props', 'tests/Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # The .snupkg symbol package is written next to the .nupkg.
+      - name: Pack
+        run: |
+          dotnet pack "$LIBRARY_PROJECT" \
+            -c Release \
+            -o artifacts \
+            -p:VersionSuffix="$VERSION_SUFFIX" \
+            -p:ContinuousIntegrationBuild=true
+          ls -lh artifacts
+
+      # nuget.org shows the README of the package: fail if it is missing or not declared.
+      - name: Check README in package
+        run: |
+          for PKG in artifacts/*.nupkg; do
+            unzip -l "$PKG" README.md >/dev/null \
+              || { echo "::error::$PKG has no README.md"; exit 1; }
+            unzip -p "$PKG" '*.nuspec' | grep -q '<readme>README.md</readme>' \
+              || { echo "::error::$PKG does not declare its README"; exit 1; }
+          done
+
+      - name: Upload NuGet artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: nupkg
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+          if-no-files-found: error
+
+  prerelease:
+    name: PR Pre-release
+    runs-on: ubuntu-latest
+    needs: [version, test, pack]
+    # Same-repository PRs only. A fork's pull_request run gets a read-only token, and this
+    # deliberately doesn't use pull_request_target: that would run untrusted fork code with a
+    # write token. Fork PRs still build and upload workflow artifacts, just no GitHub pre-release.
+    # Dependabot PRs are same-repo but GitHub also gives them a read-only token.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+      attestations: write
+    concurrency:
+      group: prerelease-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.version.outputs.version }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      BUILD_SHA: ${{ github.sha }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
+      - name: Download NuGet artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: nupkg
+          path: release
+
+      - name: Checksums
+        run: |
+          cd release
+          sha256sum * > SHA256SUMS
+          ls -lh
+
+      # GitHub only stores attestations for public (or organization) repositories.
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'release/*.nupkg, release/*.snupkg'
+
+      # One pre-release per PR, replaced on every push so testers always have a single, current
+      # link. Each run gets its own tag (pr-<N>-<run>-<attempt>): with immutable releases a tag
+      # once used by one can never be reused, even after the release is deleted. The tag
+      # deliberately isn't "v..." so it can never be mistaken for a real release by the version
+      # job's tag check.
+      - name: Publish pre-release
+        run: |
+          TAG="pr-${PR_NUMBER}-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+          cat > notes.md <<NOTES
+          Automatic pre-release for #${PR_NUMBER}: ${PR_TITLE}
+
+          - Version: \`${VERSION}\`
+          - PR head: ${HEAD_SHA}
+          - Built from merge preview: ${BUILD_SHA}
+          - Workflow run: ${RUN_URL}
+
+          > [!WARNING]
+          > Untested build of an unmerged pull request. It's replaced on every push and deleted when the PR is closed.
+          NOTES
+
+          gh release create "$TAG" release/* \
+            --prerelease \
+            --latest=false \
+            --target "$HEAD_SHA" \
+            --title "PR #${PR_NUMBER} pre-release (${VERSION})" \
+            --notes-file notes.md
+
+          # Only now drop this PR's older pre-releases, so there's always one to link to.
+          # "pr-<N>-" can't match another PR's tags (pr-3- vs pr-30-).
+          gh release list --limit 1000 --json tagName \
+            --jq ".[].tagName | select(. == \"pr-${PR_NUMBER}\" or startswith(\"pr-${PR_NUMBER}-\")) | select(. != \"${TAG}\")" |
+          while read -r OLD; do
+            gh release delete "$OLD" --cleanup-tag --yes || echo "::warning::Could not delete $OLD"
+          done
+
+      - name: Comment on the pull request
+        run: |
+          MARKER='<!-- sharpequations-prerelease -->'
+          URL="${{ github.server_url }}/${{ github.repository }}/releases/tag/${TAG}"
+          BODY="${MARKER}
+          **Pre-release \`${VERSION}\` is ready:** ${URL}
+
+          NuGet package of ${HEAD_SHA}. Updated on every push, deleted when this PR is closed."
+
+          COMMENT_ID=$(gh api "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq ".[] | select(.body | startswith(\"${MARKER}\")) | .id" | head -1)
+          if [ -n "$COMMENT_ID" ]; then
+            gh api -X PATCH "repos/${GH_REPO}/issues/comments/${COMMENT_ID}" -f body="$BODY" >/dev/null
+          else
+            gh api -X POST "repos/${GH_REPO}/issues/${PR_NUMBER}/comments" -f body="$BODY" >/dev/null
+          fi
+
+  release:
+    name: Tag & Release
+    runs-on: ubuntu-latest
+    needs: [version, test, pack]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      contents: write
+      statuses: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download NuGet artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: nupkg
+          path: release
+
+      - name: Checksums
+        run: |
+          cd release
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      # GitHub only stores attestations for public (or organization) repositories.
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'release/*.nupkg, release/*.snupkg'
+
+      - name: Tag release
+        id: tag
+        if: needs.version.outputs.tag_exists != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+
+      - name: Create GitHub Release
+        id: gh_release
+        if: steps.tag.outcome == 'success'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: v${{ env.VERSION }}
+          generate_release_notes: true
+          files: release/*
+
+      # A push that does not release on purpose (build, CI or docs changes) carries
+      # [no-new-version] in a commit message: report success instead of a pending status.
+      - name: Report release status
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_MESSAGES: ${{ join(github.event.commits.*.message, ' ') }}
+        run: |
+          if [ "${{ needs.version.outputs.tag_exists }}" = "true" ] && printf '%s' "$COMMIT_MESSAGES" | grep -qF '[no-new-version]'; then
+            STATE=success
+            DESCRIPTION="Version v$VERSION kept on purpose ([no-new-version]) — nothing to release."
+          elif [ "${{ needs.version.outputs.tag_exists }}" = "true" ]; then
+            STATE=pending
+            DESCRIPTION="Version v$VERSION already released — bump <VersionPrefix> in BuildVersion.props, or add [no-new-version] to the commit message."
+          elif [ "${{ steps.gh_release.outcome }}" = "success" ]; then
+            STATE=success
+            DESCRIPTION="Released v$VERSION with the NuGet package."
+          else
+            STATE=failure
+            DESCRIPTION="Release failed with an unexpected error."
+          fi
+          gh api repos/${{ github.repository }}/statuses/${{ github.sha }} \
+            -f state="$STATE" \
+            -f description="$DESCRIPTION" \
+            -f context="release"
+
+  publish-github:
+    name: Publish to GitHub Packages
+    runs-on: ubuntu-latest
+    needs: [version, release]
+    if: needs.version.outputs.tag_exists != 'true'
+    permissions:
+      packages: write
+
+    steps:
+      - name: Download NuGet artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: nupkg
+          path: nupkg
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'ga'
+
+      # The same package attested and attached in the release job.
+      - name: Push to GitHub Packages
+        run: |
+          dotnet nuget push "nupkg/*.nupkg" \
+            --source "$FEED_URL" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
+            --skip-duplicate
+
+  # nuget.org with Trusted Publishing (https://www.nuget.org/account/trustedpublishing): the
+  # workflow's OIDC token is exchanged for a short-lived API key, so no key is ever stored. Set the
+  # repository variable NUGET_USER to the nuget.org account owning the trusted publishing policy
+  # for this workflow (ci.yml); without it, skip.
+  publish-nuget:
+    name: Publish to nuget.org
+    runs-on: ubuntu-latest
+    needs: [version, release]
+    if: needs.version.outputs.tag_exists != 'true'
+    permissions:
+      id-token: write # nuget.org Trusted Publishing
+    env:
+      NUGET_USER: ${{ vars.NUGET_USER }}
+
+    steps:
+      - name: Check configuration
+        id: config
+        run: |
+          if [ -n "$NUGET_USER" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::The NUGET_USER repository variable isn't configured - skip nuget.org"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download NuGet artifact
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: nupkg
+          path: nupkg
+
+      - name: Setup .NET
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'ga'
+
+      - name: Log in to nuget.org
+        id: login
+        if: steps.config.outputs.enabled == 'true'
+        uses: NuGet/login@v1
+        with:
+          user: ${{ env.NUGET_USER }}
+
+      # The .snupkg symbol package next to the .nupkg is pushed with it.
+      - name: Push to nuget.org
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          dotnet nuget push "nupkg/*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "$API_KEY" \
+            --skip-duplicate
+          echo "### nuget.org: pushed $(ls nupkg/*.nupkg | xargs -n1 basename | tr '\n' ' ')" >> "$GITHUB_STEP_SUMMARY"
