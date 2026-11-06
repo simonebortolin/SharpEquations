@@ -208,6 +208,16 @@ jobs:
             -p:ContinuousIntegrationBuild=true
           ls -lh artifacts
 
+      # nuget.org shows the README of the package: fail if it is missing or not declared.
+      - name: Check README in package
+        run: |
+          for PKG in artifacts/*.nupkg; do
+            unzip -l "$PKG" README.md >/dev/null \
+              || { echo "::error::$PKG has no README.md"; exit 1; }
+            unzip -p "$PKG" '*.nuspec' | grep -q '<readme>README.md</readme>' \
+              || { echo "::error::$PKG does not declare its README"; exit 1; }
+          done
+
       - name: Upload NuGet artifact
         uses: actions/upload-artifact@v7
         with:

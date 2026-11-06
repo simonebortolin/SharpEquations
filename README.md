@@ -6,13 +6,13 @@
 [![NuGet downloads](https://img.shields.io/nuget/dt/SharpEquations?label=downloads&logo=nuget)](https://www.nuget.org/packages/SharpEquations)
 [![GitHub release](https://img.shields.io/github/v/release/simonebortolin/SharpEquations?logo=github)](https://github.com/simonebortolin/SharpEquations/releases/latest)
 [![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen?logo=renovatebot)](https://developer.mend.io/github/simonebortolin/SharpEquations)
-[![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot)](.github/dependabot.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot)](https://github.com/simonebortolin/SharpEquations/blob/main/.github/dependabot.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/simonebortolin/SharpEquations/blob/main/LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![.NET Standard 2.0](https://img.shields.io/badge/.NET%20Standard-2.0-512BD4?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/standard/net-standard)
-[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](#releases)
-[![Dependencies](https://img.shields.io/badge/dependencies-.NET%20BCL%20only-brightgreen)](#sharpequations)
-[![Formats](https://img.shields.io/badge/formats-MathML%20%7C%20OMML%20%7C%20MTEF%20%7C%20UnicodeMath%20%7C%20LaTeX-orange)](#sharpequations)
+[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](https://github.com/simonebortolin/SharpEquations#releases)
+[![Dependencies](https://img.shields.io/badge/dependencies-.NET%20BCL%20only-brightgreen)](https://github.com/simonebortolin/SharpEquations)
+[![Formats](https://img.shields.io/badge/formats-MathML%20%7C%20OMML%20%7C%20MTEF%20%7C%20UnicodeMath%20%7C%20LaTeX-orange)](https://github.com/simonebortolin/SharpEquations)
 
 Equations converted between MathML, OMML (Word), MTEF (MathType and Equation Editor 3.0), UnicodeMath (Word's linear
 format) and LaTeX, in .NET, with MathML as the common representation.
