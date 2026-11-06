@@ -1,21 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Equation converters with MathML as the common representation (OMML, MTEF). It depends on no
-       package, so that it can be used on its own. -->
+  <!-- Equation converters with MathML as the common representation. It depends on no package but System.Memory on
+       .NET Standard 2.0, for the generated UnicodeMath parser. -->
   <PropertyGroup>
-    <TargetFrameworks>net472;netstandard2.0;netstandard2.1;net8.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
     <AssemblyName>SharpEquations</AssemblyName>
     <RootNamespace>SharpEquations</RootNamespace>
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DebugSymbols>true</DebugSymbols>
+    <PackageId>SharpEquations</PackageId>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- the UnicodeMath grammar (*.parlot.cs) is compiled by Parlot.SourceGenerator; relative #line paths keep
+         the build reproducible -->
+    <ParlotLineDirectives>relative</ParlotLineDirectives>
   </PropertyGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\*.xsl" LogicalName="SharpEquations.Resources.%(Filename)%(Extension)" />
+    <InternalsVisibleTo Include="SharpEquations.Tests" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\NOTICE" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <!-- build time only: the generated parser does not reference Parlot -->
+    <PackageReference Include="Parlot.SourceGenerator" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- the generated parser uses spans: on .NET Standard 2.0 they come from System.Memory, which must flow to the
+       consumers of the package -->
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="System.Memory" />
   </ItemGroup>
 
 </Project>

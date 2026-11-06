@@ -1,0 +1,37 @@
+<Project>
+  <PropertyGroup Label="Build">
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ContinuousIntegrationBuild Condition=" '$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true' ">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Package">
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <Authors>Simone Bortolin</Authors>
+    <Copyright>Copyright (c) 2026 Simone Bortolin</Copyright>
+    <Description>Equations converted between MathML, OMML (Word), MTEF (MathType and Equation Editor 3.0, read only), UnicodeMath (Word's linear format) and LaTeX, with MathML as the common representation. No dependency but the .NET base library.</Description>
+    <PackageTags>equation math mathml omml word mathtype mtef unicodemath latex tex converter</PackageTags>
+    <RepositoryUrl>https://github.com/simonebortolin/SharpEquations</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/simonebortolin/SharpEquations</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Code Analysis">
+    <AnalysisLevel>latest-Recommended</AnalysisLevel>
+    <NoWarn>$(NoWarn);CS0162;CS0168;CS0169;CS0219;CS0414;CS0649</NoWarn> <!-- unreachable code and unused variables of the line-by-line ports -->
+    <NoWarn>$(NoWarn);CS0419;CS1570;CS1572;CS1573;CS1574;CS1584;CS1587;CS1591;CS1734</NoWarn> <!-- XML documentation of internal members -->
+    <NoWarn>$(NoWarn);NU1900</NoWarn> <!-- Error communicating with the NuGet vulnerability data source -->
+    <NoWarn>$(NoWarn);CA1304;CA1305;CA1309;CA1310;CA1311</NoWarn> <!-- culture and comparison: the converters work on code points, ordinally -->
+    <NoWarn>$(NoWarn);CA1507;CA1510;CA1512;CA1514</NoWarn> <!-- throw helpers and nameof, not on every target framework -->
+    <NoWarn>$(NoWarn);CA1707;CA1708;CA1710;CA1711;CA1716;CA1720;CA1725</NoWarn> <!-- naming -->
+    <NoWarn>$(NoWarn);CA1805;CA1806;CA1830;CA1834;CA1845;CA1846;CA1862</NoWarn> <!-- style and performance suggestions -->
+    <NoWarn>$(NoWarn);CA2201;CA2208;CA2263;CA3075</NoWarn> <!-- exception types, generic overloads, XML of the stylesheets -->
+  </PropertyGroup>
+</Project>

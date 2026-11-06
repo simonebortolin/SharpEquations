@@ -1,4 +1,4 @@
-namespace SharpEquations
+namespace SharpEquations.Internal
 {
     using System;
     using System.Collections.Concurrent;

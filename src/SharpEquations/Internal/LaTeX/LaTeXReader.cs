@@ -1,0 +1,1408 @@
+namespace SharpEquations.Internal.LaTeX
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using SharpEquations.Internal.UnicodeMath;
+    using static SharpEquations.Internal.UnicodeMath.UnicodeMathText;
+
+    /// <summary>
+    /// LaTeX to UnicodeMath: a port of TeX2UnicodeMath() of UnicodeMathML (playground/assets/TeX.js). Pass 1 replaces
+    /// control words with UnicodeMath characters (\frac → ⍁, \begin → 〖, \alpha → α), the macro pass defines and
+    /// applies \def and \newcommand macros, pass 2 rewrites the result as UnicodeMath. Text is a list of code points.
+    /// </summary>
+    internal sealed class LaTeXReader
+    {
+        private static readonly Dictionary<string, string> Environments = new Dictionary<string, string>
+        {
+            ["cases"] = "Ⓒ", ["dcases"] = "Ⓒ", ["align"] = "█", ["align*"] = "█", ["aligned"] = "█", ["alignat"] = "█",
+            ["alignat*"] = "█", ["alignedat"] = "█", ["gather"] = "█", ["gather*"] = "█", ["gathered"] = "█", ["split"] = "█",
+            ["eqnarray"] = "█", ["eqnarray*"] = "█", ["pmatrix"] = "⒨", ["matrix"] = "■", ["smallmatrix"] = "■", ["array"] = "■",
+            ["vmatrix"] = "⒱", ["bmatrix"] = "ⓢ", ["Vmatrix"] = "⒩", ["Bmatrix"] = "Ⓢ",
+        };
+
+        private const string OverBrackets = "⎴⏜⏞⏠¯";
+        private const string UnderBrackets = "⎵⏝⏟⏡";
+
+        private readonly IDictionary<string, string> macros;
+
+        private LaTeXReader(IDictionary<string, string> macros)
+        {
+            this.macros = macros ?? new Dictionary<string, string>();
+        }
+
+        /// <summary>
+        /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def
+        /// or \newcommand go to <paramref name="macros"/>, where later conversions find them.
+        /// </summary>
+        public static string ToUnicodeMath(string tex, IDictionary<string, string> macros = null) => RestoreTextEscapes(new LaTeXReader(macros).Convert(tex));
+
+        // the characters that \text escapes ({, \_, ...), held as noncharacters through the passes, which would read them as LaTeX
+        private static readonly (string Escape, char Held, char Character)[] TextEscapes =
+        {
+            ("\\textbackslash{}", '\uFDD9', '\\'), ("\\textbackslash", '\uFDD9', '\\'), ("\\{", '\uFDD0', '{'), ("\\}", '\uFDD1', '}'), ("\\_", '\uFDD2', '_'), ("\\#", '\uFDD3', '#'), ("\\$", '\uFDD4', '$'),
+            ("\\%", '\uFDD5', '%'), ("\\&", '\uFDD6', '&'), ("\\^{}", '\uFDD7', '^'), ("\\~{}", '\uFDD8', '~'),
+            ("\\textasciicircum{}", '\uFDD7', '^'), ("\\textasciitilde{}", '\uFDD8', '~'),
+        };
+
+        private static readonly HashSet<string> TextCommands = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "text", "textrm", "textup", "textnormal", "textbf", "textit", "textsf", "texttt", "textmd", "mbox",
+        };
+
+        /// <summary>Text as a quoted UnicodeMath string, which keeps parentheses and backslashes as they are.</summary>
+        private static string Quoted(string text) => text.Length == 0 ? "" : "\"" + text.Replace("\"", "\\\"") + "\"";
+
+        private static string HoldTextEscapes(string text)
+        {
+            foreach (var (escape, held, _) in TextEscapes)
+                text = text.Replace(escape, held.ToString());
+            return text;
+        }
+
+        private static string RestoreTextEscapes(string unicodemath)
+        {
+            foreach (var (_, held, character) in TextEscapes)
+                unicodemath = unicodemath.Replace(held, character);
+            if (!Characters(unicodemath).Any(c => CodePointAt(c, 0) >= HeldMarks))
+                return unicodemath;
+            return string.Concat(Characters(unicodemath).Select(c => CodePointAt(c, 0) >= HeldMarks ? char.ConvertFromUtf32(CodePointAt(c, 0) - HeldMarks) : c));
+        }
+
+        // combining marks held in the supplementary private use area B, at their code point plus this
+        private const int HeldMarks = 0x100000;
+
+        private static string HoldMark(string mark) => char.ConvertFromUtf32(CodePointAt(mark, 0) + HeldMarks);
+
+        private sealed class Text
+        {
+            private readonly List<string> chars;
+
+            public Text(string s) => chars = Characters(s);
+
+            public int Length => chars.Count;
+
+            public string this[int i] => i >= 0 && i < chars.Count ? chars[i] : null;
+
+            public string Sub(int start, int end = int.MaxValue)
+            {
+                start = System.Math.Max(0, System.Math.Min(start, chars.Count));
+                end = System.Math.Max(start, System.Math.Min(end, chars.Count));
+                return string.Concat(chars.Skip(start).Take(end - start));
+            }
+
+            public int IndexOf(string c, int from)
+            {
+                for (int i = System.Math.Max(0, from); i < chars.Count; i++)
+                {
+                    if (chars[i] == c)
+                        return i;
+                }
+                return -1;
+            }
+
+            /// <summary>The index of a text made of several characters, or -1.</summary>
+            public int Find(string text, int from)
+            {
+                var wanted = Characters(text);
+                for (int i = System.Math.Max(0, from); i + wanted.Count <= chars.Count; i++)
+                {
+                    if (chars.Skip(i).Take(wanted.Count).SequenceEqual(wanted))
+                        return i;
+                }
+                return -1;
+            }
+
+            public override string ToString() => string.Concat(chars);
+        }
+
+        private static bool IsAsciiAlphabetic(string ch) => ch != null && ch.Length == 1 && (ch[0] >= 'A' && ch[0] <= 'Z' || ch[0] >= 'a' && ch[0] <= 'z');
+
+        private static bool IsAccent(string ch) => InRange("̀", ch, "ͯ") || InRange("⃐", ch, "⃰");
+
+        private static string Last(StringBuilder sb) => Js.Ch(sb.ToString(), Js.Len(sb.ToString()) - 1);
+
+        private static void RemoveLast(StringBuilder sb)
+        {
+            var s = sb.ToString();
+            sb.Clear().Append(Js.Sub(s, 0, Js.Len(s) - 1));
+        }
+
+        private static int FindClosingBrace(Text text, int i)
+        {
+            var (j, _) = FindClosingBrace(text, i, null);
+            return j;
+        }
+
+        private static (int, int) FindClosingBrace(Text text, int i, string chStop)
+        {
+            int cBrace = 1;
+            int over = 0;
+            // the environments inside (〖 to 〗), whose line breaks and end are not those of the text searched
+            int environments = 0;
+            for (; i < text.Length; i++)
+            {
+                switch (text[i])
+                {
+                    case "〖":
+                        environments++;
+                        break;
+                    case "{":
+                        cBrace++;
+                        break;
+                    case "}":
+                        cBrace--;
+                        if (cBrace == 0)
+                            return (i, over);
+                        break;
+                    case "⒞":
+                    case "/":
+                        over = over == 0 ? i : -1;
+                        break;
+                    case "\\":
+                        if (text[i + 1] == "\\" && environments == 0)
+                            return (i, over);
+                        // an escaped brace, \{ or \}, is a character
+                        if (text[i + 1] == "{" || text[i + 1] == "}")
+                            i++;
+                        break;
+                    case "$":
+                        if (cBrace == 1 && chStop == "$")
+                            return (i, over);
+                        break;
+                    case "〗":
+                        if (environments == 0)
+                            return (i, over);
+                        environments--;
+                        break;
+                }
+            }
+            return (-1, over);
+        }
+
+        private (string, int) GetArg(Text tex, int i, bool checkNeedParens)
+        {
+            var arg = "";
+            while (tex[i] == " ")
+                i++;
+            if (tex[i] == "{")
+            {
+                i++;
+                int j = FindClosingBrace(tex, i);
+                if (j > 0)
+                {
+                    arg = Pass2(tex.Sub(i, j));
+                    i = j + 1;
+                }
+            }
+            else if (tex[i] != null)
+            {
+                arg = tex[i];
+                i++;
+            }
+            // an argument in parentheses, ^{(2)}, keeps them: UnicodeMath would take them for the grouping ones
+            if (checkNeedParens && (UnicodeMathSerializer.NeedParens(arg) || IsParenthesized(arg)))
+                arg = "(" + arg + ")";
+            return (arg, i);
+        }
+
+        private static bool IsPrime(string ch) => ch == "'" || ch == "′" || ch == "″" || ch == "‴" || ch == "⁗";
+
+        private static bool IsParenthesized(string arg)
+        {
+            var chars = Characters(arg);
+            if (chars.Count < 2 || chars[0] != "(" || chars[chars.Count - 1] != ")")
+                return false;
+            int depth = 0;
+            for (int i = 0; i < chars.Count; i++)
+            {
+                if (chars[i] == "\\")
+                    i++;
+                else if (chars[i] == "(")
+                    depth++;
+                else if (chars[i] == ")" && --depth == 0)
+                    return i == chars.Count - 1;
+            }
+            return false;
+        }
+
+        // \: and \> (medium), \; (thick) and \! (negative thin, which UnicodeMath does not have)
+        private static readonly Dictionary<string, string> Spaces = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [":"] = " ", [">"] = " ", [";"] = " ", ["!"] = "", [" "] = "\u00A0",
+        };
+
+        // the commands that only size or style what follows, left out (\displaystyle makes a display equation, ⓓ)
+        private static readonly HashSet<string> Dropped = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "big", "Big", "bigg", "Bigg", "bigl", "bigr", "Bigl", "Bigr", "biggl", "biggr", "Biggl", "Biggr", "bigm", "Bigm", "biggm", "Biggm",
+            "limits", "nolimits", "textstyle", "scriptstyle", "scriptscriptstyle", "nonumber", "notag",
+        };
+
+        // the commands that are others for MathML
+        private static readonly Dictionary<string, string> Renamed = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["dfrac"] = "\\frac", ["tfrac"] = "\\frac", ["cfrac"] = "\\frac", ["dbinom"] = "\\binom", ["tbinom"] = "\\binom",
+            ["overrightarrow"] = "\\vec", ["Vert"] = "‖", ["lVert"] = "‖", ["rVert"] = "‖", ["bmod"] = "\\operatorname{mod}",
+            ["bm"] = "\\boldsymbol",
+        };
+
+        // the commands that put a script over a base, \overset{script}{base}, as the UnicodeMath operator (\underset is ⓤ)
+        private static readonly Dictionary<string, string> Stacks = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["overset"] = "┴", ["stackrel"] = "┴",
+        };
+
+        private static bool IsZeroLength(string length) =>
+            System.Text.RegularExpressions.Regex.IsMatch(length.Trim(), @"^0*(\.0*)?\s*[a-z]*$");
+
+        /// <summary>Whether an angle closes after the index: a bra alone, ⟨𝜓|, keeps its bar.</summary>
+        private static bool AngleCloses(Text tex, int i)
+        {
+            var rest = tex.Sub(i, tex.Length);
+            return rest.Any(c => c == '⟩') || rest.Contains("\\rangle");
+        }
+
+        /// <summary>
+        /// The commands of LaTeX that have no UnicodeMath control word, rewritten with UnicodeMath operators:
+        /// \overset{A}{B} as 〖B〗┴(A), \color{c}{x} as ✎(c&amp;{x}) and \colorbox{c}{x} as ☁(c&amp;{x}), \left. and \right. as
+        /// \left and \right before a space; \color{c} without a
+        /// second argument colors the rest of its group.
+        /// </summary>
+        private static string RewriteTeXOnly(string latex)
+        {
+            var tex = new Text(latex);
+            var result = new StringBuilder();
+            // between ⟨ and ⟩ a bar parts a bra from a ket (│), as in UnicodeMath: ⟨a│b⟩
+            int angles = 0;
+            for (int i = 0; i < tex.Length;)
+            {
+                if (tex[i] == "|" && angles > 0)
+                {
+                    result.Append('│');
+                    i++;
+                    continue;
+                }
+                if (tex[i] == "⟨" && AngleCloses(tex, i + 1) || tex[i] == "⟩")
+                    angles = Math.Max(0, angles + (tex[i] == "⟨" ? 1 : -1));
+                // a slash of LaTeX is a slash, (a+b)/2, where UnicodeMath would build a fraction: the escaped one of UnicodeMath
+                if (tex[i] == "/")
+                {
+                    result.Append("\\/");
+                    i++;
+                    continue;
+                }
+                if (tex[i] != "\\")
+                {
+                    // a script that is a command with arguments, x_\text{ab}: the script is the command and its arguments
+                    if ((tex[i] == "_" || tex[i] == "^") && ScriptCommand(tex, i + 1) is var (command, after) && command != null)
+                    {
+                        result.Append(tex[i]).Append('{').Append(RewriteTeXOnly(command)).Append('}');
+                        i = after;
+                        continue;
+                    }
+                    // a combining mark after its base (𝑎⃑), held: the passes read the marks of \vec and the like before theirs
+                    result.Append(IsAccent(tex[i]) ? HoldMark(tex[i]) : tex[i]);
+                    i++;
+                    continue;
+                }
+                int j = i + 1;
+                var cw = "";
+                for (; j < tex.Length && IsAsciiAlphabetic(tex[j]); j++)
+                    cw += tex[j];
+                if (cw.Length == 0)
+                {
+                    // \| is the double bar ‖, not an escaped bar
+                    if (tex[i + 1] == "|")
+                    {
+                        result.Append('‖');
+                        i += 2;
+                        continue;
+                    }
+                    result.Append(tex[i++]);
+                    if (i < tex.Length)
+                        result.Append(tex[i++]);
+                    continue;
+                }
+                if (cw == "langle" && AngleCloses(tex, j) || cw == "rangle")
+                    angles = Math.Max(0, angles + (cw == "langle" ? 1 : -1));
+                if (cw == "middle")
+                {
+                    // \middle| between \left and \right, the bar of UnicodeMath; UnicodeMath wants no spaces around the
+                    // other delimiters
+                    int k = j;
+                    while (k < tex.Length && tex[k] == " ")
+                        k++;
+                    while (result.Length > 0 && result[result.Length - 1] == ' ')
+                        result.Length--;
+                    if (tex[k] == "\\" && tex[k + 1] == "|")
+                    {
+                        result.Append("\\‖");
+                        for (i = k + 2; i < tex.Length && tex[i] == " "; i++)
+                        {
+                        }
+                        continue;
+                    }
+                    if (tex[k] == "|")
+                    {
+                        result.Append('│');
+                        i = k + 1;
+                        continue;
+                    }
+                    if (tex.Sub(k, k + 5) == "\\vert")
+                    {
+                        result.Append('│');
+                        i = k + 5;
+                        continue;
+                    }
+                    // another delimiter in the middle is the delimiter itself, a slash the slash of UnicodeMath
+                    if (tex[k] == "/")
+                    {
+                        result.Append("\\/");
+                        for (i = k + 1; i < tex.Length && tex[i] == " "; i++)
+                        {
+                        }
+                        continue;
+                    }
+                    i = k;
+                    continue;
+                }
+                if (cw == "vert" && angles > 0)
+                {
+                    result.Append('│');
+                    i = j;
+                    continue;
+                }
+                if ((cw == "newcommand" || cw == "renewcommand") && j < tex.Length && tex[j] == "\\")
+                {
+                    // \newcommand\name{...}: the name in braces, as \newcommand{\name}{...}
+                    int end = j + 1;
+                    while (end < tex.Length && IsAsciiAlphabetic(tex[end]))
+                        end++;
+                    result.Append("\\newcommand{").Append(tex.Sub(j, end)).Append('}');
+                    i = end;
+                    continue;
+                }
+                if (cw == "renewcommand")
+                {
+                    result.Append("\\newcommand");
+                    i = j;
+                    continue;
+                }
+                if (ArgumentCommands.TryGetValue(cw, out var argumentCount) && argumentCount == 2 && Arguments(tex, j, 2) is { } fractionArguments)
+                {
+                    // \frac12 or \frac 1 2: the arguments braced, as the reader wants them
+                    result.Append(Renamed.TryGetValue(cw, out var fraction) ? fraction : "\\" + cw);
+                    foreach (var argument in fractionArguments.Arguments)
+                        result.Append('{').Append(RewriteTeXOnly(argument)).Append('}');
+                    i = fractionArguments.Next;
+                    continue;
+                }
+                if (Dropped.Contains(cw))
+                {
+                    // sizes and styles that MathML leaves to the renderer: \bigl(, \limits, \displaystyle
+                    i = j;
+                    while (i < tex.Length && tex[i] == " ")
+                        i++;
+                    continue;
+                }
+                if (Renamed.TryGetValue(cw, out var renamed))
+                {
+                    result.Append(renamed);
+                    i = j;
+                    if (IsAsciiAlphabetic(Js.Ch(renamed, Js.Len(renamed) - 1)) && i < tex.Length && IsAsciiAlphabetic(tex[i]))
+                        result.Append(' ');
+                    continue;
+                }
+                if (cw == "pmod" && Argument(tex, j) is var (modulus, afterModulus) && afterModulus >= 0)
+                {
+                    result.Append("\\;(\\operatorname{mod}\\,").Append(RewriteTeXOnly(modulus)).Append(')');
+                    i = afterModulus;
+                    continue;
+                }
+                if (cw == "hspace" && BracedArgument(tex, tex[j] == "*" ? j + 1 : j) is var (_, afterSpace) && afterSpace >= 0)
+                {
+                    result.Append("\\quad ");
+                    i = afterSpace;
+                    continue;
+                }
+                if (cw == "genfrac" && Arguments(tex, j, 6) is var (genfrac, afterFraction))
+                {
+                    // \genfrac{left}{right}{thickness}{style}{numerator}{denominator}: a fraction without a bar is the ¦ of UnicodeMath
+                    var bar = genfrac[2].Trim().Length == 0 || !IsZeroLength(genfrac[2])
+                        ? "\\frac{" + genfrac[4] + "}{" + genfrac[5] + "}"
+                        : "{{" + genfrac[4] + "}¦{" + genfrac[5] + "}}";
+                    if (genfrac[0].Trim().Length > 0 || genfrac[1].Trim().Length > 0)
+                        bar = "\\left" + (genfrac[0].Trim().Length > 0 ? genfrac[0] : ".") + bar + "\\right" + (genfrac[1].Trim().Length > 0 ? genfrac[1] : ".");
+                    result.Append(RewriteTeXOnly(bar));
+                    i = afterFraction;
+                    continue;
+                }
+                if ((cw == "xrightarrow" || cw == "xleftarrow") && BracedArgument(tex, j) is var (arrowLabel, afterArrowLabel) && afterArrowLabel >= 0)
+                {
+                    result.Append(RewriteTeXOnly("\\overset{" + arrowLabel + "}{" + (cw == "xrightarrow" ? "\\rightarrow" : "\\leftarrow") + "}"));
+                    i = afterArrowLabel;
+                    continue;
+                }
+                if (cw == "mathop" && BracedArgument(tex, j) is var (operatorText, afterOperator) && afterOperator >= 0)
+                {
+                    // \mathop{\mathrm{argmin}}: an operator name
+                    var name = operatorText.Trim();
+                    if (name.StartsWith("\\mathrm{", StringComparison.Ordinal) && name[name.Length - 1] == '}')
+                        name = name.Substring(8, name.Length - 9);
+                    result.Append(name.All(char.IsLetter) ? "\\operatorname{" + name + "}" : RewriteTeXOnly(operatorText));
+                    i = afterOperator;
+                    continue;
+                }
+                // a combining mark over or under a base, \overset{̸}{b}, is its accent, as UnicodeMath writes it: (𝑏)̸
+                if ((Stacks.ContainsKey(cw) || cw == "underset") && BracedArgument(tex, j) is var (mark, afterMark) && afterMark >= 0 &&
+                    Js.Len(mark) == 1 && IsAccent(mark) && BracedArgument(tex, afterMark) is var (accentBase, afterBase) && afterBase >= 0)
+                {
+                    result.Append('(').Append(RewriteTeXOnly(accentBase)).Append(')').Append(HoldMark(mark));
+                    i = afterBase;
+                    continue;
+                }
+                if (Stacks.TryGetValue(cw, out var stack))
+                {
+                    var (script, afterScript) = BracedArgument(tex, j);
+                    var (body, afterBody) = afterScript < 0 ? (null, -1) : BracedArgument(tex, afterScript);
+                    if (afterBody >= 0)
+                    {
+                        result.Append('〖').Append(RewriteTeXOnly(body)).Append('〗').Append(stack).Append('(').Append(RewriteTeXOnly(script)).Append(')');
+                        i = afterBody;
+                        continue;
+                    }
+                }
+                else if (cw == "begin" && BracedArgument(tex, j) is var (environment, afterBegin) && (environment == "equation" || environment == "equation*"))
+                {
+                    // Word's numbered equation, \begin{equation}\label{eqN}...\end{equation}: the equation with #(N)
+                    var endMarker = "\\end{" + environment + "}";
+                    var end = tex.Find(endMarker, afterBegin);
+                    var bodyText = new Text(end < 0 ? tex.Sub(afterBegin) : tex.Sub(afterBegin, end));
+                    var body = bodyText.ToString();
+                    var label = "";
+                    var labelAt = bodyText.Find("\\label", 0);
+                    if (labelAt >= 0)
+                    {
+                        var (name, afterLabel) = BracedArgument(bodyText, labelAt + 6);
+                        if (afterLabel >= 0)
+                        {
+                            label = name.StartsWith("eq:", StringComparison.Ordinal) ? name.Substring(3) : name.StartsWith("eq", StringComparison.Ordinal) ? name.Substring(2) : name;
+                            body = bodyText.Sub(0, labelAt) + bodyText.Sub(afterLabel);
+                        }
+                    }
+                    result.Append(RewriteTeXOnly(body));
+                    if (label.Length > 0)
+                        result.Append("#(").Append(label).Append(')');
+                    i = end < 0 ? tex.Length : end + Js.Len(endMarker);
+                    continue;
+                }
+                else if (TextCommands.Contains(cw))
+                {
+                    var (text, afterText) = BracedArgument(tex, j);
+                    if (afterText >= 0)
+                    {
+                        result.Append("\\text{").Append(HoldTextEscapes(text)).Append('}');
+                        i = afterText;
+                        continue;
+                    }
+                }
+                else if ((cw == "left" || cw == "right") && j < tex.Length && tex[j] == ".")
+                {
+                    // the empty delimiter: UnicodeMath's ├ or ┤ before a space
+                    result.Append('\\').Append(cw).Append(' ');
+                    i = j + 1;
+                    continue;
+                }
+                else if (cw == "color" || cw == "colorbox")
+                {
+                    var (color, afterColor) = BracedArgument(tex, j);
+                    if (afterColor >= 0)
+                    {
+                        var (body, afterBody) = BracedArgument(tex, afterColor);
+                        if (afterBody < 0)
+                        {
+                            int depth = 0, end = afterColor;
+                            for (; end < tex.Length; end++)
+                            {
+                                if (tex[end] == "\\")
+                                    end++;
+                                else if (tex[end] == "{")
+                                    depth++;
+                                else if (tex[end] == "}" && depth-- == 0)
+                                    break;
+                            }
+                            body = tex.Sub(afterColor, end);
+                            afterBody = end;
+                        }
+                        result.Append(cw == "color" ? "✎(" : "☁(").Append(color.Trim()).Append("&{").Append(RewriteTeXOnly(body)).Append("})");
+                        i = afterBody;
+                        continue;
+                    }
+                }
+                result.Append(tex.Sub(i, j));
+                i = j;
+            }
+            return result.ToString();
+        }
+
+        // the commands with one or two arguments that can be a script without braces, as x_\text{ab} or x^\frac12
+        private static readonly Dictionary<string, int> ArgumentCommands = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["text"] = 1, ["textrm"] = 1, ["textup"] = 1, ["textnormal"] = 1, ["mbox"] = 1, ["mathrm"] = 1, ["mathbf"] = 1,
+            ["mathit"] = 1, ["mathcal"] = 1, ["mathbb"] = 1, ["mathfrak"] = 1, ["mathsf"] = 1, ["mathtt"] = 1, ["mathscr"] = 1,
+            ["boldsymbol"] = 1, ["operatorname"] = 1, ["boxed"] = 1, ["sqrt"] = 1, ["hat"] = 1, ["bar"] = 1, ["vec"] = 1, ["dot"] = 1,
+            ["ddot"] = 1, ["tilde"] = 1, ["widehat"] = 1, ["widetilde"] = 1, ["overline"] = 1, ["underline"] = 1,
+            ["frac"] = 2, ["dfrac"] = 2, ["tfrac"] = 2, ["binom"] = 2,
+        };
+
+        /// <summary>The command with its braced arguments at the index (after blanks), and the index after it.</summary>
+        private static (string Command, int Next) ScriptCommand(Text tex, int i)
+        {
+            while (i < tex.Length && tex[i] == " ")
+                i++;
+            if (i >= tex.Length || tex[i] != "\\")
+                return (null, -1);
+            int j = i + 1;
+            var cw = "";
+            for (; j < tex.Length && IsAsciiAlphabetic(tex[j]); j++)
+                cw += tex[j];
+            if (!ArgumentCommands.TryGetValue(cw, out var count))
+                return (null, -1);
+            int next = j;
+            for (int argument = 0; argument < count; argument++)
+            {
+                while (next < tex.Length && tex[next] == " ")
+                    next++;
+                // a braced argument, or a single character (\frac12)
+                if (tex[next] == "{")
+                    (_, next) = BracedArgument(tex, next);
+                else if (next < tex.Length && tex[next] != "\\" && tex[next] != "}")
+                    next++;
+                else
+                    next = -1;
+                if (next < 0)
+                    return (null, -1);
+            }
+            return (tex.Sub(i, next), next);
+        }
+
+        // the commands whose bar is a delimiter: \left|, \right|, \big|
+        private static readonly HashSet<string> DelimiterCommands = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "left", "right", "middle", "big", "Big", "bigg", "Bigg", "bigl", "bigr", "Bigl", "Bigr", "biggl", "biggr", "Biggl", "Biggr", "bigm", "Bigm",
+        };
+
+        /// <summary>
+        /// A bar (| or ‖) left without its pair, as in 𝑎|𝑏, escaped: in UnicodeMath a bar opens an absolute value or a
+        /// norm that a second one closes. Bars are paired within their brackets; one bar alone between brackets (𝑃(𝑐|𝑑),
+        /// {𝑥|𝑥>0}) is the separator UnicodeMath makes of it, a bar before a closing angle with no opening one is a ket
+        /// (|𝑟⟩), and the bars of \left, \right and the like are delimiters.
+        /// </summary>
+        private static string EscapeOddBars(string latex)
+        {
+            var tex = new Text(latex);
+            var frames = new Stack<List<int>>();
+            frames.Push(new List<int>());
+            var escaped = new List<int>();
+            void Close(List<int> bars, bool inBrackets)
+            {
+                foreach (var bar in new[] { "|", "‖" })
+                {
+                    var some = bars.Where(b => tex[b] == bar).ToList();
+                    if (some.Count % 2 == 1 && !(inBrackets && some.Count == 1 && bar == "|"))
+                        escaped.Add(some[some.Count - 1]);
+                }
+            }
+            for (int i = 0; i < tex.Length; i++)
+            {
+                var ch = tex[i];
+                if (ch == "\\")
+                {
+                    var cw = "";
+                    int j = i + 1;
+                    for (; j < tex.Length && IsAsciiAlphabetic(tex[j]); j++)
+                        cw += tex[j];
+                    if (cw.Length == 0)
+                    {
+                        // \{ and \} are brackets
+                        if (tex[i + 1] == "{")
+                            frames.Push(new List<int>());
+                        else if (tex[i + 1] == "}" && frames.Count > 1)
+                            Close(frames.Pop(), true);
+                        i++;
+                        continue;
+                    }
+                    if (cw == "langle")
+                        ch = "⟨";
+                    else if (cw == "rangle")
+                        ch = "⟩";
+                    else
+                    {
+                        while (j < tex.Length && tex[j] == " ")
+                            j++;
+                        // the bar after \left, \right... is skipped with the command
+                        i = DelimiterCommands.Contains(cw) && j < tex.Length && (tex[j] == "|" || tex[j] == "‖") ? j : j - 1;
+                        continue;
+                    }
+                    i = j - 1;
+                }
+                if (ch == "(" || ch == "[" || ch == "⟨")
+                {
+                    frames.Push(new List<int>());
+                }
+                else if (ch == ")" || ch == "]" || ch == "⟩")
+                {
+                    if (frames.Count > 1)
+                        Close(frames.Pop(), true);
+                    else if (ch == "⟩" && frames.Peek().Count > 0)
+                        frames.Peek().RemoveAt(frames.Peek().Count - 1);
+                }
+                else if (ch == "|" || ch == "‖")
+                {
+                    frames.Peek().Add(i);
+                }
+            }
+            while (frames.Count > 0)
+                Close(frames.Pop(), false);
+            if (escaped.Count == 0)
+                return latex;
+            var result = new StringBuilder();
+            for (int i = 0; i < tex.Length; i++)
+            {
+                if (escaped.Contains(i))
+                    result.Append('\\');
+                result.Append(tex[i]);
+            }
+            return result.ToString();
+        }
+
+        /// <summary>The count arguments (braced or single characters) at the index, and the index after them; null if missing.</summary>
+        private static (List<string> Arguments, int Next)? Arguments(Text tex, int i, int count)
+        {
+            var arguments = new List<string>();
+            for (int n = 0; n < count; n++)
+            {
+                var (argument, next) = Argument(tex, i);
+                if (next < 0)
+                    return null;
+                arguments.Add(argument);
+                i = next;
+            }
+            return (arguments, i);
+        }
+
+        /// <summary>A braced argument or a single character (\pmod n), and the index after it; -1 if there is none.</summary>
+        private static (string Text, int Next) Argument(Text tex, int i)
+        {
+            while (i < tex.Length && tex[i] == " ")
+                i++;
+            if (i < tex.Length && tex[i] == "{")
+                return BracedArgument(tex, i);
+            return i < tex.Length && tex[i] != "\\" && tex[i] != "}" ? (tex[i], i + 1) : (null, -1);
+        }
+
+        /// <summary>The text of the {...} argument at the index (after blanks) and the index after it; -1 if there is none.</summary>
+        private static bool IsAsciiLetterOrDigit(char c) => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9';
+
+        private static (string Text, int Next) BracedArgument(Text tex, int i)
+        {
+            while (i < tex.Length && tex[i] == " ")
+                i++;
+            if (i >= tex.Length || tex[i] != "{")
+                return (null, -1);
+            int depth = 0;
+            for (int j = i; j < tex.Length; j++)
+            {
+                if (tex[j] == "\\")
+                    j++;
+                else if (tex[j] == "{")
+                    depth++;
+                else if (tex[j] == "}" && --depth == 0)
+                    return (tex.Sub(i + 1, j), j + 1);
+            }
+            return (null, -1);
+        }
+
+        private string Convert(string latex)
+        {
+            var tex = new Text(EscapeOddBars(RewriteTeXOnly(latex)));
+            var cwPrev = "";
+            bool needMacroPass = false;
+            var uniTeX = new StringBuilder();
+
+            for (int i = 0; i < tex.Length;)
+            {
+                switch (tex[i])
+                {
+                    case "\\":
+                    {
+                        i++;
+                        // a backslash that ends the LaTeX escapes nothing
+                        if (i >= tex.Length)
+                            break;
+                        if (tex[i] == "]" || tex[i] == ")")
+                        {
+                            i = tex.Length;
+                            break;
+                        }
+                        if (tex[i] == "{" || tex[i] == "}")
+                        {
+                            uniTeX.Append('\\').Append(tex[i]);
+                            i++;
+                            break;
+                        }
+                        if (tex[i] == "$" || tex[i] == "%")
+                        {
+                            uniTeX.Append(tex[i]);
+                            i++;
+                            break;
+                        }
+                        // a line break, \\, which the space after it does not make \ (a space)
+                        if (tex[i] == "\\")
+                        {
+                            uniTeX.Append("\\\\");
+                            i++;
+                            break;
+                        }
+                        var cw = "";
+                        for (; i < tex.Length && IsAsciiAlphabetic(tex[i]); i++)
+                            cw += tex[i];
+                        if (cwPrev == "def")
+                        {
+                            cwPrev = "";
+                            uniTeX.Append('\\').Append(cw);
+                            if (tex[i] == "}")
+                                i++;
+                            needMacroPass = true;
+                            macros[cw] = "";
+                            continue;
+                        }
+                        cwPrev = cw;
+                        string symbol;
+                        if (cw.Length > 0 && macros.TryGetValue(cw, out var macro))
+                        {
+                            symbol = macro;
+                            if (Js.Ch(symbol, 0) == "ⓜ")
+                                needMacroPass = true;
+                        }
+                        else if (cw.Length == 0 && tex[i] == ",")
+                        {
+                            symbol = "  ";
+                            i++;
+                        }
+                        else if (cw.Length == 0 && Spaces.TryGetValue(tex[i], out var space))
+                        {
+                            symbol = space;
+                            i++;
+                        }
+                        else if (cw == "qquad")
+                        {
+                            symbol = "  ";
+                            if (tex[i] == " ")
+                                i++;
+                        }
+                        else
+                        {
+                            symbol = UnicodeMathInput.ResolveControlWords("\\" + cw);
+                            if (tex[i] == " " && !IsFunctionName(cw))
+                                i++;
+                            // a function name with limits, as Word writes it (\lim _{x→0}): the space would end the name
+                            else if (tex[i] == " " && IsFunctionName(cw))
+                            {
+                                int next = i;
+                                while (tex[next] == " ")
+                                    next++;
+                                if (tex[next] == "_" || tex[next] == "^")
+                                    i = next;
+                            }
+                        }
+                        if (symbol.Length > 0 && Js.Ch(symbol, 0) != "\"")
+                            uniTeX.Append(symbol);
+                        else if (cw.Length > 0)
+                            uniTeX.Append('\\').Append(cw);
+                        break;
+                    }
+                    case "\t":
+                    case "\n":
+                    case "\v":
+                    case "\r":
+                        uniTeX.Append(' ');
+                        i++;
+                        break;
+                    case "%":
+                    {
+                        int j = tex.IndexOf("\n", i + 1);
+                        if (j == -1)
+                            j = tex.Length;
+                        i = j + 1;
+                        break;
+                    }
+                    case "{":
+                        if (cwPrev == "newcommand")
+                        {
+                            cwPrev = "def";
+                            i++;
+                            continue;
+                        }
+                        uniTeX.Append(tex[i++]);
+                        break;
+                    case "}":
+                        if (i > 0 && tex[i - 1] == "{")
+                            uniTeX.Append('⬚');
+                        uniTeX.Append(tex[i++]);
+                        break;
+                    case "~":
+                        uniTeX.Append('\u00A0');
+                        i++;
+                        break;
+                    default:
+                        uniTeX.Append(tex[i++]);
+                        break;
+                }
+            }
+
+            var text = ApplyMacros(uniTeX.ToString(), macros, needMacroPass);
+            return Pass2(text);
+        }
+
+        /// <summary>
+        /// The macros of UnicodeMath text applied: the definitions (ⓜ\name{...}, ⓜ{\name}[n]{...}, as \def and \newcommand
+        /// read) removed, and their uses (\name and their arguments) replaced by their bodies.
+        /// </summary>
+        internal static string ExpandMacros(string unicodemath)
+        {
+            var text = System.Text.RegularExpressions.Regex.Replace(unicodemath, "ⓜ\\{\\\\([A-Za-z]+)\\}", "ⓜ\\$1");
+            // the uses of a macro, which control words not known are written as text ("\\f") until then
+            foreach (System.Text.RegularExpressions.Match name in System.Text.RegularExpressions.Regex.Matches(text, "ⓜ\\\\([A-Za-z]+)"))
+                text = text.Replace("\"\\" + name.Groups[1].Value + " \"", "\\" + name.Groups[1].Value + " ").Replace("\"\\" + name.Groups[1].Value + "\"", "\\" + name.Groups[1].Value);
+            return ApplyMacros(text, new Dictionary<string, string>(StringComparer.Ordinal), true, true);
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex MacroDefinition =
+            new System.Text.RegularExpressions.Regex("\u24DC", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        /// <summary>Whether UnicodeMath text defines macros.</summary>
+        internal static bool HasMacros(string unicodemath) => MacroDefinition.IsMatch(unicodemath);
+
+        private static string ApplyMacros(string text, IDictionary<string, string> macros, bool needMacroPass, bool accentsAfter = false)
+        {
+            bool macroDefined = false;
+            if (needMacroPass)
+            {
+                var t = new Text(text);
+                for (int i = 0; i < t.Length;)
+                {
+                    int m = t.IndexOf("ⓜ", i);
+                    if (m == -1)
+                        break;
+                    i = m;
+                    if (t[i + 1] == "\\")
+                    {
+                        var (cw, body, k) = GetMacro(t, i);
+                        if (cw.Length > 0)
+                        {
+                            macros[cw] = body;
+                            t = new Text(t.Sub(0, m) + t.Sub(k));
+                            macroDefined = true;
+                            continue;
+                        }
+                        i++;
+                    }
+                    else
+                    {
+                        var (val, k) = ApplyMacro(t, i + 1, accentsAfter);
+                        t = new Text(t.Sub(0, i) + val + t.Sub(k));
+                        i += Js.Len(val);
+                    }
+                }
+                text = t.ToString();
+            }
+            if (macroDefined)
+            {
+                var t = new Text(text);
+                for (int i = 0; ;)
+                {
+                    i = t.IndexOf("\\", i);
+                    if (i == -1)
+                        break;
+                    var cw = "";
+                    int j;
+                    for (j = i + 1; j < t.Length && IsAsciiAlphabetic(t[j]); j++)
+                        cw += t[j];
+                    if (cw.Length == 0 || !macros.TryGetValue(cw, out var body))
+                    {
+                        i++;
+                        continue;
+                    }
+                    t = new Text(t.Sub(0, i) + body + t.Sub(i + 1 + cw.Length));
+                    if (Js.Ch(body, 0) == "ⓜ")
+                    {
+                        var (val, k) = ApplyMacro(t, i + 1, accentsAfter);
+                        t = new Text(t.Sub(0, i) + val + t.Sub(k));
+                        i += Js.Len(val);
+                    }
+                    else
+                    {
+                        i += Js.Len(body);
+                    }
+                }
+                text = t.ToString();
+            }
+            return text;
+        }
+
+        /// <summary>getMacro: the control word, body and end of a macro definition ⓜ\cw...{body} at i.</summary>
+        private static (string, string, int) GetMacro(Text s, int i)
+        {
+            if (s[i] == "ⓜ" && s[i + 1] == "\\")
+            {
+                var cw = "";
+                int j;
+                for (j = i + 2; j < s.Length && IsAsciiAlphabetic(s[j]); j++)
+                    cw += s[j];
+                while (s[j] == " ")
+                    j++;
+                int k = s.IndexOf("{", j);
+                if (k != -1)
+                    k = FindClosingBrace(s, k + 1);
+                if (k != -1)
+                {
+                    var body = s[j] == "#" || s[j] == "[" ? "ⓜ" + s.Sub(j, k + 1) : s.Sub(j + 1, k);
+                    return (cw, body, k + 1);
+                }
+            }
+            return ("", "", i);
+        }
+
+        /// <summary>applyMacro: the macro whose body starts at i, with its arguments substituted, and the end of its arguments.</summary>
+        private static (string, int) ApplyMacro(Text tex, int i, bool accentsAfter)
+        {
+            int k;
+            int cArg = 0;
+            if (tex[i] == "[")
+            {
+                cArg = Js.CodeAt(tex[i + 1], 0) - '0';
+                if (tex[i + 2] != "]" || cArg < 0 || cArg > 9)
+                    return ("", i);
+                k = i + 3;
+            }
+            else
+            {
+                for (k = i; k < tex.Length && tex[k] != "{"; k++)
+                {
+                    if (tex[k] == "#")
+                    {
+                        if (cArg < 9)
+                            cArg++;
+                        k++;
+                    }
+                }
+            }
+            if (tex[k] != "{")
+                return ("", i);
+            int j = FindClosingBrace(tex, k + 1);
+            if (j == -1)
+                return ("", i);
+
+            var macro = new Text(tex.Sub(k + 1, j));
+            i = j + 1;
+            var args = new List<string>();
+            for (j = 0; j < cArg && i < tex.Length; j++)
+            {
+                var arg = "";
+                while (tex[i] == " ")
+                    i++;
+                if (tex[i] == "{")
+                {
+                    k = FindClosingBrace(tex, i + 1);
+                    if (k == -1)
+                        return ("", i);
+                    arg = tex.Sub(i + 1, k);
+                    i = k + 1;
+                }
+                else if (tex[i] == "ⓝ")
+                {
+                    i++;
+                }
+                else if (tex[i] != null)
+                {
+                    arg = tex[i];
+                    i++;
+                }
+                args.Add(arg);
+            }
+            while (args.Count < cArg)
+                args.Add("");
+
+            var val = new StringBuilder();
+            // an accent passed as an argument (\hat, a combining mark) goes on the character after it, as in LaTeX
+            string accent = null;
+            for (k = 0; k < macro.Length; k++)
+            {
+                if (macro[k] == "#")
+                {
+                    k++;
+                    int n = Js.CodeAt(macro[k], 0) - '1';
+                    if (n >= 0 && n < args.Count)
+                    {
+                        if (accentsAfter && Js.Len(args[n]) == 1 && IsAccent(args[n]) && accent == null)
+                        {
+                            accent = args[n];
+                            continue;
+                        }
+                        val.Append(args[n]);
+                    }
+                }
+                else
+                {
+                    val.Append(macro[k]);
+                }
+                if (accent != null && val.Length > 0)
+                {
+                    val.Append(accent);
+                    accent = null;
+                }
+            }
+            if (accent != null)
+                val.Append(accent);
+            return (val.ToString(), i);
+        }
+
+        /// <summary>TeX2UMath: pass 2, LaTeX with UnicodeMath characters to UnicodeMath.</summary>
+        private string Pass2(string latex)
+        {
+            var tex = new Text(latex);
+            var uniTeX = new StringBuilder();
+            int j, k;
+            string val;
+
+            for (int i = 0; i < tex.Length;)
+            {
+                var ch = tex[i];
+                i++;
+                uniTeX.Append(ch);
+                if (i == tex.Length)
+                    break;
+
+                switch (ch)
+                {
+                    case "ⓗ":
+                        if (tex[i] != "{")
+                            continue;
+                        j = FindClosingBrace(tex, i + 1);
+                        if (j == -1)
+                            continue;
+                        uniTeX.Append('(').Append(tex.Sub(i + 1, j));
+                        i = j + 1;
+                        if (tex[i] == "{")
+                        {
+                            j = FindClosingBrace(tex, i + 1);
+                            if (j == -1)
+                                continue;
+                            uniTeX.Append('&').Append(Pass2(tex.Sub(i + 1, j)));
+                            i = j + 1;
+                        }
+                        uniTeX.Append(')');
+                        continue;
+
+                    case "⒝":
+                    case "⍁":
+                        if (tex[i] == "{")
+                        {
+                            j = FindClosingBrace(tex, i + 1);
+                            if (j == -1)
+                                continue;
+                            uniTeX.Append(Pass2(tex.Sub(i + 1, j))).Append('&');
+                            i = j + 1;
+                            if (tex[i] == " ")
+                                i++;
+                            if (tex[i] != "{")
+                                continue;
+                            j = FindClosingBrace(tex, i + 1);
+                            // an argument that is not closed runs to the end (j of -1 would read the LaTeX again, forever)
+                            if (j == -1)
+                                j = tex.Length;
+                            uniTeX.Append(Pass2(tex.Sub(i + 1, j))).Append("〗 ");
+                            i = j + 1;
+                        }
+                        else
+                        {
+                            uniTeX.Append(tex[i++]).Append('&').Append(tex[i++]).Append("〗 ");
+                        }
+                        continue;
+
+                    case "⒭":
+                        j = tex.IndexOf("▒", i);
+                        if (j != -1)
+                        {
+                            uniTeX.Append(tex.Sub(i, j)).Append('▒');
+                            j++;
+                            (val, i) = GetArg(tex, j, true);
+                            uniTeX.Append(val);
+                        }
+                        break;
+
+                    case "Ⅎ":
+                        if (tex[i + 1] == "{")
+                        {
+                            j = FindClosingBrace(tex, i + 2);
+                            if (j == -1)
+                                j = tex.Length;
+                            var argument = tex.Sub(i + 2, j);
+                            var style = CodePointAt(tex[i], 0) - 'a';
+                            // letters and digits in a font (\mathcal{G}) are its math alphanumerics, which take scripts
+                            if (style == 0 && argument.Length > 0 && argument.All(IsAsciiLetterOrDigit))
+                            {
+                                // upright: a letter is an upright identifier ("d"), a word upright text
+                                RemoveLast(uniTeX);
+                                uniTeX.Append(Quoted(argument));
+                            }
+                            else if (style > 0 && style < MathStyles.Length && argument.Length > 0 && argument.All(IsAsciiLetterOrDigit))
+                            {
+                                RemoveLast(uniTeX);
+                                uniTeX.Append(string.Concat(argument.Select(c => GetMathAlphanumeric(c.ToString(), MathStyles[style]))));
+                            }
+                            else if (argument.All(char.IsLetterOrDigit))
+                            {
+                                uniTeX.Append(tex[i]).Append('(').Append(argument).Append(')');
+                            }
+                            else
+                            {
+                                // other mathematics in a font (\mathbf{b\times c}, \mathrm{x_1}): its ASCII letters and digits in
+                                // the font, the rest as it is
+                                RemoveLast(uniTeX);
+                                var styled = style > 0 && style < MathStyles.Length
+                                    ? string.Concat(Characters(argument).Select(c => c.Length == 1 && IsAsciiLetterOrDigit(c[0]) ? GetMathAlphanumeric(c, MathStyles[style]) : c))
+                                    : argument;
+                                uniTeX.Append(Pass2(styled));
+                            }
+                            i = j + 1;
+                        }
+                        break;
+
+                    case "√":
+                    case "ⓑ":
+                    case "ⓓ":
+                    case "▭":
+                    case "^":
+                    case "_":
+                        if (ch == "√" && tex[i] == "[")
+                        {
+                            j = tex.IndexOf("]", i + 1);
+                            if (j != -1)
+                            {
+                                uniTeX.Append('(').Append(Pass2(tex.Sub(i + 1, j))).Append('&');
+                                j++;
+                                (val, i) = GetArg(tex, j, false);
+                                uniTeX.Append(val).Append(')');
+                            }
+                            break;
+                        }
+                        if ((ch == "√" || ch == "ⓑ" || ch == "ⓓ") && NonBlank(tex, i) != "{")
+                            break;
+                        (val, i) = GetArg(tex, i, true);
+                        if (tex[i] == "^" && Js.Ch(val, 0) != "(" && Characters(val).Contains(" "))
+                            val = "(" + val + ")";
+                        // a script with its own scripts, a_{3_4}: a_(3_4), which UnicodeMath would read as a_3 with _4
+                        else if ((ch == "^" || ch == "_") && Js.Ch(val, 0) != "(" && Js.Len(val) > 1 && Characters(val).Any(c => c == "^" || c == "_"))
+                            val = "(" + val + ")";
+                        uniTeX.Append(val);
+                        if (i < tex.Length && !"+-=/^_ )".Contains(tex[i]))
+                            uniTeX.Append(' ');
+                        break;
+
+                    case "\\":
+                        if (tex[i] == "{" || tex[i] == "}")
+                        {
+                            RemoveLast(uniTeX);
+                            uniTeX.Append(tex[i]);
+                            i++;
+                        }
+                        else if (LaTeXSerializer.IsStructureOperator(tex[i]))
+                        {
+                            // an operator of UnicodeMath escaped, \▭: the character itself, which UnicodeMath reads escaped
+                            uniTeX.Append(tex[i]);
+                            i++;
+                        }
+                        break;
+
+                    case "{":
+                    {
+                        (j, k) = FindClosingBrace(tex, i, "/");
+                        if (j == -1)
+                            break;
+                        if (k > 0)
+                        {
+                            var op = tex[k] == "/" ? "⍁" : "⒝";
+                            RemoveLast(uniTeX);
+                            uniTeX.Append(op).Append(Pass2(tex.Sub(i, k))).Append('&').Append(Pass2(tex.Sub(k + 1, j))).Append('〗');
+                            i = j + 1;
+                            break;
+                        }
+                        RemoveLast(uniTeX);
+                        // a group with a script ({a+b}^2) is in invisible brackets, which a space would part from it
+                        uniTeX.Append('〖').Append(Pass2(tex.Sub(i, j))).Append(tex[j + 1] == "_" || tex[j + 1] == "^" || tex[j + 1] == "┬" || tex[j + 1] == "┴" || IsPrime(tex[j + 1]) ? "〗" : "〗 ");
+                        i = j + 1;
+                        break;
+                    }
+
+                    case "Ⓣ":
+                    case "ⓞ":
+                    {
+                        val = tex[i];
+                        if (val == "*")
+                            i++;
+                        if (tex[i] != "{")
+                            break;
+                        j = FindClosingBrace(tex, i + 1);
+                        if (j == -1)
+                            break;
+                        RemoveLast(uniTeX);
+                        if (ch == "Ⓣ")
+                        {
+                            uniTeX.Append('#');
+                            if (val == "*")
+                                uniTeX.Append(tex.Sub(i + 1, j));
+                            else
+                                uniTeX.Append('(').Append(tex.Sub(i + 1, j)).Append(')');
+                        }
+                        else
+                        {
+                            if (IsAsciiAlphabetic(Last(uniTeX)))
+                                uniTeX.Append(' ');
+                            uniTeX.Append(tex.Sub(i + 1, j)).Append('⁡');
+                        }
+                        i = j + 1;
+                        break;
+                    }
+
+                    case "ⓤ":
+                    {
+                        if (tex[i] != "{")
+                            break;
+                        (val, j) = GetArg(tex, i, true);
+                        if (tex[j] == "{")
+                        {
+                            RemoveLast(uniTeX);
+                            var (basE, end) = GetArg(tex, j, false);
+                            // a base with its own scripts (\lim^2, \int^b) is grouped, which the limit goes under
+                            if (Js.Len(basE) > 1 && Characters(basE).Any(c => c == "^" || c == "_" || c == "┬" || c == "┴"))
+                                basE = "〖" + basE + "〗";
+                            uniTeX.Append(basE).Append('┬').Append(val).Append(' ');
+                            i = end;
+                        }
+                        break;
+                    }
+
+                    case "〖":
+                    {
+                        if (tex[i] != "{")
+                            break;
+                        j = FindClosingBrace(tex, i + 1);
+                        if (j == -1)
+                            break;
+                        var environment = tex.Sub(i + 1, j);
+                        if (!Environments.TryGetValue(environment, out var label))
+                            throw new FormatException("Unknown LaTeX environment " + environment + ".");
+                        i = j + 1;
+                        // the column specification of an array ({ll}, {r|c}) and the column count of alignat
+                        if ((environment == "array" || environment.StartsWith("alignat", StringComparison.Ordinal)) && i < tex.Length && tex[i] == "{")
+                        {
+                            j = FindClosingBrace(tex, i + 1);
+                            if (j == -1)
+                                break;
+                            i = j + 1;
+                        }
+                        RemoveLast(uniTeX);
+                        uniTeX.Append(label).Append('(');
+                        for (; ; )
+                        {
+                            j = FindClosingBrace(tex, i);
+                            if (j == -1)
+                                break;
+                            uniTeX.Append(Pass2(tex.Sub(i, j)));
+                            if (tex[j] == "〗")
+                            {
+                                uniTeX.Append(')');
+                                j = tex.IndexOf("}", j + 2);
+                                if (j == -1)
+                                    return uniTeX.ToString();
+                                i = j + 1;
+                                break;
+                            }
+                            if (tex[j] == "\\")
+                                j++;
+                            uniTeX.Append('@');
+                            i = j + 1;
+                        }
+                        break;
+                    }
+
+                    case "ⓣ":
+                        if (tex[i] != "{")
+                            break;
+                        for (; ; )
+                        {
+                            (j, _) = FindClosingBrace(tex, i + 1, "$");
+                            if (j == -1)
+                                break;
+                            if (tex[j] == "$")
+                            {
+                                (k, _) = FindClosingBrace(tex, j + 1, "$");
+                                if (tex[k] != "$")
+                                    break;
+                                RemoveLast(uniTeX);
+                                uniTeX.Append(Quoted(tex.Sub(i + 1, j)));
+                                uniTeX.Append(Pass2(tex.Sub(j + 1, k) + " "));
+                                if (tex[k + 1] == "}")
+                                {
+                                    i = k + 2;
+                                    break;
+                                }
+                                i = k;
+                                uniTeX.Append('ⓣ');
+                            }
+                            else
+                            {
+                                RemoveLast(uniTeX);
+                                uniTeX.Append(Quoted(tex.Sub(i + 1, j)));
+                                i = j + 1;
+                                break;
+                            }
+                        }
+                        break;
+
+                    default:
+                        if (IsAccent(ch))
+                        {
+                            (val, i) = GetArg(tex, i, true);
+                            RemoveLast(uniTeX);
+                            // the accent of more than one character (\vec{AB}) is over all of them
+                            if (Js.Len(val) > 1 && !(Js.Ch(val, 0) == "(" && Js.Ch(val, Js.Len(val) - 1) == ")"))
+                                val = "(" + val + ")";
+                            uniTeX.Append(val).Append(ch);
+                        }
+                        else if (OverBrackets.Contains(ch) || UnderBrackets.Contains(ch))
+                        {
+                            (val, i) = GetArg(tex, i, false);
+                            uniTeX.Append('(').Append(val).Append(')');
+                            // a space ends the operand of the bar, which would take what follows too (\overline{x}y)
+                            if (i < tex.Length && !"^_┴┬ ".Contains(tex[i]))
+                                uniTeX.Append(' ');
+                        }
+                        break;
+                }
+            }
+            return uniTeX.ToString();
+        }
+
+        private static string NonBlank(Text tex, int i)
+        {
+            while (tex[i] == " ")
+                i++;
+            return tex[i];
+        }
+    }
+}

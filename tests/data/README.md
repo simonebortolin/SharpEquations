@@ -5,15 +5,25 @@
 57ce40c7a114dcdabc4858fdf281a5fb806aac89, `test/fixtures`), licensed under the Apache License 2.0.
 Unused namespace declarations were removed.
 
-`mtef/records/mathtype3`, `mtef/records/mathtype5`: Equation Editor 3.0 and MathType OLE objects
-(`*.bin`) with the XML that https://github.com/jure/mathtype (commit
+`mtef/records/mathtype3`, `mtef/records/mathtype5`: the "Equation Native" streams (`*.eqn`) of Equation Editor
+3.0 and MathType OLE objects, taken out of the OLE objects, with the XML that https://github.com/jure/mathtype (commit
 80413caa2b57d957a3c4ec20c2a681606a937c92, `spec/fixtures`) reads from them (`*.xml`, whitespace removed).
 Copyright (c) 2015 Jure Triglav, MIT License.
 
-`mtef/mathml`: MathType OLE objects (`*.bin`) and reference MathML (`*.xml`, whitespace removed) from
+`mtef/mathml`: the "Equation Native" streams (`*.eqn`) of MathType OLE objects and reference MathML (`*.xml`, whitespace removed) from
 https://github.com/jure/mathtype_to_mathml (commit db2030b16be7e429340b1b53eb615471441ed3d4,
 `spec/fixtures`). Some of the reference files were written by MathType's own MathML translator and differ
 in structure from what the stylesheets produce. Copyright (c) 2015 Jure Triglav, MIT License.
 
 `omml/` files with a descriptive name (`style-bold.omml`, `nary-no-limits.omml`, ...): written for SharpEquations,
 reduced by hand to the OMML constructs found in equations saved by Word and missing from the files above.
+
+`unicodemath/unicodemathml-examples.json`: the UnicodeMath expressions of `dist/example.html` of
+[MurrayIII/UnicodeMathML](https://github.com/MurrayIII/UnicodeMathML) (commit 636dc8f), with the MathML its
+author expects for each (the `results` table of `dist/unicodemathml-integration.js`), as
+`{input, display, mathml}`. Copyright (c) 2019 Noah Doersing, MIT License; maintained by Murray Sargent.
+
+`unicodemath/unicodemathml-testmml.json`: the `mathML`, `unicodeMath` and `mathTeXs` tables of `test/testmml.js` of
+[MurrayIII/UnicodeMathML](https://github.com/MurrayIII/UnicodeMathML) (commit 636dc8f), as `{mathml, unicodemath, tex}`:
+MathML with the UnicodeMath and the TeX its author expects for it. Copyright (c) 2019 Noah Doersing, MIT License;
+maintained by Murray Sargent.

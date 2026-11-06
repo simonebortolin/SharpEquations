@@ -1,4 +1,4 @@
-namespace SharpEquations.Mtef
+namespace SharpEquations.Internal.Mtef
 {
     using System.Collections.Generic;
     using System.Linq;

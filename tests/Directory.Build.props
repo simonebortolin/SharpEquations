@@ -1,0 +1,8 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup Label="Code Analysis">
+    <!-- test cases with arrays and strings as written; the char overloads are missing on .NET Framework -->
+    <NoWarn>$(NoWarn);CA1847;CA1861;CA1865;CA1866</NoWarn>
+  </PropertyGroup>
+</Project>

@@ -3,7 +3,7 @@
   mtef2mml.xsl: MathType Equation Format (MTEF), as XML, to MathML.
   The stylesheets of https://github.com/jure/mathtype_to_mathml (lib/transform.xsl and lib/xsl/*.xsl,
   commit db2030b16be7e429340b1b53eb615471441ed3d4), merged into one file for SharpEquations. The XML input is the
-  one written by https://github.com/jure/mathtype and SharpEquations.Mtef.MtefReader.
+  one written by https://github.com/jure/mathtype and SharpEquations (MtefReader).
   Also included from the pull requests of that repository: square and nth roots (xsl/root.xsl, #11)
   and text in mtext (#4).
   Changed for SharpEquations: the sum, product, coproduct, union and intersection templates, and the upper-limit

@@ -1,4 +1,4 @@
-namespace SharpEquations.Mtef
+namespace SharpEquations.Internal.Mtef
 {
     /// <summary>
     /// Template selectors and variations of MTEF 3, mapped to their MTEF 5 names as https://github.com/jure/mathtype does,
