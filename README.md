@@ -5,6 +5,8 @@
 [![NuGet](https://img.shields.io/nuget/v/SharpEquations?logo=nuget)](https://www.nuget.org/packages/SharpEquations)
 [![NuGet downloads](https://img.shields.io/nuget/dt/SharpEquations?label=downloads&logo=nuget)](https://www.nuget.org/packages/SharpEquations)
 [![GitHub release](https://img.shields.io/github/v/release/simonebortolin/SharpEquations?logo=github)](https://github.com/simonebortolin/SharpEquations/releases/latest)
+[![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen?logo=renovatebot)](https://developer.mend.io/github/simonebortolin/SharpEquations)
+[![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot)](.github/dependabot.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![.NET Standard 2.0](https://img.shields.io/badge/.NET%20Standard-2.0-512BD4?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/standard/net-standard)
