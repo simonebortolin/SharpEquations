@@ -182,6 +182,49 @@ namespace SharpEquations.Tests.Property
             await Assert.That(Failures(new[] { Nest(open, close, 100) }, EquationFormat.UnicodeMath)).IsEmpty();
         }
 
+        /// <summary>Known failure: the mutations of these seeds hold a \begin not followed by {, which throws ArgumentOutOfRangeException.</summary>
+        [Test]
+        [Skip("Known failure: \\begin not followed by { throws ArgumentOutOfRangeException")]
+        [Arguments(3)]
+        [Arguments(4)]
+        public async Task ReadsMutatedLaTeXWithBeginWithoutBrace(int seed)
+        {
+            await ReadsMutatedLaTeX(seed);
+        }
+
+        [Test]
+        [Skip("Known failure: \\begin not followed by { throws ArgumentOutOfRangeException")]
+        [Arguments(@"\begin\not{eqution\label{eq1}a\end{equation}")]
+        [Arguments(@"\[(𝑎+𝑏)^𝑛=∑_{𝑘=0}^𝑛\binom\begin{matrix}{𝑛}{𝑘}𝑎a^2+b^2}^𝑘𝑏^{𝑛−𝑘}\]")]
+        public async Task ReadsBeginWithoutBrace(string latex)
+        {
+            await Assert.That(Failures(new[] { latex }, EquationFormat.LaTeX)).IsEmpty();
+        }
+
+        /// <summary>
+        /// Known failure: the UnicodeMath grammar backtracks without memoization, so these nestings take a time that
+        /// grows exponentially with their depth (twice per level for fractions, three times for unclosed brackets): thirty
+        /// levels do not end in the time limit. Explicit, as each case takes the whole limit.
+        /// </summary>
+        [Test]
+        [Explicit]
+        [Arguments("1/(", ")")]
+        [Arguments("(", "")]
+        public async Task ReadsDeeplyNestedUnicodeMathInLinearTime(string open, string close)
+        {
+            await Assert.That(Failures(new[] { Nest(open, close, 30) }, EquationFormat.UnicodeMath)).IsEmpty();
+        }
+
+        [Test]
+        [Explicit]
+        [Arguments(@"\hat{", "}")]
+        [Arguments(@"\frac{1}{", "}")]
+        [Arguments("{", "")]
+        public async Task ReadsDeeplyNestedLaTeXInLinearTime(string open, string close)
+        {
+            await Assert.That(Failures(new[] { Nest(open, close, 30) }, EquationFormat.LaTeX)).IsEmpty();
+        }
+
         /// <summary>The MathML of a nesting deeper than OMML holds is refused, not a stack overflow.</summary>
         [Test]
         public async Task RefusesMathMLNestedDeeperThanOmmlHolds()
