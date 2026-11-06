@@ -12,7 +12,8 @@ namespace SharpEquations.Internal.Mtef
     /// <remarks>
     /// The MTEF records are read into XML as https://github.com/jure/mathtype does and converted with the
     /// stylesheets of https://github.com/jure/mathtype_to_mathml (MIT, see NOTICE). Conversion is one-way:
-    /// MTEF cannot be written. Spacing and font-specific private use characters are dropped.
+    /// MTEF cannot be written. Font-specific private use characters are dropped; the spaces of MathType and of
+    /// Equation Editor 3.0 are kept as spaces.
     /// </remarks>
     internal static class MtefParser
     {

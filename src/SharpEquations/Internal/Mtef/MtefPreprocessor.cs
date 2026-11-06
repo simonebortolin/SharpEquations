@@ -33,6 +33,7 @@ namespace SharpEquations.Internal.Mtef
                     c.Add(new XElement("variation", typeface == "1" || typeface == "9" || typeface == "10" ? "textmode" : "mathmode"));
                 }
             }
+            MapEquationEditorSpaces(root);
             MoveFollowingScripts(root);
             MovePrecedingScripts(root);
             InvertEmbellishments(root);
@@ -275,6 +276,22 @@ namespace SharpEquations.Internal.Mtef
             R(0xF0B4, 0xF0BF, U, U), R(0xF0C0, 0xF0C9, Token.Default, U), R(0xF0CA, 0xF0FF, U, U), R(0xF100, 0xF133, Token.Default, U),
             R(0xF134, 0xF8FF, U, U), R(0xFB00, 0xFB4F, Token.MText), R(0xFE35, 0xFE4F, Token.Mo),
         };
+
+        /// <summary>
+        /// The spaces of Equation Editor 3.0 (0xEB00 to 0xEB08 in the space typeface, also in MathType equations
+        /// that were first written with it) are the MathType spaces 0xEF00 to 0xEF08: the same code in MTCode is an
+        /// arrow.
+        /// </summary>
+        private static void MapEquationEditorSpaces(XElement root)
+        {
+            const string SpaceTypeface = "24";
+            foreach (var value in root.Descendants("char").Where(c => (string)c.Element("typeface") == SpaceTypeface).Select(c => c.Element("mt_code_value")))
+            {
+                var code = (string)value;
+                if (code != null && code.Length == 6 && code.StartsWith("0xEB0", System.StringComparison.Ordinal) && code[5] >= '0' && code[5] <= '8')
+                    value.Value = "0xEF0" + code[5];
+            }
+        }
 
         /// <summary>
         /// Replaces chars with the token CharReplacer gives them. Unsupported characters (control and
