@@ -17,11 +17,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # .NET 10 builds everything and runs the net10.0 tests; the .NET 8 runtime runs the net8.0 tests,
-  # which test the netstandard2.0 build of the library.
-  DOTNET_VERSIONS: |
-    8.0.x
-    10.0.x
+  DOTNET_VERSION: '10.0.x'
   DOTNET_NOLOGO: 'true'
   DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
@@ -31,7 +27,7 @@ env:
   TEST_PROJECT: tests/SharpEquations.Tests/SharpEquations.Tests.csproj
   FEED_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
 
-# Stages: Resolve Version -> Test (Linux, Windows, macOS; net10.0 and net8.0) -> Pack NuGet
+# Stages: Resolve Version -> Test (Linux, Windows, macOS) -> Pack NuGet
 #         -> Pre-release (pull requests) / Tag & Release (main)
 #         -> on a new release: Publish to GitHub Packages, Publish to nuget.org
 # Pre-release and release need every test and the package to succeed.
@@ -99,6 +95,8 @@ jobs:
     permissions:
       contents: read
       checks: write # trx-parser publishes a check run per TRX file
+    # net10.0 tests the net10.0 build of the library; net8.0 (Linux) and net481 (Windows, where the
+    # test project targets net10.0 and net481) test the netstandard2.0 build.
     strategy:
       fail-fast: false
       matrix:
@@ -106,12 +104,20 @@ jobs:
           - rid: linux-x64
             label: Linux x64
             os: ubuntu-latest
+            tfms: net10.0 net8.0
+            dotnet: |
+              8.0.x
+              10.0.x
           - rid: win-x64
             label: Windows x64
             os: windows-latest
+            tfms: net10.0 net481
+            dotnet: 10.0.x
           - rid: osx-arm64
             label: macOS arm64
             os: macos-latest
+            tfms: net10.0
+            dotnet: 10.0.x
 
     steps:
       - uses: actions/checkout@v7
@@ -121,7 +127,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: ${{ env.DOTNET_VERSIONS }}
+          dotnet-version: ${{ matrix.dotnet }}
           dotnet-quality: 'ga'
 
       - name: Cache NuGet
@@ -134,12 +140,11 @@ jobs:
       - name: Build
         run: dotnet build "${{ env.SOLUTION }}" -c Release
 
-      # net10.0 tests the net10.0 build of the library, net8.0 the netstandard2.0 build.
       - name: Run tests
         shell: bash
         run: |
           set -e
-          for TFM in net10.0 net8.0; do
+          for TFM in ${{ matrix.tfms }}; do
             echo "::group::$TFM"
             dotnet run --project "$TEST_PROJECT" -c Release -f "$TFM" --no-build -- \
               --report-trx --report-trx-filename "${{ matrix.rid }}.$TFM.trx" \
@@ -183,7 +188,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: ${{ env.DOTNET_VERSIONS }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'ga'
 
       - name: Cache NuGet
@@ -414,7 +419,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'ga'
 
       # The same package attested and attached in the release job.
@@ -461,7 +466,7 @@ jobs:
         if: steps.config.outputs.enabled == 'true'
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'ga'
 
       - name: Log in to nuget.org

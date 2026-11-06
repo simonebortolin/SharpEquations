@@ -56,13 +56,14 @@ dotnet build SharpEquations.slnx
 dotnet test --solution SharpEquations.slnx
 ```
 
-The tests use [TUnit](https://tunit.dev/); they run on .NET 10 against the .NET 10 build, and on .NET 8 against the
-.NET Standard 2.0 build. Their data is in `tests/data` (see its README).
+The tests use [TUnit](https://tunit.dev/); they run on .NET 10 against the .NET 10 build, and against the .NET
+Standard 2.0 build on .NET 8 (Linux, macOS) or on .NET Framework 4.8.1 (Windows). Their data is in `tests/data` (see
+its README).
 
 ## Releases
 
-CI (`.github/workflows/ci.yml`) tests every push and pull request on Linux, Windows and macOS, on .NET 10 and on .NET
-8, and packs the NuGet package. The release version is `VersionPrefix` in `BuildVersion.props`: bump it, and merging to
+CI (`.github/workflows/ci.yml`) tests every push and pull request on Linux (.NET 10 and .NET 8), Windows (.NET 10 and
+.NET Framework 4.8.1) and macOS (.NET 10), and packs the NuGet package. The release version is `VersionPrefix` in `BuildVersion.props`: bump it, and merging to
 `main` tags `vX.Y.Z`, creates the GitHub release with the package attached, and publishes it to GitHub Packages and to
 nuget.org (with [Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing): the repository
 variable `NUGET_USER` names the nuget.org account; without it nuget.org is skipped). A push that keeps the version on

@@ -67,7 +67,8 @@ dotnet build SharpEquations.slnx
 dotnet test --solution SharpEquations.slnx
 ```
 
-The tests run on net10.0 against the net10.0 build and on net8.0 against the netstandard2.0 build. The 738 examples of
+The tests run on net10.0 against the net10.0 build, and against the netstandard2.0 build on net8.0 (Linux, macOS) or
+net481 (Windows, where the test project targets net10.0 and net481). The 738 examples of
 `tests/data/unicodemath/` test the UnicodeMath port, and `Property/RoundTripPropertyTests` checks, for all of them and
 for the equations of Word documents (`tests/data/omml/`), that an equation written in its own format (UnicodeMath,
 OMML) reads back to the same equation, and that one written in another format (standard LaTeX, Word's LaTeX, OMML)
@@ -75,8 +76,8 @@ loses only the first time what that format cannot hold. Keep these at 100%.
 
 ## Releases
 
-`.github/workflows/ci.yml`, the same pipeline as SharpMediaInfo and Letra200bSharp: it tests on Linux, Windows and
-macOS (net10.0 and net8.0), packs, publishes a `pr-<N>-…` pre-release for each pull request (deleted on close by
+`.github/workflows/ci.yml`, the same pipeline as SharpMediaInfo and Letra200bSharp: it tests on Linux (net10.0, net8.0),
+Windows (net10.0, net481) and macOS (net10.0), packs, publishes a `pr-<N>-…` pre-release for each pull request (deleted on close by
 `prerelease-cleanup.yml`) and, on `main`, tags `v<VersionPrefix>` of `BuildVersion.props`, creates the GitHub release
 and pushes the package to GitHub Packages and nuget.org (Trusted Publishing, repository variable `NUGET_USER`). A change
 that should release bumps `VersionPrefix`; one that should not says `[no-new-version]` in its commit message.
