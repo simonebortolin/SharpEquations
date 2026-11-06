@@ -1,5 +1,17 @@
 # SharpEquations
 
+[![CI](https://github.com/simonebortolin/SharpEquations/actions/workflows/ci.yml/badge.svg)](https://github.com/simonebortolin/SharpEquations/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/simonebortolin/SharpEquations/actions/workflows/codeql.yml/badge.svg)](https://github.com/simonebortolin/SharpEquations/actions/workflows/codeql.yml)
+[![NuGet](https://img.shields.io/nuget/v/SharpEquations?logo=nuget)](https://www.nuget.org/packages/SharpEquations)
+[![NuGet downloads](https://img.shields.io/nuget/dt/SharpEquations?label=downloads&logo=nuget)](https://www.nuget.org/packages/SharpEquations)
+[![GitHub release](https://img.shields.io/github/v/release/simonebortolin/SharpEquations?logo=github)](https://github.com/simonebortolin/SharpEquations/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![.NET Standard 2.0](https://img.shields.io/badge/.NET%20Standard-2.0-512BD4?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/standard/net-standard)
+[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](#releases)
+[![Dependencies](https://img.shields.io/badge/dependencies-.NET%20BCL%20only-brightgreen)](#sharpequations)
+[![Formats](https://img.shields.io/badge/formats-MathML%20%7C%20OMML%20%7C%20MTEF%20%7C%20UnicodeMath%20%7C%20LaTeX-orange)](#sharpequations)
+
 Equations converted between MathML, OMML (Word), MTEF (MathType and Equation Editor 3.0), UnicodeMath (Word's linear
 format) and LaTeX, in .NET, with MathML as the common representation.
 
@@ -44,6 +56,17 @@ dotnet test --solution SharpEquations.slnx
 
 The tests use [TUnit](https://tunit.dev/); they run on .NET 10 against the .NET 10 build, and on .NET 8 against the
 .NET Standard 2.0 build. Their data is in `tests/data` (see its README).
+
+## Releases
+
+CI (`.github/workflows/ci.yml`) tests every push and pull request on Linux, Windows and macOS, on .NET 10 and on .NET
+8, and packs the NuGet package. The release version is `VersionPrefix` in `BuildVersion.props`: bump it, and merging to
+`main` tags `vX.Y.Z`, creates the GitHub release with the package attached, and publishes it to GitHub Packages and to
+nuget.org (with [Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing): the repository
+variable `NUGET_USER` names the nuget.org account; without it nuget.org is skipped). A push that keeps the version on
+purpose says `[no-new-version]` in its commit message. Every pull request gets a `pr-<N>-…` pre-release, with the
+package versioned `X.Y.Z-pr.<N>.<run>`, replaced on each push and deleted when the pull request closes. Dependabot keeps
+the GitHub Actions current and Renovate the NuGet dependencies.
 
 ## License
 

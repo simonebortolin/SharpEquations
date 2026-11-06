@@ -1,4 +1,6 @@
 <Project>
+  <Import Project="BuildVersion.props" />
+
   <PropertyGroup Label="Build">
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -6,9 +8,10 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Package">
-    <VersionPrefix>1.0.0</VersionPrefix>
     <Authors>Simone Bortolin</Authors>
     <Copyright>Copyright (c) 2026 Simone Bortolin</Copyright>
+    <!-- a clean product version (1.0.0), without the "+<commit sha>" of SourceLink -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Description>Equations converted between MathML, OMML (Word), MTEF (MathType and Equation Editor 3.0, read only), UnicodeMath (Word's linear format) and LaTeX, with MathML as the common representation. No dependency but the .NET base library.</Description>
     <PackageTags>equation math mathml omml word mathtype mtef unicodemath latex tex converter</PackageTags>
     <RepositoryUrl>https://github.com/simonebortolin/SharpEquations</RepositoryUrl>
