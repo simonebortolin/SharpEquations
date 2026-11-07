@@ -12,7 +12,7 @@ namespace SharpEquations.Tests
 
     public class UnicodeMathCorpusTests
     {
-        internal sealed class Example
+        public sealed class Example
         {
             public string input { get; set; }
             public bool display { get; set; }
@@ -23,6 +23,13 @@ namespace SharpEquations.Tests
         {
             var path = TestData.Path("unicodemath", "unicodemathml-examples.json");
             return JsonSerializer.Deserialize<List<Example>>(File.ReadAllText(path));
+        }
+
+        public static IEnumerable<Func<Example>> UnicodeMathExamples()
+        {
+            var invalid = new HashSet<string> { "a+{(1]/4⟩ 📌+1 Jⁱ⁼⁵ |_a", "|_〖|_a〗^b", "𝐸=𝑚𝑐^2#(1)\n𝐸=𝑚𝑐^2\n𝐸=𝑚𝑐^2#(3)" };
+            return Examples().Where(e => !e.input.StartsWith("$") && !e.input.StartsWith("\\[") &&
+                !e.input.StartsWith("\\(") && !invalid.Contains(e.input)).Select(e => (Func<Example>)(() => e));
         }
 
         private static object Parse(string unicodemath)
@@ -40,46 +47,40 @@ namespace SharpEquations.Tests
         }
 
         [Test]
-        public async Task NestedBracketsParseInLinearTime()
+        [Arguments("(", ")")]
+        [Arguments("|", "|")]
+        [Arguments("〖", "〗")]
+        [Arguments("⏟(", ")_(a)")]
+        public async Task NestedBracketsParseInLinearTime(string open, string close)
         {
-            foreach (var (open, close) in new[] { ("(", ")"), ("|", "|"), ("〖", "〗"), ("⏟(", ")_(a)") })
-            {
-                var input = string.Concat(Enumerable.Repeat(open + "x_1^2 + ", 12)) + "y" + string.Concat(Enumerable.Repeat(close, 12));
-                using (var cts = new System.Threading.CancellationTokenSource(5000))
-                    await Assert.That(UnicodeMathGrammar.TryParse(UnicodeMathInput.MapToPrivate(input), cts.Token, out _)).IsTrue().Because(input);
-            }
+            var input = string.Concat(Enumerable.Repeat(open + "x_1^2 + ", 12)) + "y" + string.Concat(Enumerable.Repeat(close, 12));
+            using (var cts = new System.Threading.CancellationTokenSource(5000))
+                await Assert.That(UnicodeMathGrammar.TryParse(UnicodeMathInput.MapToPrivate(input), cts.Token, out _)).IsTrue().Because(input);
         }
 
         [Test]
-        public async Task CorpusConvertsToMathML()
+        [MethodDataSource(nameof(UnicodeMathExamples))]
+        public async Task CorpusConvertsToMathML(Example e)
         {
             // macros apply in the equation that defines them, not in the next ones (\f+r, \h ab), the cached UnicodeMathML
             // output of "x = 0, y = 2" predates its current spacing, and UnicodeMathML strikes \cancel (╱, from bottom left to
             // top right) the other way (downdiagonalstrike)
             var different = new[] { "x = 0, y = 2", "\\f+r", "\\h ab",
                 "\\xcancel(a)\\rect(207&a+b)\\rect(a+b)\\cancel(f+g)\\bcancel(u+i)" };
-            var invalid = new[] { "a+{(1]/4⟩ 📌+1 Jⁱ⁼⁵ |_a", "|_〖|_a〗^b", "𝐸=𝑚𝑐^2#(1)\n𝐸=𝑚𝑐^2\n𝐸=𝑚𝑐^2#(3)" };
-            var failed = new List<string>();
-            foreach (var e in Examples().Where(e => !e.input.StartsWith("$") && !e.input.StartsWith("\\[") && !e.input.StartsWith("\\(") && !invalid.Contains(e.input)))
-            {
-                var math = UnicodeMathParser.Parse(e.input, e.display);
-                await Assert.That(math.Name.LocalName).IsEqualTo("math").Because(e.input);
-                var expected = System.Text.RegularExpressions.Regex.Replace(e.mathml, " xmlns=\"[^\"]*\"", "").Replace("'", "\"");
-                if (UnicodeMathTranslator.ToMathML(e.input, e.display).Replace("'", "\"") != expected)
-                    failed.Add(e.input);
-            }
-            await Assert.That(failed).IsEquivalentTo(different);
+            var math = UnicodeMathParser.Parse(e.input, e.display);
+            await Assert.That(math.Name.LocalName).IsEqualTo("math").Because(e.input);
+            var expected = System.Text.RegularExpressions.Regex.Replace(e.mathml, " xmlns=\"[^\"]*\"", "").Replace("'", "\"");
+            var actual = UnicodeMathTranslator.ToMathML(e.input, e.display).Replace("'", "\"");
+            if (!different.Contains(e.input))
+                await Assert.That(actual).IsEqualTo(expected).Because(e.input);
         }
 
         [Test]
-        public async Task CorpusConvertsToOmml()
+        [MethodDataSource(nameof(UnicodeMathExamples))]
+        public async Task CorpusConvertsToOmml(Example e)
         {
-            var invalid = new[] { "a+{(1]/4⟩ 📌+1 Jⁱ⁼⁵ |_a", "|_〖|_a〗^b", "𝐸=𝑚𝑐^2#(1)\n𝐸=𝑚𝑐^2\n𝐸=𝑚𝑐^2#(3)" };
-            foreach (var e in Examples().Where(e => !e.input.StartsWith("$") && !e.input.StartsWith("\\[") && !e.input.StartsWith("\\(") && !invalid.Contains(e.input)))
-            {
-                var omml = SharpEquations.Internal.Omml.OmmlSerializer.Serialize(UnicodeMathParser.Parse(e.input, e.display));
-                await Assert.That(omml).IsNotNull().Because(e.input);
-            }
+            var omml = SharpEquations.Internal.Omml.OmmlSerializer.Serialize(UnicodeMathParser.Parse(e.input, e.display));
+            await Assert.That(omml).IsNotNull().Because(e.input);
         }
 
         internal sealed class TestMml
