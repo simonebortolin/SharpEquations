@@ -1,0 +1,18 @@
+<math>
+  <mtable columnalign="left">
+    <mtr>
+      <mtd><mtext>My nice quadratic formula:</mtext></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mfrac>
+          <mrow>
+            <mo>−</mo><mi>b</mi><mo>±</mo>
+            <msqrt><mrow><msup><mi>b</mi><mn>2</mn></msup><mo>−</mo><mn>4</mn><mi>a</mi><mi>c</mi></mrow></msqrt>
+          </mrow>
+          <mrow><mn>2</mn><mi>a</mi></mrow>
+        </mfrac>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>

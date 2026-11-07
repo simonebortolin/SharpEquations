@@ -1,0 +1,32 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML">
+  <mi>x</mi>
+  <mo>=</mo>
+  <mrow>
+    <mo>(</mo>
+    <mtable columnalign="left">
+      <mtr columnalign="left">
+        <mtd columnalign="left">
+          <mi>a</mi>
+        </mtd>
+        <mtd columnalign="left">
+          <mi>b</mi>
+        </mtd>
+        <mtd columnalign="left">
+          <mi>c</mi>
+        </mtd>
+      </mtr>
+      <mtr columnalign="left">
+        <mtd columnalign="left">
+          <mi>d</mi>
+        </mtd>
+        <mtd columnalign="left">
+          <mi>e</mi>
+        </mtd>
+        <mtd columnalign="left">
+          <mi>f</mi>
+        </mtd>
+      </mtr>
+    </mtable>
+    <mo>)</mo>
+  </mrow>
+</math>

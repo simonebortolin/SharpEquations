@@ -30,6 +30,23 @@ which that project leaves unsupported.
 and the first bytes of an MTEF 3 or MTEF 5 header followed by text, and a stream that names MTEF in text. Copyright (c)
 2026 Document Equation Migration contributors, MIT License.
 
+`mtef/metaphor`: MathType OLE equation streams (`quadratic.eqn`, `fraction.eqn`, `matrices.eqn`) from the test resources
+of [danielrendall/Metaphor](https://github.com/danielrendall/Metaphor/tree/master/code/src/test/resources/ole)
+
+`mtef/metaforml`: the 23 Equation Native streams (`*.eqn`) extracted from the OLE files in `word2000/` (MathType 5.2
+and 6.7) and `word2010/` (MathType 6.7) of the test resources of [Sukii/Metaforml](https://github.com/Sukii/Metaforml).
+`expected-MathML/` contains one MathML reference for each stream. The Word 2010 references for objects 1–7 come from
+upstream; objects 8–9 were authored here. The 14 Word 2000 references were captured from SharpEquations' normalized
+output to complete the set. The upstream checkout contains no license file; its `CREDITS` names Daniel Rendall,
+Thilo Planz, and Javier Fernandez.
+
+`mtef/go`: two "Equation Native" streams extracted from MathType OLE objects supplied by the user and attributed to the
+Go project in the pasted source. `expected-MathML/` contains the corresponding MathML produced by SharpEquations.
+
+`mtef/mtef-rs`: the "Equation Native" stream extracted from the MathType OLE object with the duplicate filename,
+supplied by the user and attributed to [hiro93/mtef-rs](https://github.com/hiro93/mtef-rs).
+`expected-MathML/` contains the MathML produced by SharpEquations.
+
 `omml/` files with a descriptive name (`style-bold.omml`, `nary-no-limits.omml`, ...): written for SharpEquations,
 reduced by hand to the OMML constructs found in equations saved by Word and missing from the files above.
 
