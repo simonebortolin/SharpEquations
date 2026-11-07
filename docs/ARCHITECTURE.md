@@ -78,6 +78,32 @@ The XSLT stylesheets recurse over the tree, and a stack overflow ends the proces
 caught, so `EquationStylesheets` rejects input nested more than 512 levels deep (`MaxDepth`). The MTEF reader stops at
 256 nested record lists for the same reason.
 
+## The stylesheets compiled to C# (`src/SharpEquations.XsltGenerator/`, `Internal/Xslt/`)
+
+The three XSLT 1.0 stylesheets of `Resources/` (`omml2mml.xsl`, `mml2omml.xsl`, `mtef2mml.xsl`) are compiled to C# at
+build time by `SharpEquations.XsltGenerator`, a source generator that reads them as additional files. Nothing is
+generated at run time, unlike `XslCompiledTransform`, which emits IL: so the library runs under Native AOT, and the
+stylesheets are not embedded in it.
+
+- Each stylesheet becomes a class named after its file (`Omml2mmlStylesheet`), declared partial in
+  `Internal/Xslt/Stylesheets.cs`, with a method for each template, a lazy property for each global variable and, for
+  each mode, the dispatch of `xsl:apply-templates`: by the name of the element first, then the rules in the order of
+  XSLT (highest priority, then the last in the stylesheet), then the built-in templates.
+- Each XPath expression becomes a C# expression over `XPathFunctions` (the data model of XPath over LINQ to XML, its
+  functions and conversions). Its type is known when it can be (a string, a number, a boolean, a node-set, a result
+  tree fragment), and is `object` otherwise (a parameter).
+- `XsltOutput` builds the result as LINQ to XML, as `XslCompiledTransform` gave it when its output was written as text
+  and parsed again: text written with `disable-output-escaping` is markup, with the text next to it (`mtef2mml.xsl`
+  writes character references in pieces), and empty text leaves `<t></t>` rather than `<t />`.
+- Strings are counted, cut and translated by code points, as XPath defines them (`XslCompiledTransform` counted UTF-16
+  units).
+- What the stylesheets do not use (keys, `xsl:sort`, `xsl:number`, imports, extension functions, the `following` and
+  `preceding` axes) is an error of the build (XSLT001).
+
+`Xslt/CompiledStylesheetTests` checks that the compiled stylesheets give what `XslCompiledTransform` gives for the
+corpora: the OMML of Word documents and of the UnicodeMathML examples, their MathML, and the MTEF of the test data. It
+leaves out the inputs with characters outside the basic plane, where the two count differently.
+
 ## The normalized MathML (`Internal/MathML/MathMLParser.cs`)
 
 `Normalize` is what makes equality and round trips possible. The same mathematics read from different formats, or
@@ -140,15 +166,15 @@ also regroups an n-ary operation or a function application that normalization fl
 ### OMML (`Internal/Omml/`)
 
 OMML ↔ MathML uses the XSLT 1.0 stylesheets of the TEI Consortium (`Resources/omml2mml.xsl`, `Resources/mml2omml.xsl`,
-BSD-2-Clause), the descendants of the ones Microsoft ships with Office. `EquationStylesheets` compiles them once
-with `XslCompiledTransform`. C# code before and after each stylesheet fixes what the stylesheets get wrong or what
-Word writes differently.
+BSD-2-Clause), the descendants of the ones Microsoft ships with Office, compiled to C# at build time (see "The
+stylesheets compiled to C#" below). C# code before and after each stylesheet fixes what the stylesheets get wrong or
+what Word writes differently.
 
 **Reading (`OmmlParser`):**
 - `m:oMathPara` is a display equation, `m:oMath` an inline one.
 - `ST_OnOff` values are normalized, because the stylesheet only knows `on`/`off`.
-- Characters outside the basic plane go through the stylesheet as private use characters, because it splits text into
-  UTF-16 units.
+- Characters outside the basic plane go through the stylesheet as private use characters, because
+  `XslCompiledTransform`, which ran it before it was compiled to C#, split text into UTF-16 units.
 - Lines aligned with `m:aln` become a table marked as aligned lines.
 - Numbers split across runs are joined.
 - Word's equation numbers (`#(1)`) become `mlabeledtr`.
