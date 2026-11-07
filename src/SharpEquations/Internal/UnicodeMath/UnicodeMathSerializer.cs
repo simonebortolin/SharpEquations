@@ -4,6 +4,7 @@ namespace SharpEquations.Internal.UnicodeMath
     using System.Linq;
     using System.Text.RegularExpressions;
     using System.Xml.Linq;
+    using SharpEquations.Internal.Text;
     using static Js;
     using static UnicodeMathText;
 
@@ -11,7 +12,7 @@ namespace SharpEquations.Internal.UnicodeMath
     /// MathML to UnicodeMath: a port of dump() and getUnicodeMath() of UnicodeMathML (src/unicodemathml.js), on
     /// XElement where the JavaScript walks the DOM. Strings are indexed by code points.
     /// </summary>
-    internal sealed class UnicodeMathSerializer
+    internal sealed partial class UnicodeMathSerializer
     {
         private const string OverBrackets = "⎴⏜⏞⏠¯";
         private const string UnderBrackets = "⎵⏝⏟⏡";
@@ -311,14 +312,20 @@ namespace SharpEquations.Internal.UnicodeMath
 
         internal static int ChildCount(XElement e) => e?.Elements().Count() ?? 0;
 
-        internal static bool IsAsciiAlphabetic(string ch) => ch != null && Regex.IsMatch(ch, "[A-Za-z]");
+        internal static bool IsAsciiAlphabetic(string ch) => ch != null && AsciiPatterns.Letter().IsMatch(ch);
+
+        [GeneratedRegex("^[A-Za-z0-9]")]
+        private static partial Regex StartsWithAsciiAlphanumeric();
+
+        [GeneratedRegex("[a-z]+")]
+        private static partial Regex LowercaseWord();
 
         internal static bool IsAlphanumeric(string ch)
         {
             if (ch == null)
                 return false;
             int code = CodePointAt(ch, 0);
-            return Regex.IsMatch(ch, "^[A-Za-z0-9]") || code >= 0x3018 || InRange("Α", ch, "ϵ") || InRange("ℂ", ch, "ⅉ");
+            return StartsWithAsciiAlphanumeric().IsMatch(ch) || code >= 0x3018 || InRange("Α", ch, "ϵ") || InRange("ℂ", ch, "ⅉ");
         }
 
         internal static bool IsCloseDelimiter(string op) => op.Length > 0 && Len(op) == 1 && ")]}⟩〗⌉⌋❳⟧⟫⟭⟯⦄⦆⦈⦊⦌⦎⦐⦒⦔⦖⦘⧙⧛⧽".Contains(op);
@@ -633,12 +640,13 @@ namespace SharpEquations.Internal.UnicodeMath
             }
             var ret = Dump(First(node)) + (mask > 0 ? mask.ToString(System.Globalization.CultureInfo.InvariantCulture) : "");
             // digit limits as subscript and superscript digits (∑₀¹), as for any base
-            bool digits = low == null || Name(low) == "mn" && Text(low).All(c => c >= '0' && c <= '9');
+            bool digits = low == null || Name(low) == "mn" && AsciiPatterns.Digits().IsMatch(Text(low));
             foreach (var (script, mark) in new[] { (low, "_"), (high, "^") })
             {
                 if (script == null)
                     continue;
-                if (digits && Name(script) == "mn" && Text(script).All(c => c >= '0' && c <= '9') && GetSelectionCodes(script).Length == 0)
+
+                if (digits && Name(script) == "mn" && AsciiPatterns.Digits().IsMatch(Text(script)) && GetSelectionCodes(script).Length == 0)
                     ret += DigitScript(Text(script), mark == "_" ? DigitSubscripts : DigitSuperscripts);
                 else
                 {
@@ -831,7 +839,7 @@ namespace SharpEquations.Internal.UnicodeMath
                         if (ret.Length > 0)
                             break;
                         int mask = 0;
-                        foreach (Match attr in Regex.Matches(notation, "[a-z]+"))
+                        foreach (Match attr in LowercaseWord().Matches(notation))
                         {
                             foreach (var (bit, cls) in MaskClasses)
                             {
@@ -1058,6 +1066,7 @@ namespace SharpEquations.Internal.UnicodeMath
                             ret = "_" + ScriptText(children[prescripts + 1]);
                         if (prescripts + 2 < children.Count && Name(children[prescripts + 2]) != "none")
                             ret += "^" + (Attr(children[prescripts + 2], "intent") == "transpose" ? "⊺" : ScriptText(children[prescripts + 2]));
+
                         // the prescripts in parentheses after something they would be the scripts of; before a base with
                         // scripts of its own, which they would join, the base and they are grouped instead
                         if (ret.Length > 0 && IsScripted(Child(value, 0)))

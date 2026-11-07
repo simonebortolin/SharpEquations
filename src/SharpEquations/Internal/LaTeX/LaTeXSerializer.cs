@@ -14,7 +14,7 @@ namespace SharpEquations.Internal.LaTeX
     /// on XElement. Letters keep their math alphanumeric characters (𝑥), and constructs without a LaTeX command keep
     /// their UnicodeMath (¦, ✎(...)). Strings are indexed by code points.
     /// </summary>
-    internal sealed class LaTeXSerializer
+    internal sealed partial class LaTeXSerializer
     {
         private static readonly Dictionary<string, string> AccentsAbove = new Dictionary<string, string>
         {
@@ -73,7 +73,7 @@ namespace SharpEquations.Internal.LaTeX
             {
                 if (Len(str) == 0)
                     return "{}";
-                if (Len(str) == 1 || System.Text.RegularExpressions.Regex.IsMatch(str, @"^\\[A-Za-z]+ ?$") || IsGroup(str) || isBase && Ch(str, 0) == "\\" && IsUnit(str))
+                if (Len(str) == 1 || SingleCommand().IsMatch(str) || IsGroup(str) || isBase && Ch(str, 0) == "\\" && IsUnit(str))
                     return str;
                 return "{" + str + "}";
             }
@@ -128,6 +128,7 @@ namespace SharpEquations.Internal.LaTeX
                     i++;
                     continue;
                 }
+
                 if (IsOpenDelimiter(chars[i]))
                     depth++;
                 else if (UnicodeMathSerializer.IsCloseDelimiter(chars[i]) && --depth == 0)
@@ -150,6 +151,7 @@ namespace SharpEquations.Internal.LaTeX
                     i++;
                     continue;
                 }
+
                 if (chars[i] == "{")
                     depth++;
                 else if (chars[i] == "}" && --depth == 0 && i < chars.Count - 1)
@@ -208,6 +210,7 @@ namespace SharpEquations.Internal.LaTeX
                     intent = Attr(value, "intent");
                     if (intent == ":system-of-equations")
                         symbol = standard ? "aligned" : "align";
+
                     if (Text(First(parent)) == "{" && (ChildCount(parent) == 2 || EmptyFence(Text(Last(parent)))) && Child(parent, 1) == value)
                     {
                         ret = "\\begin{cases}" + Nary(value, "\\\\", cNode) + "\\end{cases}";
@@ -575,6 +578,7 @@ namespace SharpEquations.Internal.LaTeX
                         ret = StandardIdentifier(value);
                         break;
                     }
+
                     if (Len(Text(value)) == 1 && !value.HasElements)
                     {
                         var c = Text(value);
@@ -614,7 +618,7 @@ namespace SharpEquations.Internal.LaTeX
                         ret = "\\" + Text(value) + " ";
                         break;
                     }
-                    else if (Len(Text(value)) > 1 && Text(value).All(c => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'))
+                    else if (Len(Text(value)) > 1 && SharpEquations.Internal.Text.AsciiPatterns.Letters().IsMatch(Text(value)))
                     {
                         ret = "\\operatorname{" + Text(value) + "}";
                         break;
@@ -735,6 +739,12 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>A script in standard LaTeX, braced unless it is a single character, command or group.</summary>
         private string Script(string script) => standard ? CheckBracing(script) : script;
 
+        [System.Text.RegularExpressions.GeneratedRegex(@"^\\[A-Za-z]+ ?$")]
+        private static partial System.Text.RegularExpressions.Regex SingleCommand();
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"^0*(\.0*)?[a-z]*$")]
+        private static partial System.Text.RegularExpressions.Regex ZeroThickness();
+
         private static readonly string[] TallElements = { "mfrac", "mtable", "munderover", "msqrt", "mroot", "msubsup", "mover", "munder" };
 
         /// <summary>An mrow between fences around a fraction, a table or the like, which \\left and \\right make grow.</summary>
@@ -754,13 +764,15 @@ namespace SharpEquations.Internal.LaTeX
             var middle = value.Elements().Skip(1).Take(ChildCount(value) - 2).ToList();
             if (middle.Count == 1 && Name(middle[0]) == "mfrac" && IsZeroThickness(Attr(middle[0], "linethickness")))
                 return false;
-            // fences that do not pair (]a[, or one side only) are read back only with \left and \right
-            if (intent == ":fenced" && (open.Length > 0 || close.Length > 0) && !(IsOneOf(open, "([{⟨|‖⌈⌊") && IsOneOf(close, ")]}⟩|‖⌉⌋")))
+            if (IsUnpairedFence(value, intent))
                 return true;
-            bool fences = (open.Length == 0 || IsOneOf(open, "([{⟨|‖⌈⌊")) && (close.Length == 0 || IsOneOf(close, ")]}⟩|‖⌉⌋"));
+            bool fences = (open.Length == 0 || IsOneOf(open, OpeningFences)) && (close.Length == 0 || IsOneOf(close, ClosingFences));
             return fences && (open.Length > 0 || close.Length > 0) &&
-                value.Elements().Skip(1).Take(ChildCount(value) - 2).Any(e => e.DescendantsAndSelf().Any(d => TallElements.Contains(Name(d))));
+                middle.Any(e => e.DescendantsAndSelf().Any(d => TallElements.Contains(Name(d))));
         }
+
+        private const string OpeningFences = "([{⟨|‖⌈⌊";
+        private const string ClosingFences = ")]}⟩|‖⌉⌋";
 
         /// <summary>An mrow between fences that do not pair (]𝑎[, or one side only), read back only with \left and \right.</summary>
         private static bool IsUnpairedFence(XElement value, string intent)
@@ -772,7 +784,7 @@ namespace SharpEquations.Internal.LaTeX
             // a brace before a table is that of cases
             if (open == "{" && Name(Child(value, 1)) == "mtable")
                 return false;
-            return (open.Length > 0 || close.Length > 0) && !(IsOneOf(open, "([{⟨|‖⌈⌊") && IsOneOf(close, ")]}⟩|‖⌉⌋"));
+            return (open.Length > 0 || close.Length > 0) && !(IsOneOf(open, OpeningFences) && IsOneOf(close, ClosingFences));
         }
 
         /// <summary>The operators that build a structure in UnicodeMath (▭, √, ¦…), escaped when they are alone: \▭.</summary>
@@ -814,7 +826,7 @@ namespace SharpEquations.Internal.LaTeX
         }
 
         private static bool IsZeroThickness(string thickness) =>
-            thickness != null && System.Text.RegularExpressions.Regex.IsMatch(thickness.Trim(), @"^0*(\.0*)?[a-z]*$") && thickness.Trim().Length > 0;
+            thickness != null && ZeroThickness().IsMatch(thickness.Trim()) && thickness.Trim().Length > 0;
 
         /// <summary>Whether limits under or over the element are its subscript and superscript: an operator or a function name.</summary>
         private static bool TakesLimits(XElement element)

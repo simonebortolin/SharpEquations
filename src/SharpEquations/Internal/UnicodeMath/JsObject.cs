@@ -158,7 +158,7 @@ namespace SharpEquations.Internal.UnicodeMath
             foreach (var codePoint in CodePoints.Of(s))
             {
                 if (i-- == 0)
-                    return CodePoints.ToString(codePoint);
+                    return codePoint.ToString();
             }
             return null;
         }
@@ -174,7 +174,7 @@ namespace SharpEquations.Internal.UnicodeMath
             foreach (var codePoint in CodePoints.Of(s))
             {
                 if (i-- == 0)
-                    return CodePoints.Value(codePoint);
+                    return codePoint.Value;
             }
             return -1;
         }
@@ -187,7 +187,7 @@ namespace SharpEquations.Internal.UnicodeMath
             int to = Math.Max(0, Math.Min(end ?? codePoints.Count, codePoints.Count));
             if (from > to)
                 (from, to) = (to, from);
-            return string.Concat(codePoints.Skip(from).Take(to - from).Select(CodePoints.ToString));
+            return string.Concat(codePoints.Skip(from).Take(to - from).Select(c => c.ToString()));
         }
 
         /// <summary>value.length of an array or a string; null (undefined) for other values.</summary>

@@ -139,7 +139,7 @@ namespace SharpEquations.Internal.Omml
             var plain = new StringBuilder();
             foreach (var codePoint in CodePoints.Of(token.Value))
             {
-                if (!LaTeXSymbols.TryGetPlain(CodePoints.ToString(codePoint), out var style, out var ch))
+                if (!LaTeXSymbols.TryGetPlain(codePoint.ToString(), out var style, out var ch))
                     return;
                 styles.Add(style);
                 plain.Append(ch);
@@ -256,6 +256,7 @@ namespace SharpEquations.Internal.Omml
                 var text = FenceText(mo);
                 if (symmetric && text == open)
                     return;
+
                 if (IsOneOf(text, OpeningFences))
                     depth++;
                 else if (IsOneOf(text, ClosingFences) && --depth < 0)
@@ -306,12 +307,12 @@ namespace SharpEquations.Internal.Omml
         {
             var text = CodePoints.Of(cell.Value.Trim()).ToList();
             if (cell.Descendants().Count(e => !e.HasElements) == 1 && text.Count > 2 &&
-                CodePoints.Value(text[0]) == '(' && CodePoints.Value(text[text.Count - 1]) == ')')
+                text[0].Value == '(' && text[text.Count - 1].Value == ')')
             {
                 var inner = text.Skip(1).Take(text.Count - 2).ToList();
-                var token = inner.All(c => CodePoints.Value(c) >= '0' && CodePoints.Value(c) <= '9') ? "mn" : "mtext";
+                var token = inner.All(c => c.Value >= '0' && c.Value <= '9') ? "mn" : "mtext";
                 return new[] { new XElement(Mml + "mfenced", new XAttribute("open", "("), new XAttribute("close", ")"),
-                    new XElement(Mml + token, string.Concat(inner.Select(CodePoints.ToString)))) };
+                    new XElement(Mml + token, string.Concat(inner.Select(c => c.ToString())))) };
             }
             return cell.Nodes();
         }

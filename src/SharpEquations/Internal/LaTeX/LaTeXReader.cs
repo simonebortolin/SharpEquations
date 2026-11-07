@@ -12,7 +12,7 @@ namespace SharpEquations.Internal.LaTeX
     /// control words with UnicodeMath characters (\frac → ⍁, \begin → 〖, \alpha → α), the macro pass defines and
     /// applies \def and \newcommand macros, pass 2 rewrites the result as UnicodeMath. Text is a list of code points.
     /// </summary>
-    internal sealed class LaTeXReader
+    internal sealed partial class LaTeXReader
     {
         private static readonly Dictionary<string, string> Environments = new Dictionary<string, string>
         {
@@ -118,6 +118,15 @@ namespace SharpEquations.Internal.LaTeX
         }
 
         private static bool IsAsciiAlphabetic(string ch) => ch != null && ch.Length == 1 && (ch[0] >= 'A' && ch[0] <= 'Z' || ch[0] >= 'a' && ch[0] <= 'z');
+
+        /// <summary>The name of the control word at the index (the letters after a backslash), empty if none.</summary>
+        private static string ControlWord(Text tex, int at)
+        {
+            var end = at;
+            while (IsAsciiAlphabetic(tex[end]))
+                end++;
+            return tex.Sub(at, end);
+        }
 
         private static bool IsAccent(string ch) => InRange("̀", ch, "ͯ") || InRange("⃐", ch, "⃰");
 
@@ -254,8 +263,10 @@ namespace SharpEquations.Internal.LaTeX
             ["overset"] = "┴", ["stackrel"] = "┴",
         };
 
-        private static bool IsZeroLength(string length) =>
-            System.Text.RegularExpressions.Regex.IsMatch(length.Trim(), @"^0*(\.0*)?\s*[a-z]*$");
+        private static bool IsZeroLength(string length) => ZeroLength().IsMatch(length.Trim());
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"^0*(\.0*)?\s*[a-z]*$")]
+        private static partial System.Text.RegularExpressions.Regex ZeroLength();
 
         /// <summary>Whether an angle closes after the index: a bra alone, ⟨𝜓|, keeps its bar.</summary>
         private static bool AngleCloses(Text tex, int i)
@@ -307,10 +318,8 @@ namespace SharpEquations.Internal.LaTeX
                     i++;
                     continue;
                 }
-                int j = i + 1;
-                var cw = "";
-                for (; j < tex.Length && IsAsciiAlphabetic(tex[j]); j++)
-                    cw += tex[j];
+                var cw = ControlWord(tex, i + 1);
+                int j = i + 1 + cw.Length;
                 if (cw.Length == 0)
                 {
                     // \| is the double bar ‖, not an escaped bar
@@ -564,10 +573,8 @@ namespace SharpEquations.Internal.LaTeX
                 i++;
             if (i >= tex.Length || tex[i] != "\\")
                 return (null, -1);
-            int j = i + 1;
-            var cw = "";
-            for (; j < tex.Length && IsAsciiAlphabetic(tex[j]); j++)
-                cw += tex[j];
+            var cw = ControlWord(tex, i + 1);
+            int j = i + 1 + cw.Length;
             if (!ArgumentCommands.TryGetValue(cw, out var count))
                 return (null, -1);
             int next = j;
@@ -620,48 +627,42 @@ namespace SharpEquations.Internal.LaTeX
                 var ch = tex[i];
                 if (ch == "\\")
                 {
-                    var cw = "";
-                    int j = i + 1;
-                    for (; j < tex.Length && IsAsciiAlphabetic(tex[j]); j++)
-                        cw += tex[j];
-                    if (cw.Length == 0)
+                    var cw = ControlWord(tex, i + 1);
+                    // the brackets among the commands (\{, \}, \langle, \rangle) become the bracket they stand for; an
+                    // escaped character (\|) is skipped
+                    ch = cw switch
                     {
-                        // \{ and \} are brackets
-                        if (tex[i + 1] == "{")
-                            frames.Push(new List<int>());
-                        else if (tex[i + 1] == "}" && frames.Count > 1)
-                            Close(frames.Pop(), true);
-                        i++;
-                        continue;
-                    }
-                    if (cw == "langle")
-                        ch = "⟨";
-                    else if (cw == "rangle")
-                        ch = "⟩";
-                    else
+                        "" => tex[i + 1] == "{" ? "(" : tex[i + 1] == "}" ? ")" : null,
+                        "langle" => "⟨",
+                        "rangle" => "⟩",
+                        _ => "\\",
+                    };
+                    int j = i + 1 + Math.Max(1, cw.Length);
+                    if (ch == "\\")
                     {
-                        while (j < tex.Length && tex[j] == " ")
+                        while (tex[j] == " ")
                             j++;
                         // the bar after \left, \right... is skipped with the command
-                        i = DelimiterCommands.Contains(cw) && j < tex.Length && (tex[j] == "|" || tex[j] == "‖") ? j : j - 1;
+                        i = DelimiterCommands.Contains(cw) && (tex[j] == "|" || tex[j] == "‖") ? j : j - 1;
                         continue;
                     }
                     i = j - 1;
                 }
-                if (ch == "(" || ch == "[" || ch == "⟨")
+                switch (ch)
                 {
-                    frames.Push(new List<int>());
-                }
-                else if (ch == ")" || ch == "]" || ch == "⟩")
-                {
-                    if (frames.Count > 1)
+                    case "(" or "[" or "⟨":
+                        frames.Push(new List<int>());
+                        break;
+                    case ")" or "]" or "⟩" when frames.Count > 1:
                         Close(frames.Pop(), true);
-                    else if (ch == "⟩" && frames.Peek().Count > 0)
+                        break;
+                    case "⟩" when frames.Peek().Count > 0:
+                        // a ket (|𝑟⟩): its bar has no pair
                         frames.Peek().RemoveAt(frames.Peek().Count - 1);
-                }
-                else if (ch == "|" || ch == "‖")
-                {
-                    frames.Peek().Add(i);
+                        break;
+                    case "|" or "‖":
+                        frames.Peek().Add(i);
+                        break;
                 }
             }
             while (frames.Count > 0)
@@ -766,9 +767,8 @@ namespace SharpEquations.Internal.LaTeX
                             i++;
                             break;
                         }
-                        var cw = "";
-                        for (; i < tex.Length && IsAsciiAlphabetic(tex[i]); i++)
-                            cw += tex[i];
+                        var cw = ControlWord(tex, i);
+                        i += cw.Length;
                         if (cwPrev == "def")
                         {
                             cwPrev = "";
@@ -871,20 +871,26 @@ namespace SharpEquations.Internal.LaTeX
         /// The macros of UnicodeMath text applied: the definitions (ⓜ\name{...}, ⓜ{\name}[n]{...}, as \def and \newcommand
         /// read) removed, and their uses (\name and their arguments) replaced by their bodies.
         /// </summary>
+        [System.Text.RegularExpressions.GeneratedRegex("ⓜ\\{\\\\([A-Za-z]+)\\}")]
+        private static partial System.Text.RegularExpressions.Regex BracedMacroName();
+
+        [System.Text.RegularExpressions.GeneratedRegex("ⓜ\\\\([A-Za-z]+)")]
+        private static partial System.Text.RegularExpressions.Regex MacroName();
+
         internal static string ExpandMacros(string unicodemath)
         {
-            var text = System.Text.RegularExpressions.Regex.Replace(unicodemath, "ⓜ\\{\\\\([A-Za-z]+)\\}", "ⓜ\\$1");
+            var text = BracedMacroName().Replace(unicodemath, "ⓜ\\$1");
             // the uses of a macro, which control words not known are written as text ("\\f") until then
-            foreach (System.Text.RegularExpressions.Match name in System.Text.RegularExpressions.Regex.Matches(text, "ⓜ\\\\([A-Za-z]+)"))
+            foreach (System.Text.RegularExpressions.Match name in MacroName().Matches(text))
                 text = text.Replace("\"\\" + name.Groups[1].Value + " \"", "\\" + name.Groups[1].Value + " ").Replace("\"\\" + name.Groups[1].Value + "\"", "\\" + name.Groups[1].Value);
             return ApplyMacros(text, new Dictionary<string, string>(StringComparer.Ordinal), true, true);
         }
 
-        private static readonly System.Text.RegularExpressions.Regex MacroDefinition =
-            new System.Text.RegularExpressions.Regex("\u24DC", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
         /// <summary>Whether UnicodeMath text defines macros.</summary>
-        internal static bool HasMacros(string unicodemath) => MacroDefinition.IsMatch(unicodemath);
+        internal static bool HasMacros(string unicodemath) => SharpEquations.Internal.Text.CodePoints.Contains(unicodemath, MacroMark);
+
+        // \u24DC, which starts the definition of a macro
+        private static readonly Rune MacroMark = new Rune(0x24DC);
 
         private static string ApplyMacros(string text, IDictionary<string, string> macros, bool needMacroPass, bool accentsAfter = false)
         {
@@ -1349,6 +1355,7 @@ namespace SharpEquations.Internal.LaTeX
                             (j, _) = FindClosingBrace(tex, i + 1, "$");
                             if (j == -1)
                                 break;
+
                             if (tex[j] == "$")
                             {
                                 (k, _) = FindClosingBrace(tex, j + 1, "$");

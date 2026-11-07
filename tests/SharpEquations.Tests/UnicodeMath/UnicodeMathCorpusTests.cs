@@ -221,9 +221,11 @@ namespace SharpEquations.Tests
                 Console.WriteLine(LaTeXSerializer.Serialize(UnicodeMathSerializer.ParseMathML(t.mathml), true));
         }
 
-        // UnicodeMath to MathML to UnicodeMath gives UnicodeMath with the same MathML
+        // writes the corpus examples whose UnicodeMath, written back from their MathML, does not give the same MathML before
+        // normalization (∕ for /, the grouping of scripts...) to the file named by UMML_RT_DUMP; the round trip of the
+        // normalized equations is a test of RoundTripPropertyTests
         [Test, Explicit]
-        public void CorpusRoundTripsThroughUnicodeMath()
+        public void DumpUnicodeMathRoundTrip()
         {
             var invalid = new[] { "a+{(1]/4⟩ 📌+1 Jⁱ⁼⁵ |_a", "|_〖|_a〗^b", "𝐸=𝑚𝑐^2#(1)\n𝐸=𝑚𝑐^2\n𝐸=𝑚𝑐^2#(3)" };
             var lines = new List<string>();

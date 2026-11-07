@@ -10,6 +10,9 @@ namespace SharpEquations.Internal.UnicodeMath
 
     internal sealed partial class UnicodeMathTranslator
     {
+        [GeneratedRegex("[^A-Za-z0-9_]")]
+        private static partial Regex NotIdentifierCharacter();
+
         private const string OverBrackets = "⎴⏜⏞⏠¯";
         private const string StretchyOperators = "←→↔⇐⇒⇔↩↪↼⇀↽⇁⊢⊣⟵⟶⟷⟸⟹⟺↦⊨";
 
@@ -33,7 +36,7 @@ namespace SharpEquations.Internal.UnicodeMath
 
         private static string DoublestruckChar(string value) => DoubleStruckUsTech.TryGetValue(value, out var ch) ? ch : null;
 
-        private static bool IsAsciiAlphabetic(string ch) => ch != null && ch.Any(c => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z');
+        private static bool IsAsciiAlphabetic(string ch) => UnicodeMathSerializer.IsAsciiAlphabetic(ch);
 
         private static bool IsGreek(string ch) => InRange("Α", ch, "ϵ");
 
@@ -60,6 +63,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 attrs["selfocus"] = Get(value, "selfocus");
             if (Truthy(Get(value, "arg")))
                 attrs["arg"] = Get(value, "arg");
+
             if (Truthy(Get(value, "intent")))
                 attrs["intent"] = Get(value, "intent");
             else if (Truthy(deflt) && EmitDefaultIntents)
@@ -254,7 +258,7 @@ namespace SharpEquations.Internal.UnicodeMath
             var eqnumber = Get(value, "eqnumber") as string;
             if (eqnumber == null)
                 return O("math", WithAttrs(attrs, Transform(dsty, Get(value, "content"))));
-            var id = Regex.Replace(eqnumber, "[^A-Za-z0-9_]", "-");
+            var id = NotIdentifierCharacter().Replace(eqnumber, "-");
             var row = A(O("mtd", NoAttr(O("mtext", NoAttr(eqnumber)))), O("mtd", NoAttr(Transform(dsty, Get(value, "content")))));
             var table = O("mtable", WithAttrs(O("displaystyle", true), O("mlabeledtr", WithAttrs(O("id", id), row))));
             return O("math", WithAttrs(attrs, table));
@@ -467,6 +471,7 @@ namespace SharpEquations.Internal.UnicodeMath
             var attrs = O("class", string.Join(" ", options));
             if (Truthy(Get(value, "intent")))
                 attrs["intent"] = Get(value, "intent");
+
             if (options.Contains("nSizeText"))
                 attrs["scriptlevel"] = 0;
             else if (options.Contains("nSizeScript"))
@@ -988,6 +993,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 value["open"] = value["close"];
                 value["close"] = open;
             }
+
             if (value["open"] is string openString)
             {
                 ret.Add(O("mo", NoAttr(openString)));

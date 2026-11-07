@@ -31,7 +31,7 @@ namespace SharpEquations.Internal.LaTeX
             var macros = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var macro in latexMacros)
             {
-                if (string.IsNullOrEmpty(macro.Key) || !macro.Key.All(c => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'))
+                if (macro.Key == null || !SharpEquations.Internal.Text.AsciiPatterns.Letters().IsMatch(macro.Key))
                     throw new ArgumentException("A LaTeX macro name is made of ASCII letters: " + macro.Key + ".", nameof(latexMacros));
                 LaTeXReader.ToUnicodeMath("\\def\\" + macro.Key + "{" + macro.Value + "}", macros);
             }

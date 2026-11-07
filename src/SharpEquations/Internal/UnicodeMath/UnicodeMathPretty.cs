@@ -75,6 +75,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 case "mrow":
                     if (value is List<object> single && single.Count == 1 && !Truthy(attributes["arg"]))
                         return Pretty(O("mrow", O(("attributes", attributes), ("content", single[0]))));
+
                     if (value is List<object> children && (!Truthy(attributes["intent"]) || !Eq(attributes["intent"], ":fenced")))
                     {
                         var first = At(children, 0);
@@ -86,6 +87,7 @@ namespace SharpEquations.Internal.UnicodeMath
                             if (first is List<object>)
                                 first = At(first, 0);
                         }
+
                         if (Truthy(Get(first, "munder")) && Eq(Get(Get(Get(first, "munder"), "attributes"), "intent"), ":function"))
                         {
                             attributes["intent"] = ":function";

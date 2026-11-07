@@ -391,6 +391,7 @@ namespace SharpEquations.Internal.UnicodeMath
                     primes = Get(Get(val, "primed"), "primes");
                     val = Get(Get(val, "primed"), "base");
                 }
+
                 if (Truthy(Get(val, "atoms")))
                 {
                     val = Get(val, "atoms");

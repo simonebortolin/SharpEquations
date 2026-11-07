@@ -126,17 +126,10 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\mathrm{x_1}", @"x_1", @"𝑥₁")]
         [Arguments(@"\mathbf{\alpha}", @"\mathbf{\alpha}", @"𝛂")]
         [Arguments(@"\tag*{A}", @"\tag{A}", @"#A")]
+        [Arguments(@"{\color{blue} a \{ b} + c", @"a\{b+c", @"𝑎\{𝑏+𝑐")]
         public async Task ReadsLessCommonCommands(string latex, string expectedLaTeX, string expectedUnicodeMath)
         {
             await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);
-        }
-
-        // valid LaTeX that is not read yet: the reader of Word's LaTeX, which goes through UnicodeMath, has no form for this
-        [Test]
-        [Arguments(@"{\color{blue} a \{ b} + c", Skip = "an escaped brace without its pair in the group of \\color")]
-        public async Task ReadsLaTeXNotSupportedYet(string latex)
-        {
-            await Assert.That(() => Equation.Parse(latex, EquationFormat.LaTeX)).ThrowsNothing();
         }
 
         // a slash and a bar are ordinary characters of LaTeX, which UnicodeMath reads as a fraction and an absolute value
