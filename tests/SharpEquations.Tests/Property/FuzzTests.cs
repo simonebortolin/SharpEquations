@@ -11,14 +11,14 @@ namespace SharpEquations.Tests.Property
 
     /// <summary>
     /// LaTeX and UnicodeMath that no one wrote: the corpus and the tests mutated at random (code points deleted, swapped
-    /// or repeated, the tokens of the format and pieces of other equations inserted) are read in a bounded time to an
-    /// equation or a FormatException, never another exception or a loop, and what is read is written in every format and
-    /// read back from its UnicodeMath and its OMML. The seeds are fixed, so a failure repeats: the message holds the input.
+    /// or repeated, the tokens of the format and pieces of other equations inserted) are read with a bounded work of the
+    /// grammar (<see cref="ParserWork"/>) to an equation or a FormatException, never another exception, and what is read
+    /// is written in every format and read back from its UnicodeMath and its OMML. The seeds are fixed, so a failure
+    /// repeats: the message holds the input.
     /// </summary>
     public class FuzzTests
     {
         private const int Cases = 1000;
-        private static readonly TimeSpan Limit = TimeSpan.FromSeconds(10);
 
         private static readonly string[] LaTeXTokens =
         {
@@ -116,11 +116,12 @@ namespace SharpEquations.Tests.Property
             var failures = new List<string>();
             foreach (var source in sources.Distinct())
             {
-                var task = Task.Run(() => Check(source, format));
-                if (!task.Wait(Limit))
-                    failures.Add(Quote(source) + "\n  does not end");
-                else if (task.Result != null)
-                    failures.Add(Quote(source) + "\n  " + task.Result);
+                string? result = null;
+                var work = ParserWork.Of(() => result = Check(source, format));
+                if (result != null)
+                    failures.Add(Quote(source) + "\n  " + result);
+                else if (work > ParserWork.Budget(source))
+                    failures.Add(Quote(source) + "\n  takes " + work + " steps of the grammar, more than " + ParserWork.Budget(source));
             }
             return failures;
         }
@@ -205,14 +206,25 @@ namespace SharpEquations.Tests.Property
         /// <summary>
         /// The UnicodeMath grammar backtracks without memoization: these nestings, which an alternative would parse
         /// again at each level (the operand of a fraction, an unclosed bracket, a bracket with a diacritic), are parsed
-        /// once, in a time that does not grow exponentially with their depth.
+        /// once, so twice the depth takes at most about four times the work (quadratic, where exponential would take
+        /// thousands of times more).
         /// </summary>
+        private static async Task AssertWorkIsPolynomial(string open, string close, EquationFormat format)
+        {
+            long Work(int depth) => ParserWork.Of(() => Check(Nest(open, close, depth), format));
+            long half = Work(15), full = Work(30);
+            // the grammar counts its work (UnicodeMathGrammarWork.Step in the entity rule): without it, nothing is measured
+            await Assert.That(half).IsGreaterThan(0);
+            await Assert.That(full).IsLessThanOrEqualTo(5 * half).Because($"{half} steps at depth 15, {full} at depth 30");
+            await Assert.That(Failures(new[] { Nest(open, close, 30) }, format)).IsEmpty();
+        }
+
         [Test]
         [Arguments("1/(", ")")]
         [Arguments("(", "")]
         public async Task ReadsDeeplyNestedUnicodeMathInLinearTime(string open, string close)
         {
-            await Assert.That(Failures(new[] { Nest(open, close, 30) }, EquationFormat.UnicodeMath)).IsEmpty();
+            await AssertWorkIsPolynomial(open, close, EquationFormat.UnicodeMath);
         }
 
         [Test]
@@ -221,7 +233,7 @@ namespace SharpEquations.Tests.Property
         [Arguments("{", "")]
         public async Task ReadsDeeplyNestedLaTeXInLinearTime(string open, string close)
         {
-            await Assert.That(Failures(new[] { Nest(open, close, 30) }, EquationFormat.LaTeX)).IsEmpty();
+            await AssertWorkIsPolynomial(open, close, EquationFormat.LaTeX);
         }
 
         /// <summary>The MathML of a nesting deeper than OMML holds is refused, not a stack overflow.</summary>

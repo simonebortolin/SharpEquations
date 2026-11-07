@@ -53,9 +53,14 @@ namespace SharpEquations.Tests
         [Arguments("⏟(", ")_(a)")]
         public async Task NestedBracketsParseInLinearTime(string open, string close)
         {
-            var input = string.Concat(Enumerable.Repeat(open + "x_1^2 + ", 12)) + "y" + string.Concat(Enumerable.Repeat(close, 12));
-            using (var cts = new System.Threading.CancellationTokenSource(5000))
-                await Assert.That(UnicodeMathGrammar.TryParse(UnicodeMathInput.MapToPrivate(input), cts.Token, out _)).IsTrue().Because(input);
+            // the work of the grammar, not the time, which depends on the machine: twice the depth, twice the work
+            string Input(int depth) => string.Concat(Enumerable.Repeat(open + "x_1^2 + ", depth)) + "y" + string.Concat(Enumerable.Repeat(close, depth));
+            bool parsed = true;
+            long Work(int depth) => SharpEquations.Tests.Property.ParserWork.Of(() => parsed &= UnicodeMathGrammar.TryParse(UnicodeMathInput.MapToPrivate(Input(depth)), out _));
+            long half = Work(12), full = Work(24);
+            await Assert.That(parsed).IsTrue().Because(Input(24));
+            await Assert.That(half).IsGreaterThan(0);
+            await Assert.That(full).IsLessThanOrEqualTo(3 * half).Because($"{half} steps at depth 12, {full} at depth 24");
         }
 
         [Test]

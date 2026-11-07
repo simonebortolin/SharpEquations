@@ -365,4 +365,21 @@ namespace SharpEquations.Internal.UnicodeMath
             return false;
         }
     }
+
+    /// <summary>
+    /// The entities the grammar tried on this thread: a measure of the work of its parses that is the same on every
+    /// machine, which the tests bound (an alternative that parses again what another one parsed makes it exponential).
+    /// </summary>
+    internal static class UnicodeMathGrammarWork
+    {
+        [System.ThreadStatic]
+        public static long Steps;
+
+        /// <summary>Counts an entity tried, and goes on.</summary>
+        public static bool Step()
+        {
+            Steps++;
+            return true;
+        }
+    }
 }
