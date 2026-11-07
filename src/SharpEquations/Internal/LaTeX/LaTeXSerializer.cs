@@ -754,13 +754,15 @@ namespace SharpEquations.Internal.LaTeX
             var middle = value.Elements().Skip(1).Take(ChildCount(value) - 2).ToList();
             if (middle.Count == 1 && Name(middle[0]) == "mfrac" && IsZeroThickness(Attr(middle[0], "linethickness")))
                 return false;
-            // fences that do not pair (]a[, or one side only) are read back only with \left and \right
-            if (intent == ":fenced" && (open.Length > 0 || close.Length > 0) && !(IsOneOf(open, "([{⟨|‖⌈⌊") && IsOneOf(close, ")]}⟩|‖⌉⌋")))
+            if (IsUnpairedFence(value, intent))
                 return true;
-            bool fences = (open.Length == 0 || IsOneOf(open, "([{⟨|‖⌈⌊")) && (close.Length == 0 || IsOneOf(close, ")]}⟩|‖⌉⌋"));
+            bool fences = (open.Length == 0 || IsOneOf(open, OpeningFences)) && (close.Length == 0 || IsOneOf(close, ClosingFences));
             return fences && (open.Length > 0 || close.Length > 0) &&
-                value.Elements().Skip(1).Take(ChildCount(value) - 2).Any(e => e.DescendantsAndSelf().Any(d => TallElements.Contains(Name(d))));
+                middle.Any(e => e.DescendantsAndSelf().Any(d => TallElements.Contains(Name(d))));
         }
+
+        private const string OpeningFences = "([{⟨|‖⌈⌊";
+        private const string ClosingFences = ")]}⟩|‖⌉⌋";
 
         /// <summary>An mrow between fences that do not pair (]𝑎[, or one side only), read back only with \left and \right.</summary>
         private static bool IsUnpairedFence(XElement value, string intent)
@@ -772,7 +774,7 @@ namespace SharpEquations.Internal.LaTeX
             // a brace before a table is that of cases
             if (open == "{" && Name(Child(value, 1)) == "mtable")
                 return false;
-            return (open.Length > 0 || close.Length > 0) && !(IsOneOf(open, "([{⟨|‖⌈⌊") && IsOneOf(close, ")]}⟩|‖⌉⌋"));
+            return (open.Length > 0 || close.Length > 0) && !(IsOneOf(open, OpeningFences) && IsOneOf(close, ClosingFences));
         }
 
         /// <summary>The operators that build a structure in UnicodeMath (▭, √, ¦…), escaped when they are alone: \▭.</summary>
