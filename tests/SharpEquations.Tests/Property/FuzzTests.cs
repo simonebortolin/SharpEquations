@@ -182,6 +182,15 @@ namespace SharpEquations.Tests.Property
             await Assert.That(Failures(new[] { Nest(open, close, 100) }, EquationFormat.UnicodeMath)).IsEmpty();
         }
 
+        [Test]
+        [Arguments("a^{bc}^d", EquationFormat.UnicodeMath)]
+        [Arguments(@"\newcommand{\h}[{\h}]{x}\h", EquationFormat.LaTeX)]
+        [Arguments("〖", EquationFormat.UnicodeMath)]
+        public async Task ReadsPreviouslyCrashingInputs(string source, EquationFormat format)
+        {
+            await Assert.That(Failures(new[] { source }, format)).IsEmpty();
+        }
+
         /// <summary>Known failure: the mutations of these seeds hold a \begin not followed by {, which throws ArgumentOutOfRangeException.</summary>
         [Test]
         [Skip("Known failure: \\begin not followed by { throws ArgumentOutOfRangeException")]
