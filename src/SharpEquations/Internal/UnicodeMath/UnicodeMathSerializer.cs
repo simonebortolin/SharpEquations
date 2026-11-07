@@ -638,6 +638,7 @@ namespace SharpEquations.Internal.UnicodeMath
             {
                 if (script == null)
                     continue;
+
                 if (digits && Name(script) == "mn" && Text(script).All(c => c >= '0' && c <= '9') && GetSelectionCodes(script).Length == 0)
                     ret += DigitScript(Text(script), mark == "_" ? DigitSubscripts : DigitSuperscripts);
                 else
@@ -1058,6 +1059,7 @@ namespace SharpEquations.Internal.UnicodeMath
                             ret = "_" + ScriptText(children[prescripts + 1]);
                         if (prescripts + 2 < children.Count && Name(children[prescripts + 2]) != "none")
                             ret += "^" + (Attr(children[prescripts + 2], "intent") == "transpose" ? "⊺" : ScriptText(children[prescripts + 2]));
+
                         // the prescripts in parentheses after something they would be the scripts of; before a base with
                         // scripts of its own, which they would join, the base and they are grouped instead
                         if (ret.Length > 0 && IsScripted(Child(value, 0)))

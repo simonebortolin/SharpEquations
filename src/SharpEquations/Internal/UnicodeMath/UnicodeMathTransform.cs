@@ -60,6 +60,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 attrs["selfocus"] = Get(value, "selfocus");
             if (Truthy(Get(value, "arg")))
                 attrs["arg"] = Get(value, "arg");
+
             if (Truthy(Get(value, "intent")))
                 attrs["intent"] = Get(value, "intent");
             else if (Truthy(deflt) && EmitDefaultIntents)
@@ -467,6 +468,7 @@ namespace SharpEquations.Internal.UnicodeMath
             var attrs = O("class", string.Join(" ", options));
             if (Truthy(Get(value, "intent")))
                 attrs["intent"] = Get(value, "intent");
+
             if (options.Contains("nSizeText"))
                 attrs["scriptlevel"] = 0;
             else if (options.Contains("nSizeScript"))
@@ -988,6 +990,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 value["open"] = value["close"];
                 value["close"] = open;
             }
+
             if (value["open"] is string openString)
             {
                 ret.Add(O("mo", NoAttr(openString)));

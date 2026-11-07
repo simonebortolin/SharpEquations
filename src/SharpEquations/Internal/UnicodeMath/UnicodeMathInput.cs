@@ -32,35 +32,25 @@ namespace SharpEquations.Internal.UnicodeMath
             for (int i = 0; i < chars.Count; i++)
             {
                 var ch = chars[i];
-                if (ch == "\\")
+                switch (ch)
                 {
-                    i++;
-                    continue;
-                }
-                if (ch == "\"")
-                {
-                    for (i++; i < chars.Count && chars[i] != "\""; i++)
-                    {
-                        if (chars[i] == "\\")
-                            i++;
-                    }
-                    continue;
-                }
-                if (ch == "(" || ch == "[" || ch == "{" || ch == "⟨" || ch == "〖")
-                {
-                    frames.Push((ch, new List<int>()));
-                }
-                else if (ch == ")" || ch == "]" || ch == "}" || ch == "⟩" || ch == "〗")
-                {
-                    if (frames.Count == 0)
-                        continue;
-                    var (open, bars) = frames.Pop();
-                    if (open == "{" && ch == "}" && bars.Count == 1)
-                        separators.Add(bars[0]);
-                }
-                else if (ch == "|" && frames.Count > 0)
-                {
-                    frames.Peek().Bars.Add(i);
+                    case "\\":
+                        i++;
+                        break;
+                    case "\"":
+                        i = ClosingQuote(chars, i);
+                        break;
+                    case "(" or "[" or "{" or "⟨" or "〖":
+                        frames.Push((ch, new List<int>()));
+                        break;
+                    case ")" or "]" or "}" or "⟩" or "〗" when frames.Count > 0:
+                        var (open, bars) = frames.Pop();
+                        if (open == "{" && ch == "}" && bars.Count == 1)
+                            separators.Add(bars[0]);
+                        break;
+                    case "|" when frames.Count > 0:
+                        frames.Peek().Bars.Add(i);
+                        break;
                 }
             }
             if (separators.Count == 0)
@@ -82,43 +72,34 @@ namespace SharpEquations.Internal.UnicodeMath
             for (int i = 0; i < chars.Count; i++)
             {
                 var ch = chars[i];
-                if (ch == "\\" || ch == "├" || ch == "┤")
+                switch (ch)
                 {
-                    i++;
-                    continue;
-                }
-                if (ch == "\"")
-                {
-                    for (i++; i < chars.Count && chars[i] != "\""; i++)
-                    {
-                        if (chars[i] == "\\")
-                            i++;
-                    }
-                    continue;
-                }
-                // the fractions that the reader of LaTeX writes, ⍁𝑎&𝑏〗, end as a group does
-                if (ch == "〖" || ch == "⍁" || ch == "⒝")
-                {
-                    opens.Push(("〖", i));
-                }
-                else if (OpeningBrackets.Contains(ch))
-                {
-                    opens.Push((ch, i));
-                }
-                else if (ch == "〗")
-                {
-                    // the brackets left open in the group would close with it: they are characters too
-                    while (opens.Count > 0 && opens.Peek().Open != "〖")
-                        escaped.Add(opens.Pop().At);
-                    if (opens.Count > 0)
-                        opens.Pop();
-                }
-                else if (ClosingBrackets.Contains(ch))
-                {
-                    if (opens.Count > 0 && opens.Peek().Open != "〖")
-                        opens.Pop();
-                    else
-                        escaped.Add(i);
+                    case "\\" or "├" or "┤":
+                        i++;
+                        break;
+                    case "\"":
+                        i = ClosingQuote(chars, i);
+                        break;
+                    // the fractions that the reader of LaTeX writes, ⍁𝑎&𝑏〗, end as a group does
+                    case "〖" or "⍁" or "⒝":
+                        opens.Push(("〖", i));
+                        break;
+                    case "〗":
+                        // the brackets left open in the group would close with it: they are characters too
+                        while (opens.Count > 0 && opens.Peek().Open != "〖")
+                            escaped.Add(opens.Pop().At);
+                        if (opens.Count > 0)
+                            opens.Pop();
+                        break;
+                    case var _ when OpeningBrackets.Contains(ch):
+                        opens.Push((ch, i));
+                        break;
+                    case var _ when ClosingBrackets.Contains(ch):
+                        if (opens.Count > 0 && opens.Peek().Open != "〖")
+                            opens.Pop();
+                        else
+                            escaped.Add(i);
+                        break;
                 }
             }
             if (escaped.Count == 0)
@@ -128,7 +109,19 @@ namespace SharpEquations.Internal.UnicodeMath
             return string.Concat(chars);
         }
 
-        private static readonly HashSet<string> OpeningBrackets = new HashSet<string>(Characters("([{⟨⌈⌊❲⟦⟪⟬⟮⦃⦅⦇⦉⦋⦍⦏⦑⦓⦕⦗⧘⧚⧼"));
+        /// <summary>The index of the quote that closes the quoted text opening at the index (the end if none).</summary>
+        private static int ClosingQuote(List<string> chars, int open)
+        {
+            var i = open + 1;
+            for (; i < chars.Count && chars[i] != "\""; i++)
+            {
+                if (chars[i] == "\\")
+                    i++;
+            }
+            return i;
+        }
+
+        private static readonly HashSet<string> OpeningBrackets =new HashSet<string>(Characters("([{⟨⌈⌊❲⟦⟪⟬⟮⦃⦅⦇⦉⦋⦍⦏⦑⦓⦕⦗⧘⧚⧼"));
 
         private static readonly HashSet<string> ClosingBrackets = new HashSet<string>(Characters(")]}⟩⌉⌋❳⟧⟫⟭⟯⦄⦆⦈⦊⦌⦎⦐⦒⦔⦖⦘⧙⧛⧽"));
 

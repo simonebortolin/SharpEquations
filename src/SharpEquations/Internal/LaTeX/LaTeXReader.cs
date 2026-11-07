@@ -648,22 +648,17 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 switch (ch)
                 {
-                    case "(":
-                    case "[":
-                    case "⟨":
+                    case "(" or "[" or "⟨":
                         frames.Push(new List<int>());
                         break;
-                    case ")" when frames.Count > 1:
-                    case "]" when frames.Count > 1:
-                    case "⟩" when frames.Count > 1:
+                    case ")" or "]" or "⟩" when frames.Count > 1:
                         Close(frames.Pop(), true);
                         break;
                     case "⟩" when frames.Peek().Count > 0:
                         // a ket (|𝑟⟩): its bar has no pair
                         frames.Peek().RemoveAt(frames.Peek().Count - 1);
                         break;
-                    case "|":
-                    case "‖":
+                    case "|" or "‖":
                         frames.Peek().Add(i);
                         break;
                 }
@@ -1352,6 +1347,7 @@ namespace SharpEquations.Internal.LaTeX
                             (j, _) = FindClosingBrace(tex, i + 1, "$");
                             if (j == -1)
                                 break;
+
                             if (tex[j] == "$")
                             {
                                 (k, _) = FindClosingBrace(tex, j + 1, "$");

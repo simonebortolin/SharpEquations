@@ -256,6 +256,7 @@ namespace SharpEquations.Internal.Omml
                 var text = FenceText(mo);
                 if (symmetric && text == open)
                     return;
+
                 if (IsOneOf(text, OpeningFences))
                     depth++;
                 else if (IsOneOf(text, ClosingFences) && --depth < 0)

@@ -128,6 +128,7 @@ namespace SharpEquations.Internal.LaTeX
                     i++;
                     continue;
                 }
+
                 if (IsOpenDelimiter(chars[i]))
                     depth++;
                 else if (UnicodeMathSerializer.IsCloseDelimiter(chars[i]) && --depth == 0)
@@ -150,6 +151,7 @@ namespace SharpEquations.Internal.LaTeX
                     i++;
                     continue;
                 }
+
                 if (chars[i] == "{")
                     depth++;
                 else if (chars[i] == "}" && --depth == 0 && i < chars.Count - 1)
@@ -208,6 +210,7 @@ namespace SharpEquations.Internal.LaTeX
                     intent = Attr(value, "intent");
                     if (intent == ":system-of-equations")
                         symbol = standard ? "aligned" : "align";
+
                     if (Text(First(parent)) == "{" && (ChildCount(parent) == 2 || EmptyFence(Text(Last(parent)))) && Child(parent, 1) == value)
                     {
                         ret = "\\begin{cases}" + Nary(value, "\\\\", cNode) + "\\end{cases}";
@@ -575,6 +578,7 @@ namespace SharpEquations.Internal.LaTeX
                         ret = StandardIdentifier(value);
                         break;
                     }
+
                     if (Len(Text(value)) == 1 && !value.HasElements)
                     {
                         var c = Text(value);

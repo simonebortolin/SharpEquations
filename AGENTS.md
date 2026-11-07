@@ -22,6 +22,12 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 - Nullable reference types as the surrounding code uses them
 - Text is handled as Unicode code points, never as UTF-16 `char`s: use `CodePoint` (`Internal/Text/CodePoints.cs`:
   `System.Text.Rune` on .NET, its `int` value on .NET Standard 2.0, which lacks `Rune`) and the helpers of `CodePoints`
+- `switch` (statements and expressions) and pattern matching (`case "(" or "[":`, `>= 0x1D434 and <= 0x1D44D =>`,
+  `case var _ when Set.Contains(ch):`) rather than chains of `else if` on one value
+- An `if` is never followed directly by an unrelated `if`/`else if` chain, which reads as if the chain continued it:
+  either it belongs to the chain (`else if`, or a case of the `switch`), or a blank line separates them
+- The code ported line by line (the translator of UnicodeMath, `LaTeXReader` from TeX2UnicodeMath) keeps the structure
+  of the original, so that it can be compared with it: only blank lines are added there
 - The public API (`Public/`) does not change without a reason that is the user's to give
 
 ## Architecture

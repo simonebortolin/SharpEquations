@@ -330,16 +330,15 @@ namespace SharpEquations.Internal.MathML
             foreach (var codePoint in CodePoints.Of(text))
             {
                 int c = CodePoints.Value(codePoint);
-                if (c >= 0x1D434 && c <= 0x1D44D)
-                    c = 'A' + c - 0x1D434;
-                else if (c >= 0x1D44E && c <= 0x1D467)
-                    c = 'a' + c - 0x1D44E;
-                else if (c == 0x210E)
-                    c = 'h';
-                else if (c >= 0x1D6E2 && c <= 0x1D6FA)
-                    c = 0x391 + c - 0x1D6E2;
-                else if (c >= 0x1D6FC && c <= 0x1D714)
-                    c = 0x3B1 + c - 0x1D6FC;
+                c = c switch
+                {
+                    >= 0x1D434 and <= 0x1D44D => 'A' + c - 0x1D434,
+                    >= 0x1D44E and <= 0x1D467 => 'a' + c - 0x1D44E,
+                    0x210E => 'h',
+                    >= 0x1D6E2 and <= 0x1D6FA => 0x391 + c - 0x1D6E2,
+                    >= 0x1D6FC and <= 0x1D714 => 0x3B1 + c - 0x1D6FC,
+                    _ => c,
+                };
                 plain.Append(char.ConvertFromUtf32(c));
             }
             return plain.ToString();

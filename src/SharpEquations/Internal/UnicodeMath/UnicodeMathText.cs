@@ -70,6 +70,7 @@ namespace SharpEquations.Internal.UnicodeMath
         {
             if (code == 0x210E)
                 return "h";
+
             if (code >= 0x1D434 && code <= 0x1D467)
             {
                 code += 0x0041 - 0x1D434;
@@ -252,6 +253,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 n = Array.IndexOf(SetsGr, mathStyle);
                 if (n == -1)
                     return ch;
+
                 if (OffsetsGr.TryGetValue(ch, out int code0) && code0 != 0)
                 {
                     code = code0;
@@ -270,6 +272,7 @@ namespace SharpEquations.Internal.UnicodeMath
             n = Array.IndexOf(SetsAr, mathStyle);
             if (n == -1)
                 return ch;
+
             if (code <= 0x64A)
             {
                 code = Abjad[code - 0x0627];

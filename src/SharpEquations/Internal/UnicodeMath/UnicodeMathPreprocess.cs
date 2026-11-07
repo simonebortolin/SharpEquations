@@ -345,6 +345,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 value = Sub(op, 1, 1 + 1);
                 intent = ":text";
             }
+
             if (Eq(value, "<"))
             {
                 value = "&lt;";
@@ -613,6 +614,7 @@ namespace SharpEquations.Internal.UnicodeMath
                             ret["base"] = basE;
                         }
                     }
+
                     if (Truthy(Get(basE, "intend")) && Eq(Get(Get(basE, "intend"), "op"), "Ⓐ"))
                     {
                         val = Get(Get(Get(basE, "intend"), "intent"), "text");
@@ -626,6 +628,7 @@ namespace SharpEquations.Internal.UnicodeMath
                         var primes = O("operator", ProcessPrimes(Get(Get(basE, "primed"), "primes")));
                         if (value.Has("low"))
                             ret["low"] = Preprocess(dsty, value["low"]);
+
                         if (value.Has("high"))
                             ret["high"] = A(primes, Preprocess(dsty, value["high"]));
                         else
@@ -825,6 +828,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 var x = At(ofList, 0);
                 if (x is List<object>)
                     x = At(x, 0);
+
                 if (Truthy(x) && Truthy(Get(x, "atoms")))
                 {
                     var ch = Get(At(Get(x, "atoms"), 0), "chars") as string;
