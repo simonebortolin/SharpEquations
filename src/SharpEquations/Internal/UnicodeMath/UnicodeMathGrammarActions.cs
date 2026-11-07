@@ -172,11 +172,15 @@ namespace SharpEquations.Internal.UnicodeMath
         }
 
         /// <summary>["fraction", op, [operand, op]..., operand] of a fraction after its first operand.</summary>
-        public static List<object> FractionTail(object op, IReadOnlyList<(object, object)> pairs, object last)
+        public static List<object> FractionTail(object op, object operand, IReadOnlyList<(object, object)> steps)
         {
             var items = new List<object> { "fraction", op };
-            items.AddRange(pairs.Select(p => (object)A(p.Item1, p.Item2)));
-            items.Add(last);
+            foreach (var (nextOp, next) in steps)
+            {
+                items.Add(A(operand, nextOp));
+                operand = next;
+            }
+            items.Add(operand);
             return items;
         }
 
@@ -222,9 +226,18 @@ namespace SharpEquations.Internal.UnicodeMath
             return O("separated", O(("separator", separated[0]), ("of", of)));
         }
 
-        /// <summary>A bracket opened by "(": (exp|exp) as ["|", exp], or contents and close as ["contents", tail, close].</summary>
-        public static JsObject ParenBracket(object first, List<object> rest)
+        /// <summary>
+        /// A bracket opened by "(": (exp|exp) as ["|", exp], contents and close as ["contents", tail, close], or (exp)
+        /// with diacritics as ["diacriticized", diacritics, atoms], the atoms that start with it.
+        /// </summary>
+        public static object ParenBracket(object first, List<object> rest)
         {
+            if ((string)rest[0] == "diacriticized")
+            {
+                var atoms = new List<object> { O("diacriticized", O(("base", first), ("diacritics", rest[1]))) };
+                atoms.AddRange((List<object>)rest[2]);
+                return new DiacriticizedParen(Atoms(atoms));
+            }
             if ((string)rest[0] == "|")
                 return O("bracketed", O(("open", "("), ("close", ")"), ("content", O("separated", O(("separator", "│"), ("of", A(first, rest[1])))))));
             return O("bracketed", O(("open", "("), ("close", rest[2]), ("content", BracketContents(first, (List<object>)rest[1]))));
@@ -306,6 +319,50 @@ namespace SharpEquations.Internal.UnicodeMath
                 return text;
             }
             return (string)name;
+        }
+    }
+
+    /// <summary>
+    /// The atoms that start with (exp) and its diacritics: what diacriticbase would read after the bracket that the
+    /// diacritics make the entity refuse, read once with the bracket.
+    /// </summary>
+    internal sealed class DiacriticizedParen
+    {
+        public DiacriticizedParen(object atoms) => Atoms = atoms;
+
+        public object Atoms { get; }
+    }
+
+    /// <summary>
+    /// The offsets of the input at which the brackets with contents failed, the memoization the generated parser
+    /// lacks: per thread, for the input being parsed (the same string instance, as the result at an offset depends only
+    /// on the input).
+    /// </summary>
+    internal static class BracketFailures
+    {
+        [System.ThreadStatic]
+        private static string input;
+
+        [System.ThreadStatic]
+        private static HashSet<int> offsets;
+
+        private static HashSet<int> Of(string buffer)
+        {
+            if (!ReferenceEquals(buffer, input) || offsets == null)
+            {
+                input = buffer;
+                offsets = new HashSet<int>();
+            }
+            return offsets;
+        }
+
+        public static bool Untried(string buffer, int offset) => !Of(buffer).Contains(offset);
+
+        /// <summary>Remembers the failure at the offset, and fails.</summary>
+        public static bool Fail(string buffer, int offset)
+        {
+            Of(buffer).Add(offset);
+            return false;
         }
     }
 }

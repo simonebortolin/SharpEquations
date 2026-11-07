@@ -134,6 +134,8 @@ namespace SharpEquations.Tests.Property
         [Test]
         [Arguments(1)]
         [Arguments(2)]
+        [Arguments(3)]
+        [Arguments(4)]
         public async Task ReadsMutatedLaTeX(int seed)
         {
             var corpus = UnicodeMathCorpusTests.Examples().Select(e => e.input).Where(IsLaTeX);
@@ -191,18 +193,8 @@ namespace SharpEquations.Tests.Property
             await Assert.That(Failures(new[] { source }, format)).IsEmpty();
         }
 
-        /// <summary>Known failure: the mutations of these seeds hold a \begin not followed by {, which throws ArgumentOutOfRangeException.</summary>
+        /// <summary>A \begin not followed by { leaves an unclosed bracket, an empty operand that UnicodeMath writes as 〖〗.</summary>
         [Test]
-        [Skip("Known failure: \\begin not followed by { throws ArgumentOutOfRangeException")]
-        [Arguments(3)]
-        [Arguments(4)]
-        public async Task ReadsMutatedLaTeXWithBeginWithoutBrace(int seed)
-        {
-            await ReadsMutatedLaTeX(seed);
-        }
-
-        [Test]
-        [Skip("Known failure: \\begin not followed by { throws ArgumentOutOfRangeException")]
         [Arguments(@"\begin\not{eqution\label{eq1}a\end{equation}")]
         [Arguments(@"\[(𝑎+𝑏)^𝑛=∑_{𝑘=0}^𝑛\binom\begin{matrix}{𝑛}{𝑘}𝑎a^2+b^2}^𝑘𝑏^{𝑛−𝑘}\]")]
         public async Task ReadsBeginWithoutBrace(string latex)
@@ -211,12 +203,11 @@ namespace SharpEquations.Tests.Property
         }
 
         /// <summary>
-        /// Known failure: the UnicodeMath grammar backtracks without memoization, so these nestings take a time that
-        /// grows exponentially with their depth (twice per level for fractions, three times for unclosed brackets): thirty
-        /// levels do not end in the time limit. Explicit, as each case takes the whole limit.
+        /// The UnicodeMath grammar backtracks without memoization: these nestings, which an alternative would parse
+        /// again at each level (the operand of a fraction, an unclosed bracket, a bracket with a diacritic), are parsed
+        /// once, in a time that does not grow exponentially with their depth.
         /// </summary>
         [Test]
-        [Explicit]
         [Arguments("1/(", ")")]
         [Arguments("(", "")]
         public async Task ReadsDeeplyNestedUnicodeMathInLinearTime(string open, string close)
@@ -225,7 +216,6 @@ namespace SharpEquations.Tests.Property
         }
 
         [Test]
-        [Explicit]
         [Arguments(@"\hat{", "}")]
         [Arguments(@"\frac{1}{", "}")]
         [Arguments("{", "")]

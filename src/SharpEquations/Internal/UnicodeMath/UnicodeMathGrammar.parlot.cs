@@ -229,7 +229,10 @@ namespace SharpEquations.Internal.UnicodeMath
             // fractions
             // operand !(__? (opFraction !rawOperator / opAtop / opChoose)) / fraction / atop, with the first operand
             // parsed once; atop is (operand __? ¦ __?)+ operand / operand __? ⒞ __? operand / operand (opFraction / opChoose)
-            var fractionTail = Opt(_).SkipAnd(opFraction).And(ZeroOrMany(operand.AndSkip(Opt(_)).And(opFraction))).And(operand)
+            // (opFraction operand)+ with each operand parsed once, not again after the opFraction it lacks; a fraction
+            // operator with no operand after it fails the tail, as (operand opFraction)* operand fails it
+            var fractionStep = Opt(_).SkipAnd(opFraction);
+            var fractionTail = fractionStep.And(operand).And(ZeroOrMany(fractionStep.And(operand))).AndSkip(Not(fractionStep))
                 .Then(t => (object)FractionTail(t.Item1, t.Item2, t.Item3));
             var atopTail = Opt(__).SkipAnd(opAtop).SkipAnd(Opt(__))
                 .SkipAnd(ZeroOrMany(operand.AndSkip(Opt(__)).AndSkip(opAtop).AndSkip(Opt(__)))).And(operand)
@@ -561,9 +564,18 @@ namespace SharpEquations.Internal.UnicodeMath
             // (exp|exp) / ( contents close, with the first exp parsed once
             var parenPipeTail = L("|").SkipAnd(exp).AndSkip(L(")")).Then(e => (object)A("|", e));
             var parenContentsTail = expBracketContentsTail.And(expBracketClose).Then(t => (object)A("contents", t.Item1, t.Item2));
-            var parenBracket = L("(").SkipAnd(exp).And(OneOf(parenPipeTail, parenContentsTail))
-                .Then(t => (object)ParenBracket(t.Item1, (List<object>)t.Item2));
-            var expBracket = OneOf(
+            // (exp) with diacritics, which the entity refuses as a bracket, is the diacriticbase of atoms: read here, not
+            // again by diacriticbase
+            var parenDiacriticTail = L(")").SkipAnd(Opt(L(" "))).SkipAnd(OneOrMany(diacritic)).And(ZeroOrMany(atom))
+                .Then(t => (object)A("diacriticized", t.Item1.ToList(), t.Item2.ToList()));
+            var parenBracket = L("(").SkipAnd(exp).And(OneOf(parenDiacriticTail, parenPipeTail, parenContentsTail))
+                .Then(t => ParenBracket(t.Item1, (List<object>)t.Item2));
+            // the brackets with contents that fail at an offset are remembered, as PEG gives a rule at an offset the same
+            // result: an unclosed bracket would otherwise parse its contents for nothing, then again as the operand that
+            // follows its opening bracket read as an operator, twice or three times per level of nesting
+            var bracketUntried = Always<object>(null).When((context, x) => BracketFailures.Untried(context.Scanner.Buffer, context.Scanner.Cursor.Offset));
+            var bracketFailed = Always<object>(null).When((context, x) => BracketFailures.Fail(context.Scanner.Buffer, context.Scanner.Cursor.Offset));
+            var expBracketWithContents = OneOf(
                 OneOf(L("||"), L("‖")).SkipAnd(exp).AndSkip(OneOf(L("||"), L("‖")))
                     .Then(e => (object)O("bracketed", O(("open", "‖"), ("close", "‖"), ("content", e)))),
                 L("|").SkipAnd(exp).And(OneOf(L("|"), Not(L(")")).SkipAnd(expBracketClose)))
@@ -580,7 +592,10 @@ namespace SharpEquations.Internal.UnicodeMath
                 L("Ⓒ(").SkipAnd(arows).AndSkip(L(")"))
                     .Then(r => (object)O("bracketed", O(("open", "{"), ("close", ""), ("intent", ":piecewise"), ("content", O("array", r))))),
                 L("Ⓒ〖").SkipAnd(arows).AndSkip(L("〗"))
-                    .Then(r => (object)O("bracketed", O(("open", "{"), ("close", ""), ("intent", ":piecewise"), ("content", O("array", r))))),
+                    .Then(r => (object)O("bracketed", O(("open", "{"), ("close", ""), ("intent", ":piecewise"), ("content", O("array", r))))));
+            var expBracket = OneOf(
+                bracketUntried.SkipAnd(expBracketWithContents),
+                bracketFailed,
                 expBracketOpen.Then(op => (object)ColoredOperator(op)));
             var absoluteValue = OneOf(
                 opAbs.AndSkip(L("(")).And(exp).AndSkip(L(")"))
@@ -593,7 +608,9 @@ namespace SharpEquations.Internal.UnicodeMath
                 L("ⓐ(").SkipAnd(OneOrMany(alphaAscii)).AndSkip(Opt(__)).And(exp).AndSkip(L(")"))
                     .Then(t => (object)O("intend", O(("op", "ⓐ"), ("intent", O("text", Join(t.Item1.ToList()))), ("content", t.Item2)))));
             entity.Parser = OneOf(
-                expBracket.AndSkip(Not(OneOf(L("\u00A0"), diacritic))),
+                expBracket.And(OneOf(Not(OneOf(L("\u00A0"), diacritic)).Then(x => (object)true), Always<object>(false)))
+                    .When((context, t) => (bool)t.Item2 || t.Item1 is DiacriticizedParen)
+                    .Then(t => t.Item1 is DiacriticizedParen d ? d.Atoms : t.Item1),
                 absoluteValue,
                 atoms,
                 arg,
