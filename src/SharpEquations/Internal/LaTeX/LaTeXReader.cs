@@ -890,7 +890,7 @@ namespace SharpEquations.Internal.LaTeX
         internal static bool HasMacros(string unicodemath) => SharpEquations.Internal.Text.CodePoints.Contains(unicodemath, MacroMark);
 
         // \u24DC, which starts the definition of a macro
-        private static readonly CodePoint MacroMark = SharpEquations.Internal.Text.CodePoints.From(0x24DC);
+        private static readonly Rune MacroMark = new Rune(0x24DC);
 
         private static string ApplyMacros(string text, IDictionary<string, string> macros, bool needMacroPass, bool accentsAfter = false)
         {

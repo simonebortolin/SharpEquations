@@ -86,8 +86,8 @@ namespace SharpEquations.Internal.Omml
 
             // omml2mml splits the text of runs character by character, which breaks surrogate pairs (math
             // alphanumerics such as 𝑥, emoji): they go through the stylesheet as private use characters
-            var placeholders = new Dictionary<CodePoint, CodePoint>();
-            var used = new HashSet<CodePoint>(equations.SelectMany(e => e.Descendants(M + "t")).SelectMany(t => CodePoints.Of(t.Value)));
+            var placeholders = new Dictionary<Rune, Rune>();
+            var used = new HashSet<Rune>(equations.SelectMany(e => e.Descendants(M + "t")).SelectMany(t => CodePoints.Of(t.Value)));
             var converted = equations.Select(e => SingleRow(EquationStylesheets.Transform("omml2mml.xsl", HideAstral(PrepareOmml(e), placeholders, used)))).ToList();
             if (placeholders.Count > 0)
             {
@@ -243,35 +243,35 @@ namespace SharpEquations.Internal.Omml
 
         private static bool IsXmlSpace(char c) => c == ' ' || c == '\t' || c == '\n' || c == '\r';
 
-        private static XElement HideAstral(XElement oMath, Dictionary<CodePoint, CodePoint> placeholders, HashSet<CodePoint> used)
+        private static XElement HideAstral(XElement oMath, Dictionary<Rune, Rune> placeholders, HashSet<Rune> used)
         {
-            foreach (var text in oMath.Descendants(M + "t").Where(t => CodePoints.Of(t.Value).Any(c => !CodePoints.IsBmp(c))))
+            foreach (var text in oMath.Descendants(M + "t").Where(t => CodePoints.Of(t.Value).Any(c => !c.IsBmp)))
             {
                 var sb = new StringBuilder();
                 foreach (var codePoint in CodePoints.Of(text.Value))
                 {
                     var hidden = codePoint;
-                    if (!CodePoints.IsBmp(codePoint) && !placeholders.TryGetValue(codePoint, out hidden))
+                    if (!codePoint.IsBmp && !placeholders.TryGetValue(codePoint, out hidden))
                     {
                         int value = 0xE000 + placeholders.Count;
-                        while (used.Contains(CodePoints.From(value)))
+                        while (used.Contains(new Rune(value)))
                             value++;
-                        hidden = CodePoints.From(value);
+                        hidden = new Rune(value);
                         used.Add(hidden);
                         placeholders[codePoint] = hidden;
                     }
-                    sb.Append(CodePoints.ToString(hidden));
+                    sb.Append(hidden.ToString());
                 }
                 text.Value = sb.ToString();
             }
             return oMath;
         }
 
-        private static string RestoreAstral(string value, Dictionary<CodePoint, CodePoint> astral)
+        private static string RestoreAstral(string value, Dictionary<Rune, Rune> astral)
         {
             var sb = new StringBuilder();
             foreach (var codePoint in CodePoints.Of(value))
-                sb.Append(CodePoints.ToString(astral.TryGetValue(codePoint, out var original) ? original : codePoint));
+                sb.Append((astral.TryGetValue(codePoint, out var original) ? original : codePoint).ToString());
             return sb.ToString();
         }
 

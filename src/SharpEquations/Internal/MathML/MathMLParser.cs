@@ -199,7 +199,7 @@ namespace SharpEquations.Internal.MathML
             if (variant == null)
             {
                 if (token.Name == Mml + "mi" && CodePoints.IsSingle(text, out _) && LaTeX.LaTeXSymbols.TryGetPlain(text, out var italic, out var plain)
-                    && italic == "mit" && CodePoints.IsSingle(plain, out var letter) && IsItalicByDefault(CodePoints.Value(letter)))
+                    && italic == "mit" && CodePoints.IsSingle(plain, out var letter) && IsItalicByDefault(letter.Value))
                     token.Value = plain;
                 return;
             }
@@ -211,7 +211,7 @@ namespace SharpEquations.Internal.MathML
                 // upright, or italic alone: the plain letters, whatever characters a writer used
                 var plainText = new System.Text.StringBuilder();
                 foreach (var codePoint in CodePoints.Of(text))
-                    plainText.Append(LaTeX.LaTeXSymbols.TryGetPlain(CodePoints.ToString(codePoint), out _, out var ch) ? ch : CodePoints.ToString(codePoint));
+                    plainText.Append(LaTeX.LaTeXSymbols.TryGetPlain(codePoint.ToString(), out _, out var ch) ? ch : codePoint.ToString());
                 token.Value = plainText.ToString();
                 if (style == "mit")
                     token.Attribute("mathvariant")!.Remove();
@@ -220,7 +220,7 @@ namespace SharpEquations.Internal.MathML
             var styled = new System.Text.StringBuilder();
             foreach (var codePoint in CodePoints.Of(text))
             {
-                var ch = CodePoints.ToString(codePoint);
+                var ch = codePoint.ToString();
                 var mapped = UnicodeMathText.GetMathAlphanumeric(ch, style);
                 if (mapped == ch && !(LaTeX.LaTeXSymbols.TryGetPlain(ch, out var existing, out _) && existing == style))
                     return;
@@ -282,7 +282,7 @@ namespace SharpEquations.Internal.MathML
         {
             if (script == null || script.Name != Mml + "mo" || script.HasElements || !CodePoints.IsSingle(script.Value, out var single))
                 return false;
-            int c = CodePoints.Value(single);
+            int c = single.Value;
             return c >= 0x300 && c <= 0x36F || c >= 0x20D0 && c <= 0x20FF || c <= 0xFFFF && "^ˇ˘˙¨´`~¯‾˜ˆ←→↔⃗⏞⏟⏜⏝⎴⎵_".Contains(script.Value);
         }
 
@@ -303,7 +303,7 @@ namespace SharpEquations.Internal.MathML
                 operatorElement = operatorElement.Elements().FirstOrDefault();
             if (operatorElement == null || operatorElement.Name != Mml + "mo" || !CodePoints.IsSingle(operatorElement.Value, out var single))
                 return false;
-            int c = CodePoints.Value(single);
+            int c = single.Value;
             return c >= 0x220F && c <= 0x2211 || c >= 0x222B && c <= 0x2233 || c >= 0x22C0 && c <= 0x22C3 || c >= 0x2A00 && c <= 0x2A1C;
         }
 
@@ -311,7 +311,7 @@ namespace SharpEquations.Internal.MathML
         {
             if (!CodePoints.IsSingle(text, out var single))
                 return false;
-            int c = CodePoints.Value(single);
+            int c = single.Value;
             return c >= 0x2190 && c <= 0x21FF || c >= 0x27F0 && c <= 0x27FF || c >= 0x2900 && c <= 0x297F || c >= 0x23DC && c <= 0x23E1
                 || c <= 0xFFFF && "¯‾_^~ˇ˘˙̲⎴⎵‖|()[]{}⟨⟩⌈⌉⌊⌋".Contains(text);
         }
@@ -329,7 +329,7 @@ namespace SharpEquations.Internal.MathML
             var plain = new System.Text.StringBuilder();
             foreach (var codePoint in CodePoints.Of(text))
             {
-                int c = CodePoints.Value(codePoint);
+                int c = codePoint.Value;
                 c = c switch
                 {
                     >= 0x1D434 and <= 0x1D44D => 'A' + c - 0x1D434,
@@ -353,7 +353,7 @@ namespace SharpEquations.Internal.MathML
             var open = (string?)fenced.Attribute("open") ?? "(";
             var close = (string?)fenced.Attribute("close") ?? ")";
             var separators = string.Concat(((string?)fenced.Attribute("separators") ?? ",").Where(c => !char.IsWhiteSpace(c)));
-            var separatorList = CodePoints.Of(separators).Select(CodePoints.ToString).ToList();
+            var separatorList = CodePoints.Of(separators).Select(c => c.ToString()).ToList();
             var children = fenced.Elements().ToList();
             var content = new List<XElement>();
             for (int i = 0; i < children.Count; i++)

@@ -1,80 +1,41 @@
-// A Unicode scalar value: System.Text.Rune on .NET Core 3.0 and later, its int value on .NET Framework and
-// .NET Standard, which do not have Rune
-#if NETCOREAPP3_0_OR_GREATER
-global using CodePoint = System.Text.Rune;
-#else
-global using CodePoint = System.Int32;
-#endif
-
 namespace SharpEquations.Internal.Text
 {
     using System.Collections.Generic;
+    using System.Text;
 
     /// <summary>
-    /// Text as Unicode scalar values (<c>CodePoint</c>), never as UTF-16 units: a character outside the basic plane
-    /// (𝑥, 𝔸, emoji) is one value. A lone surrogate reads as U+FFFD.
+    /// Text as Unicode scalar values (<see cref="Rune"/>, which <c>Rune.cs</c> provides on .NET Standard 2.0), never as
+    /// UTF-16 units: a character outside the basic plane (𝑥, 𝔸, emoji) is one value. A lone surrogate reads as U+FFFD.
     /// </summary>
     internal static class CodePoints
     {
-        public static IEnumerable<CodePoint> Of(string s)
+        public static IEnumerable<Rune> Of(string s)
         {
-#if NETCOREAPP3_0_OR_GREATER
             foreach (var rune in s.EnumerateRunes())
                 yield return rune;
-#else
-            for (int i = 0; i < s.Length; i++)
+        }
+
+        /// <summary>Whether the text holds the rune.</summary>
+        public static bool Contains(string s, Rune rune)
+        {
+            foreach (var r in s.EnumerateRunes())
             {
-                if (char.IsHighSurrogate(s[i]) && i + 1 < s.Length && char.IsLowSurrogate(s[i + 1]))
-                    yield return char.ConvertToUtf32(s[i], s[++i]);
-                else
-                    yield return char.IsSurrogate(s[i]) ? 0xFFFD : s[i];
-            }
-#endif
-        }
-
-        public static CodePoint From(int value)
-        {
-#if NETCOREAPP3_0_OR_GREATER
-            return new CodePoint(value);
-#else
-            return value;
-#endif
-        }
-
-        public static int Value(CodePoint codePoint)
-        {
-#if NETCOREAPP3_0_OR_GREATER
-            return codePoint.Value;
-#else
-            return codePoint;
-#endif
-        }
-
-        public static bool IsBmp(CodePoint codePoint) => Value(codePoint) <= 0xFFFF;
-
-        public static string ToString(CodePoint codePoint) => char.ConvertFromUtf32(Value(codePoint));
-
-        /// <summary>Whether the text holds the code point.</summary>
-        public static bool Contains(string s, CodePoint codePoint)
-        {
-            foreach (var c in Of(s))
-            {
-                if (c == codePoint)
+                if (r == rune)
                     return true;
             }
             return false;
         }
 
-        /// <summary>The text as a single code point, if it is one.</summary>
-        public static bool IsSingle(string s, out CodePoint codePoint)
+        /// <summary>The text as a single rune, if it is one.</summary>
+        public static bool IsSingle(string s, out Rune rune)
         {
-            codePoint = default;
+            rune = default;
             int count = 0;
-            foreach (var c in Of(s))
+            foreach (var r in s.EnumerateRunes())
             {
                 if (++count > 1)
                     return false;
-                codePoint = c;
+                rune = r;
             }
             return count == 1;
         }

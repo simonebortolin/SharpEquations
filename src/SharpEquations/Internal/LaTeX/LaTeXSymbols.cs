@@ -112,7 +112,7 @@ namespace SharpEquations.Internal.LaTeX
         {
             var sb = new StringBuilder();
             foreach (var codePoint in CodePoints.Of(text))
-                sb.Append(Character(CodePoints.ToString(codePoint)));
+                sb.Append(Character(codePoint.ToString()));
             return sb.ToString();
         }
 

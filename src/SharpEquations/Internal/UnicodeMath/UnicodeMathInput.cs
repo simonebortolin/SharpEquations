@@ -248,7 +248,7 @@ namespace SharpEquations.Internal.UnicodeMath
         /// </summary>
         public static string MapToPrivate(string s)
         {
-            var cps = CodePoints.Of(s).Select(CodePoints.Value).ToList();
+            var cps = CodePoints.Of(s).Select(c => c.Value).ToList();
             var u = new List<int>();
             for (int i = 0; i < cps.Count; i++)
             {
@@ -280,7 +280,7 @@ namespace SharpEquations.Internal.UnicodeMath
                             if (k - i >= 1)
                             {
                                 u.RemoveRange(u.Count - (i - j), i - j);
-                                u.AddRange(CodePoints.Of(" " + numerator + "⊘" + denominator + " ").Select(CodePoints.Value));
+                                u.AddRange(CodePoints.Of(" " + numerator + "⊘" + denominator + " ").Select(c => c.Value));
                                 i = k - 1;
                                 continue;
                             }

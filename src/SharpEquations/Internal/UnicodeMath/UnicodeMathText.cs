@@ -40,7 +40,7 @@ namespace SharpEquations.Internal.UnicodeMath
         public static bool InRange(string ch0, string ch, string ch1)
         {
             return ch != null && CodePoints.IsSingle(ch, out var c) && CodePoints.IsSingle(ch0, out var c0) && CodePoints.IsSingle(ch1, out var c1)
-                && CodePoints.Value(c) >= CodePoints.Value(c0) && CodePoints.Value(c) <= CodePoints.Value(c1);
+                && c.Value >= c0.Value && c.Value <= c1.Value;
         }
 
         public static bool IsAsciiDigit(string ch) => InRange("0", ch, "9");
@@ -93,8 +93,8 @@ namespace SharpEquations.Internal.UnicodeMath
             var sb = new StringBuilder();
             foreach (var codePoint in CodePoints.Of(chars))
             {
-                int code = CodePoints.Value(codePoint);
-                sb.Append(code >= 0x2102 ? FoldMathItalic(code) : CodePoints.ToString(codePoint));
+                int code = codePoint.Value;
+                sb.Append(code >= 0x2102 ? FoldMathItalic(code) : codePoint.ToString());
             }
             return sb.ToString();
         }
@@ -118,7 +118,7 @@ namespace SharpEquations.Internal.UnicodeMath
         }
 
         /// <summary>Array.from(chars): the code points of a string, as strings.</summary>
-        public static List<string> Characters(string chars) => CodePoints.Of(chars).Select(CodePoints.ToString).ToList();
+        public static List<string> Characters(string chars) => CodePoints.Of(chars).Select(c => c.ToString()).ToList();
 
         public static string ItalicizeCharacters(string chars) => string.Concat(Characters(chars).Select(ItalicizeCharacter));
 
@@ -141,7 +141,7 @@ namespace SharpEquations.Internal.UnicodeMath
             var result = new StringBuilder();
             foreach (var c in CodePoints.Of(chNum))
             {
-                int n = CodePoints.Value(c) - '0';
+                int n = c.Value - '0';
                 if (n < 0 || n > 9)
                     return "";
                 result.Append(DigitSuperscripts[n]);
@@ -149,7 +149,7 @@ namespace SharpEquations.Internal.UnicodeMath
             result.Append('⁄');
             foreach (var c in CodePoints.Of(chDenom))
             {
-                int n = CodePoints.Value(c) - '0';
+                int n = c.Value - '0';
                 if (n < 0 || n > 9)
                     return "";
                 result.Append(DigitSubscripts[n]);
