@@ -537,8 +537,9 @@ namespace SharpEquations.Internal.LaTeX
                         return "\\" + val + " ";
                     if (OperatorMap.TryGetValue(val, out var mapped))
                         return mapped;
+                    // escaped for the reader, in standard LaTeX its command if it has one (Ⓢ, \circledS)
                     if (IsStructureOperator(val))
-                        return "\\" + val;
+                        return standard && LaTeXSymbols.Math(val) != val ? LaTeXSymbols.Math(val) : "\\" + val;
                     if (val == "$")
                     {
                         ret = "\\$";
@@ -811,7 +812,8 @@ namespace SharpEquations.Internal.LaTeX
         private static readonly Dictionary<string, string> SpacingAccents = new Dictionary<string, string>
         {
             ["^"] = "hat", ["ˆ"] = "hat", ["~"] = "tilde", ["˜"] = "tilde", ["→"] = "vec", ["⃗"] = "vec", ["˙"] = "dot", ["¨"] = "ddot",
-            ["ˇ"] = "check", ["˘"] = "breve", ["´"] = "acute", ["`"] = "grave", ["‾"] = "bar", ["¯"] = "bar",
+            ["ˇ"] = "check", ["˘"] = "breve", ["´"] = "acute", ["`"] = "grave", ["‾"] = "bar", ["¯"] = "bar", ["―"] = "overline",
+            ["˚"] = "mathring", ["←"] = "overleftarrow", ["↔"] = "overleftrightarrow",
         };
 
         /// <summary>A closing fence that is not there: empty in Word mode, also a zero width space in standard LaTeX.</summary>
@@ -862,6 +864,9 @@ namespace SharpEquations.Internal.LaTeX
                 return LaTeXSymbols.Math(intent);
             if (Len(text) != 1)
             {
+                // an empty identifier, which holds a place (the base of {}^3, the left side of &=)
+                if (text.Length == 0)
+                    return "{}";
                 if (IsFunctionName(text))
                     return "\\" + text + " ";
                 var plain = string.Concat(Characters(text).Where(c => c.Length == 1 && (c[0] >= 'A' && c[0] <= 'Z' || c[0] >= 'a' && c[0] <= 'z')));

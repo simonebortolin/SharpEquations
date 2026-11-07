@@ -263,6 +263,12 @@ namespace SharpEquations.Internal.LaTeX
             ["overset"] = "┴", ["stackrel"] = "┴",
         };
 
+        // the commands that put a mark over a base, as \overset{mark}{base}
+        private static readonly Dictionary<string, string> OverArrows = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["mathring"] = "˚", ["overleftarrow"] = "\\leftarrow", ["overleftrightarrow"] = "\\leftrightarrow",
+        };
+
         private static bool IsZeroLength(string length) => ZeroLength().IsMatch(length.Trim());
 
         [System.Text.RegularExpressions.GeneratedRegex(@"^0*(\.0*)?\s*[a-z]*$")]
@@ -329,6 +335,13 @@ namespace SharpEquations.Internal.LaTeX
                         i += 2;
                         continue;
                     }
+                    // \_ held, which the passes would read as a subscript of what follows (\_\{\})
+                    if (tex[i + 1] == "_")
+                    {
+                        result.Append('\\').Append('\uFDD2');
+                        i += 2;
+                        continue;
+                    }
                     result.Append(tex[i++]);
                     if (i < tex.Length)
                         result.Append(tex[i++]);
@@ -381,6 +394,29 @@ namespace SharpEquations.Internal.LaTeX
                 {
                     result.Append('│');
                     i = j;
+                    continue;
+                }
+                if (cw == "mid" || cw == "circledS")
+                {
+                    // the relation ∣, a bar that EscapeOddBars escapes when it has no pair (the separator of a bra-ket
+                    // between angles), and Ⓢ, an operator of UnicodeMath
+                    result.Append(cw == "circledS" ? "\\Ⓢ" : angles > 0 ? "│" : "∣");
+                    i = j;
+                    continue;
+                }
+                if (OverArrows.TryGetValue(cw, out var over) && Argument(tex, j) is var (overBase, afterOverBase) && afterOverBase >= 0)
+                {
+                    // \mathring{a}, \overleftarrow{a}: the mark over the base, as \overset puts it
+                    result.Append(RewriteTeXOnly("\\overset{" + over + "}{" + overBase + "}"));
+                    i = afterOverBase;
+                    continue;
+                }
+                if (cw is "phantom" or "vphantom" or "hphantom" && BracedArgument(tex, j) is var (phantom, afterPhantom) && afterPhantom >= 0 &&
+                    NonBlank(tex, afterPhantom) is "_" or "^")
+                {
+                    // a phantom with scripts, \vphantom{\sum}_1^2, braced: UnicodeMath would take the scripts into the phantom
+                    result.Append("{\\").Append(cw).Append('{').Append(RewriteTeXOnly(phantom)).Append("}}");
+                    i = afterPhantom;
                     continue;
                 }
                 if ((cw == "newcommand" || cw == "renewcommand") && j < tex.Length && tex[j] == "\\")
@@ -478,7 +514,8 @@ namespace SharpEquations.Internal.LaTeX
                     var (body, afterBody) = afterScript < 0 ? (null, -1) : BracedArgument(tex, afterScript);
                     if (afterBody >= 0)
                     {
-                        result.Append('〖').Append(RewriteTeXOnly(body)).Append('〗').Append(stack).Append('(').Append(RewriteTeXOnly(script)).Append(')');
+                        // grouped whole: 〖a〗┴(→)〖b〗┴(→) is not UnicodeMath
+                        result.Append("〖〖").Append(RewriteTeXOnly(body)).Append('〗').Append(stack).Append('(').Append(RewriteTeXOnly(script)).Append(")〗");
                         i = afterBody;
                         continue;
                     }
@@ -613,12 +650,13 @@ namespace SharpEquations.Internal.LaTeX
             var frames = new Stack<List<int>>();
             frames.Push(new List<int>());
             var escaped = new List<int>();
+            var kets = new HashSet<int>();
             void Close(List<int> bars, bool inBrackets)
             {
-                foreach (var bar in new[] { "|", "‖" })
+                foreach (var bar in new[] { "|", "‖", "∣" })
                 {
                     var some = bars.Where(b => tex[b] == bar).ToList();
-                    if (some.Count % 2 == 1 && !(inBrackets && some.Count == 1 && bar == "|"))
+                    if (some.Count % 2 == 1 && !(inBrackets && some.Count == 1 && bar != "‖"))
                         escaped.Add(some[some.Count - 1]);
                 }
             }
@@ -657,24 +695,27 @@ namespace SharpEquations.Internal.LaTeX
                         Close(frames.Pop(), true);
                         break;
                     case "⟩" when frames.Peek().Count > 0:
-                        // a ket (|𝑟⟩): its bar has no pair
+                        // a ket (|𝑟⟩): its bar has no pair, and ∣ (\mid) there is the bar of the ket
+                        var ket = frames.Peek()[frames.Peek().Count - 1];
+                        if (tex[ket] == "∣")
+                            kets.Add(ket);
                         frames.Peek().RemoveAt(frames.Peek().Count - 1);
                         break;
-                    case "|" or "‖":
+                    case "|" or "‖" or "∣":
                         frames.Peek().Add(i);
                         break;
                 }
             }
             while (frames.Count > 0)
                 Close(frames.Pop(), false);
-            if (escaped.Count == 0)
+            if (escaped.Count == 0 && kets.Count == 0)
                 return latex;
             var result = new StringBuilder();
             for (int i = 0; i < tex.Length; i++)
             {
                 if (escaped.Contains(i))
                     result.Append('\\');
-                result.Append(tex[i]);
+                result.Append(kets.Contains(i) ? "|" : tex[i]);
             }
             return result.ToString();
         }

@@ -1,0 +1,62 @@
+[
+ {
+  "id": "declare-math-operator",
+  "latex": "\\DeclareMathOperator{\\Res}{Res} \\Res_{z=0}",
+  "equivalent": "\\operatorname{Res}_{z=0}",
+  "display": true
+ },
+ {
+  "id": "newcommand-no-args",
+  "latex": "\\newcommand{\\R}{\\mathbb{R}} \\R",
+  "equivalent": "\\mathbb{R}",
+  "display": true
+ },
+ {
+  "id": "newcommand-with-args",
+  "latex": "\\newcommand{\\norm}[1]{\\left\\|#1\\right\\|} \\norm{x}",
+  "equivalent": "\\left\\|x\\right\\|",
+  "display": true
+ },
+ {
+  "id": "newcommand-optional-default",
+  "latex": "\\newcommand{\\greeting}[1][Hello]{#1} \\greeting{world}",
+  "equivalent": "world",
+  "display": false
+ },
+ {
+  "id": "newcommand-expands-to-command",
+  "latex": "\\newcommand{\\myfrac}{\\frac} \\myfrac{a}{b}",
+  "equivalent": "\\frac{a}{b}",
+  "display": false
+ },
+ {
+  "id": "newcommand-empty-body",
+  "latex": "\\newcommand{\\nothing}{} \\nothing x",
+  "equivalent": "x",
+  "display": false
+ },
+ {
+  "id": "def-command",
+  "latex": "\\def\\R{\\mathbb{R}} \\R",
+  "equivalent": "\\mathbb{R}",
+  "display": true
+ },
+ {
+  "id": "newenvironment",
+  "latex": "\\newenvironment{myenv}{\\begin{bmatrix}}{\\end{bmatrix}} \\begin{myenv} 1 & 2 \\\\ 3 & 4 \\end{myenv}",
+  "equivalent": "\\begin{bmatrix} 1 & 2 \\\\ 3 & 4 \\end{bmatrix}",
+  "display": true
+ },
+ {
+  "id": "newenvironment-with-args",
+  "latex": "\\newenvironment{paren}[1]{\\left( #1 +}{\\right)} \\begin{paren}{x} y \\end{paren}",
+  "equivalent": "\\left( x + y \\right)",
+  "display": true
+ },
+ {
+  "id": "newcommand-bare-name",
+  "latex": "\\newcommand\\R{\\mathbb{R}} \\R",
+  "equivalent": "\\mathbb{R}",
+  "display": true
+ }
+]
