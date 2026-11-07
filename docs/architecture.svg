@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 450" role="img" aria-labelledby="title desc">
+  <title id="title">SharpEquations format architecture</title>
+  <desc id="desc">MathML is the normalized central representation. OMML, LaTeX and UnicodeMath can be read and written. MTEF is read-only. Arrowheads point in the conversion direction.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#52657a"/></marker>
+    <style>
+      .edge{fill:none;stroke:#52657a;stroke-width:2;marker-end:url(#arrow)}
+      .node rect{fill:#fff;stroke:#52657a;stroke-width:1.5}
+      .hub rect{fill:#e9f2ff;stroke:#2563a6;stroke-width:2.5}
+      text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#172b3d;text-anchor:middle}
+      .name{font-size:15px;font-weight:650}.sub{font-size:11px;fill:#52657a}
+      .tag{font-size:10px;fill:#52657a}
+    </style>
+  </defs>
+  <g aria-hidden="true">
+    <path class="edge" d="M176 92 284 198"/><path class="edge" d="M176 112 284 218"/>
+    <path class="edge" d="M396 198 504 112"/><path class="edge" d="M504 92 396 178"/>
+    <path class="edge" d="M324 258 324 340"/><path class="edge" d="M356 340 356 258"/>
+
+    <path class="edge" d="M340 70 340 190"/>
+    <g class="node"><rect x="44" y="66" width="132" height="52" rx="8"/><text class="name" x="110" y="88">OMML</text><text class="sub" x="110" y="105">Word · .docx</text></g>
+    <g class="node"><rect x="504" y="66" width="132" height="52" rx="8"/><text class="name" x="570" y="97">LaTeX</text></g>
+    <g class="node"><rect x="268" y="340" width="144" height="52" rx="8"/><text class="name" x="340" y="362">UnicodeMath</text><text class="sub" x="340" y="379">linear format</text></g>
+
+    <g class="node"><rect x="284" y="22" width="112" height="48" rx="8"/><text class="name" x="340" y="42">MTEF</text><text class="sub" x="340" y="58">read only</text></g>
+    <g class="hub"><rect x="266" y="198" width="148" height="60" rx="10"/><text class="name" x="340" y="226">MathML</text><text class="sub" x="340" y="244">forma normalizzata</text></g>
+    <text class="tag" x="217" y="157">reads / writes</text><text class="tag" x="464" y="157">reads / writes</text>
+    <text class="tag" x="340" y="309">reads / writes</text>
+    <text class="tag" x="357" y="133">reads</text>
+  </g>
+</svg>
