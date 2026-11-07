@@ -886,11 +886,11 @@ namespace SharpEquations.Internal.LaTeX
             return ApplyMacros(text, new Dictionary<string, string>(StringComparer.Ordinal), true, true);
         }
 
-        private static readonly System.Text.RegularExpressions.Regex MacroDefinition =
-            new System.Text.RegularExpressions.Regex("\u24DC", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
         /// <summary>Whether UnicodeMath text defines macros.</summary>
-        internal static bool HasMacros(string unicodemath) => MacroDefinition.IsMatch(unicodemath);
+        internal static bool HasMacros(string unicodemath) => SharpEquations.Internal.Text.CodePoints.Contains(unicodemath, MacroMark);
+
+        // \u24DC, which starts the definition of a macro
+        private static readonly CodePoint MacroMark = SharpEquations.Internal.Text.CodePoints.From(0x24DC);
 
         private static string ApplyMacros(string text, IDictionary<string, string> macros, bool needMacroPass, bool accentsAfter = false)
         {

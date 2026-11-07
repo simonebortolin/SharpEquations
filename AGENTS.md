@@ -25,7 +25,9 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
   `System.Text.Rune` on .NET, its `int` value on .NET Standard 2.0, which lacks `Rune`) and the helpers of `CodePoints`
 - Regular expressions are `[GeneratedRegex]` partial methods, never `new Regex` or the static `Regex` methods: .NET
   generates them on net10.0, `SharpEquations.RegexPolyfill` (an analyzer of the netstandard2.0 build, which .NET
-  Standard lacks the generator for) as a `Regex` built once from the pattern, the options and the timeout
+  Standard lacks the generator for) as a `Regex` built once from the pattern, the options and the timeout. A `Regex`
+  with a constant pattern fails the build (SYSLIB1045, an error in `src/`, reported by .NET on net10.0 and by the
+  polyfill on netstandard2.0); a search for one character is `CodePoints.Contains`, not a regular expression
 - `switch` (statements and expressions) and pattern matching (`case "(" or "[":`, `>= 0x1D434 and <= 0x1D44D =>`,
   `case var _ when Set.Contains(ch):`) rather than chains of `else if` on one value
 - An `if` is never followed directly by an unrelated `if`/`else if` chain, which reads as if the chain continued it:

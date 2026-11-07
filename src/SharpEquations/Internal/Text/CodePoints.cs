@@ -54,6 +54,17 @@ namespace SharpEquations.Internal.Text
 
         public static string ToString(CodePoint codePoint) => char.ConvertFromUtf32(Value(codePoint));
 
+        /// <summary>Whether the text holds the code point.</summary>
+        public static bool Contains(string s, CodePoint codePoint)
+        {
+            foreach (var c in Of(s))
+            {
+                if (c == codePoint)
+                    return true;
+            }
+            return false;
+        }
+
         /// <summary>The text as a single code point, if it is one.</summary>
         public static bool IsSingle(string s, out CodePoint codePoint)
         {
