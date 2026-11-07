@@ -618,7 +618,7 @@ namespace SharpEquations.Internal.LaTeX
                         ret = "\\" + Text(value) + " ";
                         break;
                     }
-                    else if (Len(Text(value)) > 1 && Text(value).All(c => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'))
+                    else if (Len(Text(value)) > 1 && SharpEquations.Internal.Text.AsciiPatterns.Letters().IsMatch(Text(value)))
                     {
                         ret = "\\operatorname{" + Text(value) + "}";
                         break;

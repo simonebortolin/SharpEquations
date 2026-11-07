@@ -4,6 +4,7 @@ namespace SharpEquations.Internal.UnicodeMath
     using System.Linq;
     using System.Text.RegularExpressions;
     using System.Xml.Linq;
+    using SharpEquations.Internal.Text;
     using static Js;
     using static UnicodeMathText;
 
@@ -311,10 +312,7 @@ namespace SharpEquations.Internal.UnicodeMath
 
         internal static int ChildCount(XElement e) => e?.Elements().Count() ?? 0;
 
-        internal static bool IsAsciiAlphabetic(string ch) => ch != null && AsciiLetter().IsMatch(ch);
-
-        [GeneratedRegex("[A-Za-z]")]
-        private static partial Regex AsciiLetter();
+        internal static bool IsAsciiAlphabetic(string ch) => ch != null && AsciiPatterns.Letter().IsMatch(ch);
 
         [GeneratedRegex("^[A-Za-z0-9]")]
         private static partial Regex StartsWithAsciiAlphanumeric();
@@ -642,13 +640,13 @@ namespace SharpEquations.Internal.UnicodeMath
             }
             var ret = Dump(First(node)) + (mask > 0 ? mask.ToString(System.Globalization.CultureInfo.InvariantCulture) : "");
             // digit limits as subscript and superscript digits (∑₀¹), as for any base
-            bool digits = low == null || Name(low) == "mn" && Text(low).All(c => c >= '0' && c <= '9');
+            bool digits = low == null || Name(low) == "mn" && AsciiPatterns.Digits().IsMatch(Text(low));
             foreach (var (script, mark) in new[] { (low, "_"), (high, "^") })
             {
                 if (script == null)
                     continue;
 
-                if (digits && Name(script) == "mn" && Text(script).All(c => c >= '0' && c <= '9') && GetSelectionCodes(script).Length == 0)
+                if (digits && Name(script) == "mn" && AsciiPatterns.Digits().IsMatch(Text(script)) && GetSelectionCodes(script).Length == 0)
                     ret += DigitScript(Text(script), mark == "_" ? DigitSubscripts : DigitSuperscripts);
                 else
                 {

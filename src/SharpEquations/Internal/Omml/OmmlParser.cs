@@ -303,7 +303,7 @@ namespace SharpEquations.Internal.Omml
             var texts = run.Elements(M + "t").ToList();
             return properties != null && properties.Element(M + "nor") == null && (string)properties.Element(M + "sty")?.Attribute(M + "val") == "p"
                 && !run.Ancestors(M + "fName").Any() && texts.Count == 1 && texts[0].Value.Length > 1
-                && texts[0].Value.All(c => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z');
+                && AsciiPatterns.Letters().IsMatch(texts[0].Value);
         }
 
         private static void UnmarkNames(XElement math)

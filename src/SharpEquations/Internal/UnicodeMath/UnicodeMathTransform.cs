@@ -36,7 +36,7 @@ namespace SharpEquations.Internal.UnicodeMath
 
         private static string DoublestruckChar(string value) => DoubleStruckUsTech.TryGetValue(value, out var ch) ? ch : null;
 
-        private static bool IsAsciiAlphabetic(string ch) => ch != null && ch.Any(c => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z');
+        private static bool IsAsciiAlphabetic(string ch) => UnicodeMathSerializer.IsAsciiAlphabetic(ch);
 
         private static bool IsGreek(string ch) => InRange("Α", ch, "ϵ");
 
