@@ -10,6 +10,9 @@ namespace SharpEquations.Internal.UnicodeMath
 
     internal sealed partial class UnicodeMathTranslator
     {
+        [GeneratedRegex("[^A-Za-z0-9_]")]
+        private static partial Regex NotIdentifierCharacter();
+
         private const string OverBrackets = "⎴⏜⏞⏠¯";
         private const string StretchyOperators = "←→↔⇐⇒⇔↩↪↼⇀↽⇁⊢⊣⟵⟶⟷⟸⟹⟺↦⊨";
 
@@ -255,7 +258,7 @@ namespace SharpEquations.Internal.UnicodeMath
             var eqnumber = Get(value, "eqnumber") as string;
             if (eqnumber == null)
                 return O("math", WithAttrs(attrs, Transform(dsty, Get(value, "content"))));
-            var id = Regex.Replace(eqnumber, "[^A-Za-z0-9_]", "-");
+            var id = NotIdentifierCharacter().Replace(eqnumber, "-");
             var row = A(O("mtd", NoAttr(O("mtext", NoAttr(eqnumber)))), O("mtd", NoAttr(Transform(dsty, Get(value, "content")))));
             var table = O("mtable", WithAttrs(O("displaystyle", true), O("mlabeledtr", WithAttrs(O("id", id), row))));
             return O("math", WithAttrs(attrs, table));

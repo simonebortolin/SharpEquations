@@ -14,7 +14,7 @@ namespace SharpEquations.Internal.LaTeX
     /// on XElement. Letters keep their math alphanumeric characters (𝑥), and constructs without a LaTeX command keep
     /// their UnicodeMath (¦, ✎(...)). Strings are indexed by code points.
     /// </summary>
-    internal sealed class LaTeXSerializer
+    internal sealed partial class LaTeXSerializer
     {
         private static readonly Dictionary<string, string> AccentsAbove = new Dictionary<string, string>
         {
@@ -73,7 +73,7 @@ namespace SharpEquations.Internal.LaTeX
             {
                 if (Len(str) == 0)
                     return "{}";
-                if (Len(str) == 1 || System.Text.RegularExpressions.Regex.IsMatch(str, @"^\\[A-Za-z]+ ?$") || IsGroup(str) || isBase && Ch(str, 0) == "\\" && IsUnit(str))
+                if (Len(str) == 1 || SingleCommand().IsMatch(str) || IsGroup(str) || isBase && Ch(str, 0) == "\\" && IsUnit(str))
                     return str;
                 return "{" + str + "}";
             }
@@ -739,6 +739,12 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>A script in standard LaTeX, braced unless it is a single character, command or group.</summary>
         private string Script(string script) => standard ? CheckBracing(script) : script;
 
+        [System.Text.RegularExpressions.GeneratedRegex(@"^\\[A-Za-z]+ ?$")]
+        private static partial System.Text.RegularExpressions.Regex SingleCommand();
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"^0*(\.0*)?[a-z]*$")]
+        private static partial System.Text.RegularExpressions.Regex ZeroThickness();
+
         private static readonly string[] TallElements = { "mfrac", "mtable", "munderover", "msqrt", "mroot", "msubsup", "mover", "munder" };
 
         /// <summary>An mrow between fences around a fraction, a table or the like, which \\left and \\right make grow.</summary>
@@ -820,7 +826,7 @@ namespace SharpEquations.Internal.LaTeX
         }
 
         private static bool IsZeroThickness(string thickness) =>
-            thickness != null && System.Text.RegularExpressions.Regex.IsMatch(thickness.Trim(), @"^0*(\.0*)?[a-z]*$") && thickness.Trim().Length > 0;
+            thickness != null && ZeroThickness().IsMatch(thickness.Trim()) && thickness.Trim().Length > 0;
 
         /// <summary>Whether limits under or over the element are its subscript and superscript: an operator or a function name.</summary>
         private static bool TakesLimits(XElement element)

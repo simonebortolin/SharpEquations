@@ -14,10 +14,11 @@ namespace SharpEquations.Internal.UnicodeMath
     /// are resolved, and the characters outside the basic plane that the grammar names (math alphanumerics,
     /// emoji, Arabic math letters) are mapped to the private use area and back.
     /// </summary>
-    internal static class UnicodeMathInput
+    internal static partial class UnicodeMathInput
     {
         // a quoted text (kept as it is, with its escaped quotes), an escaped quote, or a control word
-        private static readonly Regex ControlWord = new Regex(@"""(?:\\""|[^""])*""|\\""|\\([A-Za-z0-9]+) ?", RegexOptions.CultureInvariant);
+        [GeneratedRegex(@"""(?:\\""|[^""])*""|\\""|\\([A-Za-z0-9]+) ?", RegexOptions.CultureInvariant)]
+        private static partial Regex ControlWord();
 
         /// <summary>
         /// The bar of a set written with braces, {𝑥|𝑥>0}, as the separator │: a bar alone would open an absolute
@@ -130,7 +131,7 @@ namespace SharpEquations.Internal.UnicodeMath
         public static string ResolveControlWords(string unicodemath, Action<string> unknown = null)
         {
             string previous = "";
-            return ControlWord.Replace(unicodemath, match =>
+            return ControlWord().Replace(unicodemath, match =>
             {
                 if (!match.Groups[1].Success)
                     return match.Value;

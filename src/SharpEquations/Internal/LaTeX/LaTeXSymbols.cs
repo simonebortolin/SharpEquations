@@ -13,8 +13,17 @@ namespace SharpEquations.Internal.LaTeX
     /// letters with their font command (𝐱 → \mathbf{x}, ℝ → \mathbb{R}), Greek letters and symbols as commands
     /// (α → \alpha, ≤ → \le). Other characters stay as they are, which XeLaTeX and LuaLaTeX with unicode-math read.
     /// </summary>
-    internal static class LaTeXSymbols
+    internal static partial class LaTeXSymbols
     {
+        [GeneratedRegex("[A-Za-z]$")]
+        private static partial Regex EndsWithLetter();
+
+        [GeneratedRegex(@"[\\{}#$%&_^~]")]
+        private static partial Regex TextSpecialCharacters();
+
+        [GeneratedRegex(@"(\\[A-Za-z]+) (?=[^A-Za-z ]|$)")]
+        private static partial Regex SpaceAfterCommand();
+
         private static readonly Dictionary<string, string> Commands = new Dictionary<string, string>
         {
             // Greek
@@ -173,7 +182,7 @@ namespace SharpEquations.Internal.LaTeX
                 return font.Length == 0 ? letter : "\\" + font + "{" + letter.TrimEnd() + "}";
             }
             if (Commands.TryGetValue(ch, out var command))
-                return "\\" + command + (Regex.IsMatch(command, "[A-Za-z]$") ? " " : "");
+                return "\\" + command + (EndsWithLetter().IsMatch(command) ? " " : "");
             return ch;
         }
 
@@ -189,14 +198,14 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>\text{...}, with the characters that are special in LaTeX escaped.</summary>
         public static string Text(string text)
         {
-            var escaped = Regex.Replace(text, @"[\\{}#$%&_^~]", m => m.Value == "\\" ? "\\textbackslash{}" : m.Value == "^" || m.Value == "~" ? "\\" + m.Value + "{}" : "\\" + m.Value);
+            var escaped = TextSpecialCharacters().Replace(text, m => m.Value == "\\" ? "\\textbackslash{}" : m.Value == "^" || m.Value == "~" ? "\\" + m.Value + "{}" : "\\" + m.Value);
             return "\\text{" + escaped.Replace("\u00A0", " ") + "}";
         }
 
         /// <summary>The spaces that a command left before a character that cannot continue its name are removed.</summary>
         public static string Tidy(string latex)
         {
-            latex = Regex.Replace(latex, @"(\\[A-Za-z]+) (?=[^A-Za-z ]|$)", "$1");
+            latex = SpaceAfterCommand().Replace(latex, "$1");
             return latex.Trim();
         }
     }

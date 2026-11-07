@@ -129,7 +129,7 @@ namespace SharpEquations.Internal.Omml
             }
             // MathML also trims tokens and collapses their spaces: " ove " would touch the formula around it.
             foreach (var text in math.Descendants(Mml + "mtext").Where(e => !e.HasElements))
-                text.Value = CollapsibleSpaces.Replace(text.Value, m => new string('\u00A0', m.Length));
+                text.Value = CollapsibleSpaces().Replace(text.Value, m => new string('\u00A0', m.Length));
             JoinNumbers(math);
             LabelEquationNumbers(math);
             if (display)

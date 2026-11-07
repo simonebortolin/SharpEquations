@@ -11,7 +11,7 @@ namespace SharpEquations.Internal.UnicodeMath
     /// MathML to UnicodeMath: a port of dump() and getUnicodeMath() of UnicodeMathML (src/unicodemathml.js), on
     /// XElement where the JavaScript walks the DOM. Strings are indexed by code points.
     /// </summary>
-    internal sealed class UnicodeMathSerializer
+    internal sealed partial class UnicodeMathSerializer
     {
         private const string OverBrackets = "⎴⏜⏞⏠¯";
         private const string UnderBrackets = "⎵⏝⏟⏡";
@@ -311,14 +311,23 @@ namespace SharpEquations.Internal.UnicodeMath
 
         internal static int ChildCount(XElement e) => e?.Elements().Count() ?? 0;
 
-        internal static bool IsAsciiAlphabetic(string ch) => ch != null && Regex.IsMatch(ch, "[A-Za-z]");
+        internal static bool IsAsciiAlphabetic(string ch) => ch != null && AsciiLetter().IsMatch(ch);
+
+        [GeneratedRegex("[A-Za-z]")]
+        private static partial Regex AsciiLetter();
+
+        [GeneratedRegex("^[A-Za-z0-9]")]
+        private static partial Regex StartsWithAsciiAlphanumeric();
+
+        [GeneratedRegex("[a-z]+")]
+        private static partial Regex LowercaseWord();
 
         internal static bool IsAlphanumeric(string ch)
         {
             if (ch == null)
                 return false;
             int code = CodePointAt(ch, 0);
-            return Regex.IsMatch(ch, "^[A-Za-z0-9]") || code >= 0x3018 || InRange("Α", ch, "ϵ") || InRange("ℂ", ch, "ⅉ");
+            return StartsWithAsciiAlphanumeric().IsMatch(ch) || code >= 0x3018 || InRange("Α", ch, "ϵ") || InRange("ℂ", ch, "ⅉ");
         }
 
         internal static bool IsCloseDelimiter(string op) => op.Length > 0 && Len(op) == 1 && ")]}⟩〗⌉⌋❳⟧⟫⟭⟯⦄⦆⦈⦊⦌⦎⦐⦒⦔⦖⦘⧙⧛⧽".Contains(op);
@@ -832,7 +841,7 @@ namespace SharpEquations.Internal.UnicodeMath
                         if (ret.Length > 0)
                             break;
                         int mask = 0;
-                        foreach (Match attr in Regex.Matches(notation, "[a-z]+"))
+                        foreach (Match attr in LowercaseWord().Matches(notation))
                         {
                             foreach (var (bit, cls) in MaskClasses)
                             {

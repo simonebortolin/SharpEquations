@@ -12,7 +12,7 @@ namespace SharpEquations.Internal.LaTeX
     /// control words with UnicodeMath characters (\frac → ⍁, \begin → 〖, \alpha → α), the macro pass defines and
     /// applies \def and \newcommand macros, pass 2 rewrites the result as UnicodeMath. Text is a list of code points.
     /// </summary>
-    internal sealed class LaTeXReader
+    internal sealed partial class LaTeXReader
     {
         private static readonly Dictionary<string, string> Environments = new Dictionary<string, string>
         {
@@ -263,8 +263,10 @@ namespace SharpEquations.Internal.LaTeX
             ["overset"] = "┴", ["stackrel"] = "┴",
         };
 
-        private static bool IsZeroLength(string length) =>
-            System.Text.RegularExpressions.Regex.IsMatch(length.Trim(), @"^0*(\.0*)?\s*[a-z]*$");
+        private static bool IsZeroLength(string length) => ZeroLength().IsMatch(length.Trim());
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"^0*(\.0*)?\s*[a-z]*$")]
+        private static partial System.Text.RegularExpressions.Regex ZeroLength();
 
         /// <summary>Whether an angle closes after the index: a bra alone, ⟨𝜓|, keeps its bar.</summary>
         private static bool AngleCloses(Text tex, int i)
@@ -869,11 +871,17 @@ namespace SharpEquations.Internal.LaTeX
         /// The macros of UnicodeMath text applied: the definitions (ⓜ\name{...}, ⓜ{\name}[n]{...}, as \def and \newcommand
         /// read) removed, and their uses (\name and their arguments) replaced by their bodies.
         /// </summary>
+        [System.Text.RegularExpressions.GeneratedRegex("ⓜ\\{\\\\([A-Za-z]+)\\}")]
+        private static partial System.Text.RegularExpressions.Regex BracedMacroName();
+
+        [System.Text.RegularExpressions.GeneratedRegex("ⓜ\\\\([A-Za-z]+)")]
+        private static partial System.Text.RegularExpressions.Regex MacroName();
+
         internal static string ExpandMacros(string unicodemath)
         {
-            var text = System.Text.RegularExpressions.Regex.Replace(unicodemath, "ⓜ\\{\\\\([A-Za-z]+)\\}", "ⓜ\\$1");
+            var text = BracedMacroName().Replace(unicodemath, "ⓜ\\$1");
             // the uses of a macro, which control words not known are written as text ("\\f") until then
-            foreach (System.Text.RegularExpressions.Match name in System.Text.RegularExpressions.Regex.Matches(text, "ⓜ\\\\([A-Za-z]+)"))
+            foreach (System.Text.RegularExpressions.Match name in MacroName().Matches(text))
                 text = text.Replace("\"\\" + name.Groups[1].Value + " \"", "\\" + name.Groups[1].Value + " ").Replace("\"\\" + name.Groups[1].Value + "\"", "\\" + name.Groups[1].Value);
             return ApplyMacros(text, new Dictionary<string, string>(StringComparer.Ordinal), true, true);
         }

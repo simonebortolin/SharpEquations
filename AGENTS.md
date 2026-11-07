@@ -12,6 +12,7 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | Directory | Content |
 |---|---|
 | `src/SharpEquations/` | The library: `Public/` (the public API), `Internal/` (one folder per format), `Resources/` (XSLT stylesheets) |
+| `src/SharpEquations.RegexPolyfill/` | Build time only: the `[GeneratedRegex]` source generator of the netstandard2.0 build |
 | `tests/SharpEquations.Tests/` | TUnit tests, in folders by subject (PublicApi, MathML, Omml, Mtef, UnicodeMath, LaTeX, Property, Regression) |
 | `tests/data/` | Test data and its provenance (`tests/data/README.md`) |
 
@@ -22,6 +23,9 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 - Nullable reference types as the surrounding code uses them
 - Text is handled as Unicode code points, never as UTF-16 `char`s: use `CodePoint` (`Internal/Text/CodePoints.cs`:
   `System.Text.Rune` on .NET, its `int` value on .NET Standard 2.0, which lacks `Rune`) and the helpers of `CodePoints`
+- Regular expressions are `[GeneratedRegex]` partial methods, never `new Regex` or the static `Regex` methods: .NET
+  generates them on net10.0, `SharpEquations.RegexPolyfill` (an analyzer of the netstandard2.0 build, which .NET
+  Standard lacks the generator for) as a `Regex` built once from the pattern, the options and the timeout
 - `switch` (statements and expressions) and pattern matching (`case "(" or "[":`, `>= 0x1D434 and <= 0x1D44D =>`,
   `case var _ when Set.Contains(ch):`) rather than chains of `else if` on one value
 - An `if` is never followed directly by an unrelated `if`/`else if` chain, which reads as if the chain continued it:
