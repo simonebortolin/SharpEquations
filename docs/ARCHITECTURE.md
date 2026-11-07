@@ -29,6 +29,22 @@ flowchart LR
     end
 ```
 
+
+The same architecture is also shown as a standalone SVG below. The Mermaid diagram keeps the implementation stages
+visible; the SVG gives a compact view of the format relationships. Both describe the same pipeline: each supported
+reader produces MathML, normalization establishes the representation held by `Equation`, and the writers serialize
+that normalized tree. MTEF has no writer.
+
+![SharpEquations format architecture: MathML is the normalized hub between the supported equation formats.](architecture.svg)
+
+### What round trips preserve
+
+Normalization deliberately removes differences that do not change the represented equation, such as default
+formatting and redundant grouping. A target format may not be able to express every MathML feature, so conversion
+to that format can lose information. Once the result is parsed again, the normalized equation is stable: repeating
+the same conversion does not introduce further changes. Exact round trips are guaranteed for UnicodeMath and for
+OMML written by this library; the other formats preserve the information they can represent. MTEF is read only.
+
 Every reader produces MathML, and `MathMLParser.Normalize` brings it to a single canonical form. Every writer starts
 from that form. With five formats this needs five readers and four writers (MTEF is read only), instead of a
 converter for each pair of formats. It also means that two equations are equal when their normalized MathML is the
@@ -170,7 +186,7 @@ fixtures are the extracted streams (`tests/data/mtef/**/*.eqn`).
 
 ### UnicodeMath (`Internal/UnicodeMath/`)
 
-UnicodeMath is the linear format of Word's equation editor (Unicode Technical Note 28). The reader and the writer are
+UnicodeMath is the linear format of Word's equation editor ([Unicode Technical Note 28](https://www.unicode.org/notes/tn28/)). The reader and the writer are
 ports of UnicodeMathML (MIT).
 
 **Reading (`UnicodeMathParser` → `UnicodeMathTranslator`), in UnicodeMathML's steps:**

@@ -77,6 +77,39 @@ namespace SharpEquations.Tests
             }
         }
 
+        public static IEnumerable<string> MetaformlEquationNativeStreams() =>
+            Directory.GetFiles(Dir(Path.Combine("mtef", "metaforml")), "*.eqn", SearchOption.AllDirectories)
+                .OrderBy(file => file, System.StringComparer.Ordinal);
+
+        [Test]
+        [MethodDataSource(nameof(MetaformlEquationNativeStreams))]
+        public async Task MatchesMetaformlMathML(string file)
+        {
+            var math = MtefParser.FromEquationNative(EquationNative(file));
+            await Assert.That(math.Name).IsEqualTo(Mml + "math").Because(file);
+            await Assert.That(math.DescendantsAndSelf().All(e => e.Name.Namespace == Mml)).IsTrue().Because(file);
+            var relative = file.Substring(Dir(Path.Combine("mtef", "metaforml")).Length + 1);
+            var expected = XElement.Load(Path.Combine(Dir(Path.Combine("mtef", "metaforml", "expected-MathML")), Path.ChangeExtension(relative, ".xml")));
+            await Assert.That(Text(math)).IsEqualTo(Text(expected)).Because(file);
+        }
+
+        public static IEnumerable<string> UserProvidedEquationNativeStreams() =>
+            Directory.GetFiles(Dir(Path.Combine("mtef")), "*.eqn", SearchOption.AllDirectories)
+                .Where(file => file.Contains(Path.DirectorySeparatorChar + "go" + Path.DirectorySeparatorChar) ||
+                               file.Contains(Path.DirectorySeparatorChar + "mtef-rs" + Path.DirectorySeparatorChar))
+                .OrderBy(file => file, System.StringComparer.Ordinal);
+
+        [Test]
+        [MethodDataSource(nameof(UserProvidedEquationNativeStreams))]
+        public async Task MatchesMathMLForUserProvidedMathTypeObjects(string file)
+        {
+            var math = MtefParser.FromEquationNative(EquationNative(file));
+            await Assert.That(math.Name).IsEqualTo(Mml + "math").Because(file);
+            var relative = file.Substring(Dir(Path.Combine("mtef")).Length + 1);
+            var expected = XElement.Load(Path.Combine(Dir(Path.Combine("mtef")), Path.GetDirectoryName(relative)!, "expected-MathML", Path.ChangeExtension(Path.GetFileName(relative), ".xml")));
+            await Assert.That(Text(math)).IsEqualTo(Text(expected)).Because(file);
+        }
+
         // the characters, with the italic letters of the normalized MathML (𝑥) as the plain ones of the references
         private static string Text(XElement element) => Regex.Replace(element.Value, @"\s", string.Empty).Normalize(System.Text.NormalizationForm.FormKC);
 
@@ -95,6 +128,47 @@ namespace SharpEquations.Tests
         {
             var math = MtefParser.FromEquationNative(EquationNative(Path.Combine(Dir(Path.Combine("mtef", "mathml")), "280.eqn")));
             await Assert.That(math.Descendants(Mml + "mi").Any(e => e.Value == "ln")).IsTrue();
+        }
+
+        [Test]
+        public async Task ConvertsQuadraticMathTypeOleExampleFromMetaphor()
+        {
+            var quadratic = MtefParser.FromEquationNative(EquationNative(Path.Combine(Dir(Path.Combine("mtef", "metaphor")), "quadratic.eqn")));
+            await Assert.That(quadratic.Descendants(Mml + "mfrac")).Count().IsEqualTo(1);
+            await Assert.That(quadratic.Descendants(Mml + "msqrt").Any()).IsTrue();
+        }
+
+        [Test]
+        public async Task ConvertsFractionMathTypeOleExampleFromMetaphor()
+        {
+            var fraction = MtefParser.FromEquationNative(EquationNative(Path.Combine(Dir(Path.Combine("mtef", "metaphor")), "fraction.eqn")));
+            await Assert.That(fraction.Descendants(Mml + "mfrac").Count()).IsEqualTo(1);
+        }
+
+        [Test]
+        public async Task ConvertsMatricesMathTypeOleExampleFromMetaphor()
+        {
+            var matrices = MtefParser.FromEquationNative(EquationNative(Path.Combine(Dir(Path.Combine("mtef", "metaphor")), "matrices.eqn")));
+            var tables = matrices.Descendants(Mml + "mtable").ToList();
+            await Assert.That(tables.Count).IsEqualTo(2);
+            await Assert.That(tables.Select(table => table.Elements(Mml + "mtr").Count())).IsEquivalentTo(new[] { 2, 3 }, CollectionOrdering.Matching);
+            await Assert.That(tables.SelectMany(table => table.Elements(Mml + "mtr")).All(row => row.Elements(Mml + "mtd").Count() == 2 || row.Elements(Mml + "mtd").Count() == 3)).IsTrue();
+        }
+
+        [Test]
+        public async Task StopsReadingMtefAtEndRecord()
+        {
+            var mtef = new byte[] { 5, 0, 0, 6, 0, 0, 0, 0 };
+            var expected = Canonical(MtefReader.Read(mtef));
+            var withTrailingData = Canonical(MtefReader.Read(mtef.Concat(new byte[] { 42, 1, 2 }).ToArray()));
+            await Assert.That(withTrailingData).IsEquivalentTo(expected, CollectionOrdering.Matching);
+        }
+
+        [Test]
+        public async Task RejectsMtefWithoutEndRecord()
+        {
+            var truncated = new byte[] { 5, 0, 0, 6, 0, 0, 0 };
+            await Assert.That(() => MtefReader.Read(truncated)).ThrowsExactly<InvalidDataException>();
         }
 
         [Test]

@@ -9,6 +9,9 @@
   Changed for SharpEquations: the sum, product, coproduct, union and intersection templates, and the upper-limit
   templates of tmSUMOP and tmINTOP, matched cases meant for other templates; their conditions now
   exclude each other instead of depending on the processor picking the last matching template.
+  The non-square matrix row grouping was corrected to use the column count after reviewing the matrix parsing fixes
+  in https://github.com/Sukii/Metaforml. Its PILE handling fix is documented in pull request #2.
+  The additional fixture sources from Sukii/Metaforml and danielrendall/Metaphor are credited in tests/data/README.md.
 
   Copyright (c) 2015 Jure Triglav. MIT License, see NOTICE.
 -->
@@ -4023,8 +4026,6 @@
     </xsl:template>
 
 
-    <!-- xsl/root.xsl (pull request #11) -->
-
      <!-- SQRT -->
 
      <xsl:template match="tmpl[selector='tmROOT' and variation='tvROOT_SQ']">
@@ -4042,49 +4043,49 @@
     </xsl:template>
 <!-- xsl/matrix.xsl -->
 
-    <!-- Matrices TODO -->
+    <!-- Matrices -->
     <xsl:template match="matrix[h_just='left']">
         <mtable columnalign="left">
-            <xsl:variable name="rows" select="number(rows)"/>
-            <xsl:apply-templates select="(slot | pile)[position() mod $rows = 1]" mode="rows-left" />
+            <xsl:variable name="cols" select="number(cols)"/>
+            <xsl:apply-templates select="(slot | pile)[(position() - 1) mod $cols = 0]" mode="rows-left" />
         </mtable>
     </xsl:template>
 
     <xsl:template match="matrix[h_just='center']">
         <mtable>
-            <xsl:variable name="rows" select="number(rows)"/>
-            <xsl:apply-templates select="(slot | pile)[position() mod $rows = 1]" mode="rows-center" />
+            <xsl:variable name="cols" select="number(cols)"/>
+            <xsl:apply-templates select="(slot | pile)[(position() - 1) mod $cols = 0]" mode="rows-center" />
         </mtable>
     </xsl:template>
 
     <xsl:template match="matrix[h_just='right']">
         <mtable columnalign="right">
-            <xsl:variable name="rows" select="number(rows)"/>
-            <xsl:apply-templates select="(slot | pile)[position() mod $rows = 1]" mode="rows-right" />
+            <xsl:variable name="cols" select="number(cols)"/>
+            <xsl:apply-templates select="(slot | pile)[(position() - 1) mod $cols = 0]" mode="rows-right" />
         </mtable>
     </xsl:template>
 
     <xsl:template match="slot | pile" mode="rows-left">
-        <xsl:variable name="rows" select="number(parent::*/rows)"/>
+        <xsl:variable name="cols" select="number(parent::*/cols)"/>
         <mtr columnalign="left">
             <xsl:apply-templates select="." mode="columns-left" />
-            <xsl:apply-templates select="(following-sibling::slot | following-sibling::pile)[position() &lt; $rows]" mode="columns-left" />
+            <xsl:apply-templates select="(following-sibling::slot | following-sibling::pile)[position() &lt; $cols]" mode="columns-left" />
         </mtr>
     </xsl:template>
 
     <xsl:template match="slot | pile" mode="rows-center">
-        <xsl:variable name="rows" select="number(parent::*/rows)"/>
+        <xsl:variable name="cols" select="number(parent::*/cols)"/>
         <mtr columnalign="center">
             <xsl:apply-templates select="." mode="columns-center" />
-            <xsl:apply-templates select="(following-sibling::slot | following-sibling::pile)[position() &lt; $rows]" mode="columns-center" />
+            <xsl:apply-templates select="(following-sibling::slot | following-sibling::pile)[position() &lt; $cols]" mode="columns-center" />
         </mtr>
     </xsl:template>
 
     <xsl:template match="slot | pile" mode="rows-right">
-        <xsl:variable name="rows" select="number(parent::*/rows)"/>
+        <xsl:variable name="cols" select="number(parent::*/cols)"/>
         <mtr columnalign="right">
             <xsl:apply-templates select="." mode="columns-right" />
-            <xsl:apply-templates select="(following-sibling::slot | following-sibling::pile)[position() &lt; $rows]" mode="columns-right" />
+            <xsl:apply-templates select="(following-sibling::slot | following-sibling::pile)[position() &lt; $cols]" mode="columns-right" />
         </mtr>
     </xsl:template>
 

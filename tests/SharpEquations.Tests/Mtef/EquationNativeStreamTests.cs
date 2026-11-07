@@ -93,6 +93,15 @@ namespace SharpEquations.Tests
             await Assert.That(Words(formula)).StartsWith("Psti= 0,8*");
         }
 
+        [Test]
+        public async Task PreservesRowsAndColumnsOfNonSquareMatrices()
+        {
+            var table = Read("records/mathtype3/matrix_2x1.eqn").ToMathML().Descendants(Mml + "mtable").Single();
+            var rows = table.Elements(Mml + "mtr").ToList();
+            await Assert.That(rows.Count).IsEqualTo(2);
+            await Assert.That(rows.All(row => row.Elements(Mml + "mtd").Count() == 1)).IsTrue();
+        }
+
         public static IEnumerable<string> PayloadsThatOnlyLookLikeMtef() =>
             Directory.GetFiles(TestData.Path(Path.Combine("mtef", "invalid")), "*.bin").Select(Path.GetFileName).OrderBy(f => f, StringComparer.Ordinal)!;
 
