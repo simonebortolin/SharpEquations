@@ -12,6 +12,9 @@
     <Project Path="src/SharpEquations/SharpEquations.csproj" />
     <Project Path="src/SharpEquations.RegexPolyfill/SharpEquations.RegexPolyfill.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/SharpEquations.Benchmarks/SharpEquations.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SharpEquations.Tests/SharpEquations.Tests.csproj" />
   </Folder>
