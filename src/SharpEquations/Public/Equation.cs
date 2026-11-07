@@ -90,7 +90,7 @@ namespace SharpEquations
         /// <exception cref="InvalidDataException"><paramref name="source"/> is not a supported MTEF equation.</exception>
         public static Equation Parse(ReadOnlySpan<byte> source, EquationFormat format, EquationOptions? options = null)
         {
-            return new Equation(EquationPipeline.Read(source.ToArray(), format, options ?? EquationOptions.Default, CancellationToken.None));
+            return new Equation(EquationPipeline.Read(source, format, options ?? EquationOptions.Default));
         }
 
         /// <summary>Reads an equation given as text, returning false instead of throwing when it is not valid in its format.</summary>
