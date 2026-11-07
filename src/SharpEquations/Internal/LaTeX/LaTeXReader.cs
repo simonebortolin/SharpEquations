@@ -119,6 +119,15 @@ namespace SharpEquations.Internal.LaTeX
 
         private static bool IsAsciiAlphabetic(string ch) => ch != null && ch.Length == 1 && (ch[0] >= 'A' && ch[0] <= 'Z' || ch[0] >= 'a' && ch[0] <= 'z');
 
+        /// <summary>The name of the control word at the index (the letters after a backslash), empty if none.</summary>
+        private static string ControlWord(Text tex, int at)
+        {
+            var end = at;
+            while (IsAsciiAlphabetic(tex[end]))
+                end++;
+            return tex.Sub(at, end);
+        }
+
         private static bool IsAccent(string ch) => InRange("̀", ch, "ͯ") || InRange("⃐", ch, "⃰");
 
         private static string Last(StringBuilder sb) => Js.Ch(sb.ToString(), Js.Len(sb.ToString()) - 1);
@@ -307,10 +316,8 @@ namespace SharpEquations.Internal.LaTeX
                     i++;
                     continue;
                 }
-                int j = i + 1;
-                var cw = "";
-                for (; j < tex.Length && IsAsciiAlphabetic(tex[j]); j++)
-                    cw += tex[j];
+                var cw = ControlWord(tex, i + 1);
+                int j = i + 1 + cw.Length;
                 if (cw.Length == 0)
                 {
                     // \| is the double bar ‖, not an escaped bar
@@ -564,10 +571,8 @@ namespace SharpEquations.Internal.LaTeX
                 i++;
             if (i >= tex.Length || tex[i] != "\\")
                 return (null, -1);
-            int j = i + 1;
-            var cw = "";
-            for (; j < tex.Length && IsAsciiAlphabetic(tex[j]); j++)
-                cw += tex[j];
+            var cw = ControlWord(tex, i + 1);
+            int j = i + 1 + cw.Length;
             if (!ArgumentCommands.TryGetValue(cw, out var count))
                 return (null, -1);
             int next = j;
@@ -620,48 +625,47 @@ namespace SharpEquations.Internal.LaTeX
                 var ch = tex[i];
                 if (ch == "\\")
                 {
-                    var cw = "";
-                    int j = i + 1;
-                    for (; j < tex.Length && IsAsciiAlphabetic(tex[j]); j++)
-                        cw += tex[j];
-                    if (cw.Length == 0)
+                    var cw = ControlWord(tex, i + 1);
+                    // the brackets among the commands (\{, \}, \langle, \rangle) become the bracket they stand for; an
+                    // escaped character (\|) is skipped
+                    ch = cw switch
                     {
-                        // \{ and \} are brackets
-                        if (tex[i + 1] == "{")
-                            frames.Push(new List<int>());
-                        else if (tex[i + 1] == "}" && frames.Count > 1)
-                            Close(frames.Pop(), true);
-                        i++;
-                        continue;
-                    }
-                    if (cw == "langle")
-                        ch = "⟨";
-                    else if (cw == "rangle")
-                        ch = "⟩";
-                    else
+                        "" => tex[i + 1] == "{" ? "(" : tex[i + 1] == "}" ? ")" : null,
+                        "langle" => "⟨",
+                        "rangle" => "⟩",
+                        _ => "\\",
+                    };
+                    int j = i + 1 + Math.Max(1, cw.Length);
+                    if (ch == "\\")
                     {
-                        while (j < tex.Length && tex[j] == " ")
+                        while (tex[j] == " ")
                             j++;
                         // the bar after \left, \right... is skipped with the command
-                        i = DelimiterCommands.Contains(cw) && j < tex.Length && (tex[j] == "|" || tex[j] == "‖") ? j : j - 1;
+                        i = DelimiterCommands.Contains(cw) && (tex[j] == "|" || tex[j] == "‖") ? j : j - 1;
                         continue;
                     }
                     i = j - 1;
                 }
-                if (ch == "(" || ch == "[" || ch == "⟨")
+                switch (ch)
                 {
-                    frames.Push(new List<int>());
-                }
-                else if (ch == ")" || ch == "]" || ch == "⟩")
-                {
-                    if (frames.Count > 1)
+                    case "(":
+                    case "[":
+                    case "⟨":
+                        frames.Push(new List<int>());
+                        break;
+                    case ")" when frames.Count > 1:
+                    case "]" when frames.Count > 1:
+                    case "⟩" when frames.Count > 1:
                         Close(frames.Pop(), true);
-                    else if (ch == "⟩" && frames.Peek().Count > 0)
+                        break;
+                    case "⟩" when frames.Peek().Count > 0:
+                        // a ket (|𝑟⟩): its bar has no pair
                         frames.Peek().RemoveAt(frames.Peek().Count - 1);
-                }
-                else if (ch == "|" || ch == "‖")
-                {
-                    frames.Peek().Add(i);
+                        break;
+                    case "|":
+                    case "‖":
+                        frames.Peek().Add(i);
+                        break;
                 }
             }
             while (frames.Count > 0)
@@ -766,9 +770,8 @@ namespace SharpEquations.Internal.LaTeX
                             i++;
                             break;
                         }
-                        var cw = "";
-                        for (; i < tex.Length && IsAsciiAlphabetic(tex[i]); i++)
-                            cw += tex[i];
+                        var cw = ControlWord(tex, i);
+                        i += cw.Length;
                         if (cwPrev == "def")
                         {
                             cwPrev = "";
