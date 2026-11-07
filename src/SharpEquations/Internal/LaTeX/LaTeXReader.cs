@@ -941,7 +941,8 @@ namespace SharpEquations.Internal.LaTeX
                     {
                         var (val, k) = ApplyMacro(t, i + 1, accentsAfter);
                         t = new Text(t.Sub(0, i) + val + t.Sub(k));
-                        i += Js.Len(val);
+                        // a body that is not a macro with arguments stays as it is, not read again for its own name
+                        i += k == i + 1 ? Js.Len(body) - 1 : Js.Len(val);
                     }
                     else
                     {

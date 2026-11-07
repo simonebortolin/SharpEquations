@@ -13,7 +13,8 @@ namespace SharpEquations.Internal.Mtef
     /// into the XML written by https://github.com/jure/mathtype (MIT), which mtef2mml.xsl converts to MathML:
     /// one element per record, named after the record, holding its fields.
     /// </summary>
-    internal sealed class MtefReader
+    /// <remarks>A ref struct, so that it reads the bytes the caller gives without copying them.</remarks>
+    internal ref struct MtefReader
     {
         private static readonly string[] HAlign = { null, "left", "center", "right", "al", "dec" };
         private static readonly string[] VAlign = { "top_baseline", "center_baseline", "bottom_baseline", "center", "axis" };
@@ -27,26 +28,30 @@ namespace SharpEquations.Internal.Mtef
             "embU_RARROW", "embU_LARROW", "embU_BARROW", "embU_R1ARROW", "embU_L1ARROW",
         };
 
-        private readonly byte[] data;
+        private readonly ReadOnlySpan<byte> data;
         private int position;
         private int bits;
         private int bitCount;
         private int version;
         private int depth;
 
-        private MtefReader(byte[] data)
+        private MtefReader(ReadOnlySpan<byte> data)
         {
             this.data = data;
+            position = 0;
+            bits = 0;
+            bitCount = 0;
+            version = 0;
+            depth = 0;
         }
 
         /// <summary>
         /// Reads an MTEF equation (without the OLE "Equation Native" header) into a root element holding an mtef element.
         /// </summary>
-        public static XElement Read(byte[] mtef)
+        public static XElement Read(ReadOnlySpan<byte> mtef)
         {
-            if (mtef == null)
-                throw new ArgumentNullException(nameof(mtef));
-            return new MtefReader(mtef).ReadEquation();
+            var reader = new MtefReader(mtef);
+            return reader.ReadEquation();
         }
 
         private XElement ReadEquation()
@@ -519,7 +524,9 @@ namespace SharpEquations.Internal.Mtef
             while (Byte() != 0)
             {
             }
-            return Encoding.GetEncoding("ISO-8859-1").GetString(data, start, position - start - 1);
+            // one path on every target: .NET Standard 2.0 has no Encoding.GetString for spans, so the few bytes of
+            // the string (a font or encoding name, a comment) are copied
+            return Encoding.GetEncoding("ISO-8859-1").GetString(data.Slice(start, position - start - 1).ToArray());
         }
 
         private void Skip(int count)

@@ -480,6 +480,11 @@ namespace SharpEquations.Internal.UnicodeMath
         {
             var ret = Dump(First(node));
             var retd = Dump(Last(node));
+            // an empty operand (the <mo/> of an unclosed bracket) is an empty group, as nothing would not read back
+            if (ret.Length == 0)
+                ret = "〖〗";
+            if (retd.Length == 0)
+                retd = "〖〗";
 
             // a scripted base (𝑎_𝑏 under ^𝑐) is grouped, as 𝑎_𝑏^𝑐 is one subsup
             if ((op == "^" || op == "_" || IsPrime(Text(Last(node)))) && IsScripted(First(node)) && functionName == null)
@@ -491,7 +496,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 Name(node) == "mfrac" && (Name(Last(node)) == "mfrac" || Name(Last(node)) == "mo" && Text(Last(node)).Length > 0 && !char.IsLetter(Text(Last(node)), 0)))
                 retd = "(" + retd.Trim(' ') + ")";
             // an operator alone over a fraction bar ((+̸)/2) is in parentheses, which the fraction drops
-            if (Name(node) == "mfrac" && Name(First(node)) == "mo" && !char.IsLetter(Text(First(node)), 0))
+            if (Name(node) == "mfrac" && Name(First(node)) == "mo" && Text(First(node)).Length > 0 && !char.IsLetter(Text(First(node)), 0))
                 ret = "(" + ret.Trim(' ') + ")";
             // a script that applies a function (log_(𝑏⁡𝑎)): the space before the function name would end the script
             if ((op == "^" || op == "_") && Name(Last(node)) == "mrow" && Role(Last(node)) == ":function")

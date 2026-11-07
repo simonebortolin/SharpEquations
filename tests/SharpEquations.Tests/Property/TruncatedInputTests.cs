@@ -11,12 +11,11 @@ namespace SharpEquations.Tests.Property
 
     /// <summary>
     /// Text that is not a whole equation, as a user types it or a document cuts it: every prefix of the LaTeX and
-    /// UnicodeMath of the corpus and of the tests is read in a bounded time, to an equation or a FormatException,
-    /// never another exception or a loop.
+    /// UnicodeMath of the corpus and of the tests is read with a bounded work of the grammar (<see cref="ParserWork"/>),
+    /// to an equation or a FormatException, never another exception.
     /// </summary>
     public class TruncatedInputTests
     {
-        private static readonly TimeSpan Limit = TimeSpan.FromSeconds(10);
 
         private static IEnumerable<string> Prefixes(string text)
         {
@@ -27,37 +26,40 @@ namespace SharpEquations.Tests.Property
                 yield return string.Concat(codePoints.Take(n));
         }
 
+        private static string? Check(string source, EquationFormat format)
+        {
+            try
+            {
+                var equation = Equation.Parse(source, format);
+                _ = equation.ToString(EquationFormat.LaTeX) + equation.ToString(EquationFormat.UnicodeMath) + equation.ToString(EquationFormat.Omml);
+                return null;
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+            catch (Exception e)
+            {
+                return e.GetType().Name + ": " + e.Message;
+            }
+        }
+
         private static List<string> Failures(IEnumerable<string> sources, EquationFormat format)
         {
             var failures = new List<string>();
             foreach (var source in sources.Distinct())
             {
-                var task = Task.Run(() =>
-                {
-                    try
-                    {
-                        var equation = Equation.Parse(source, format);
-                        _ = equation.ToString(EquationFormat.LaTeX) + equation.ToString(EquationFormat.UnicodeMath) + equation.ToString(EquationFormat.Omml);
-                        return null;
-                    }
-                    catch (FormatException)
-                    {
-                        return null;
-                    }
-                    catch (Exception e)
-                    {
-                        return e.GetType().Name + ": " + e.Message;
-                    }
-                });
-                if (!task.Wait(Limit))
-                    failures.Add(source + "\n  does not end");
-                else if (task.Result != null)
-                    failures.Add(source + "\n  " + task.Result);
+                string? result = null;
+                var work = ParserWork.Of(() => result = Check(source, format));
+                if (result != null)
+                    failures.Add(source + "\n  " + result);
+                else if (work > ParserWork.Budget(source))
+                    failures.Add(source + "\n  takes " + work + " steps of the grammar, more than " + ParserWork.Budget(source));
             }
             return failures;
         }
 
-        private static readonly string[] LaTeX =
+        internal static readonly string[] LaTeX =
         {
             @"\frac{a^2+b^2}{c}", @"\sqrt[3]{x+1}", @"\left(\frac{1}{2}\right)", @"\begin{pmatrix}a&b\\c&d\end{pmatrix}",
             @"\begin{cases}1&x>0\\0&\text{otherwise}\end{cases}", @"\sum_{i=1}^{n} i^2", @"\int_0^1 f(x)\,dx", @"\lim_{x\to0}\frac{\sin x}{x}",

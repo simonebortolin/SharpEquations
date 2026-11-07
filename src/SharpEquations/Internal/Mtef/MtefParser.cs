@@ -21,10 +21,8 @@ namespace SharpEquations.Internal.Mtef
         /// Converts an MTEF equation (MTEF version 3 or 5, without the "Equation Native" header) to a MathML math element.
         /// </summary>
         /// <exception cref="InvalidDataException">The data is not a supported MTEF equation.</exception>
-        public static XElement Parse(byte[] mtef)
+        public static XElement Parse(ReadOnlySpan<byte> mtef)
         {
-            if (mtef == null)
-                throw new ArgumentNullException(nameof(mtef));
             if (HasEquationNativeHeader(mtef))
                 return FromEquationNative(mtef);
             var xml = MtefReader.Read(mtef);
@@ -41,7 +39,7 @@ namespace SharpEquations.Internal.Mtef
         /// Whether the data starts with an EQNOLEFILEHDR: its size, 28, as a 16-bit number. An MTEF equation starts
         /// with its version, 2 to 5.
         /// </summary>
-        public static bool HasEquationNativeHeader(byte[] data)
+        public static bool HasEquationNativeHeader(ReadOnlySpan<byte> data)
         {
             return data.Length >= 10 && data[0] == 28 && data[1] == 0;
         }
@@ -52,10 +50,8 @@ namespace SharpEquations.Internal.Mtef
         /// caller.
         /// </summary>
         /// <exception cref="InvalidDataException">The data is not a supported MTEF equation.</exception>
-        public static XElement FromEquationNative(byte[] equationNative)
+        public static XElement FromEquationNative(ReadOnlySpan<byte> equationNative)
         {
-            if (equationNative == null)
-                throw new ArgumentNullException(nameof(equationNative));
             if (equationNative.Length < 10)
                 throw new InvalidDataException("The Equation Native stream is too short.");
             var headerSize = equationNative[0] | equationNative[1] << 8;
@@ -63,9 +59,7 @@ namespace SharpEquations.Internal.Mtef
             var size = (int)Math.Min(declaredSize, (uint)Math.Max(0, equationNative.Length - headerSize));
             if (headerSize >= equationNative.Length || size <= 0)
                 throw new InvalidDataException("The Equation Native stream holds no equation.");
-            var mtef = new byte[size];
-            Array.Copy(equationNative, headerSize, mtef, 0, size);
-            return Parse(mtef);
+            return Parse(equationNative.Slice(headerSize, size));
         }
     }
 }
