@@ -169,7 +169,8 @@ namespace SharpEquations.Internal.UnicodeMath
 
         /// <summary>
         /// An operator that reading would take for a structure: an enclosure or a root sign without its operand, or an
-        /// opening bracket that nothing closes inside a row.
+        /// opening bracket that nothing closes inside a row, or a bar without its pair inside brackets ([𝑎|𝑏], which
+        /// reading takes for [𝑎 and the fence |𝑏]).
         /// </summary>
         private static bool IsLoneStructure(XElement mo)
         {
@@ -179,8 +180,21 @@ namespace SharpEquations.Internal.UnicodeMath
             if ("▭√∛∜⟡▢◯⬭".Contains(text))
                 return true;
             var parent = mo.Parent;
+            if (text is "|" or "‖" && Role(parent) == ":fenced" && First(parent) != mo && Last(parent) != mo && Text(First(parent)) is not ("|" or "‖" or "⟨"))
+                return Children(parent).Count(c => c != First(parent) && c != Last(parent) && Name(c) == "mo" && Text(c) == text) % 2 == 1;
             return (IsOpening(text) || IsOpenDelimiter(text)) && text != "|" && text != "‖" && Name(parent) == "mrow" && First(parent) != mo &&
                 !(Last(parent) == mo && IsFence(First(parent))) && Role(parent) != ":fenced" && !mo.ElementsAfterSelf().Any(e => Name(e) == "mo" && IsClosing(Text(e)));
+        }
+
+        /// <summary>
+        /// Whether a slash has an operand before it that reading takes for its numerator: not when nothing is written
+        /// before it (an empty &lt;mn/&gt;) or an operator is (=∕=), where ∕ does not parse.
+        /// </summary>
+        private static bool HasOperandBefore(XElement mo)
+        {
+            var previous = Previous(mo);
+            return previous != null && (previous.HasElements || Text(previous).Length > 0) &&
+                !(Name(previous) == "mo" && !IsCloseDelimiter(Text(previous)) && !IsClosing(Text(previous)));
         }
 
         private static bool IsNaryOperator(string op) => "∑∏∐∫∬∭∮∯∰∱∲∳⨌⨀⨁⨂⨃⨄⨅⨆⋀⋁⋂⋃".Contains(op);
@@ -1121,7 +1135,7 @@ namespace SharpEquations.Internal.UnicodeMath
                         break;
                     }
                     // an operator that reading would not take for one (ℏ, an n-ary operator without operand) is in a remark
-                    if (rawOperators.Contains(value) || IsLoneStructure(value))
+                    if (rawOperators.Contains(value) || IsLoneStructure(value) || val == "/" && !HasOperandBefore(value))
                     {
                         ret = "ⓡ(" + val + "&U+" + CodePointAt(val, 0).ToString("X4", System.Globalization.CultureInfo.InvariantCulture) + ")";
                         break;
@@ -1130,6 +1144,12 @@ namespace SharpEquations.Internal.UnicodeMath
                     {
                         // a slash that is not a fraction: ∕ reads as one, \/ as the slash of text
                         ret = "∕";
+                        break;
+                    }
+                    // a bar that is the base of a script (|_ℤ) does not open or close: ├|_ℤ
+                    if (val is "|" or "‖" && Name(parent) is "msub" or "msup" or "msubsup" && First(parent) == value)
+                    {
+                        ret = "├" + val;
                         break;
                     }
                     if (val == "|")
@@ -1425,9 +1445,11 @@ namespace SharpEquations.Internal.UnicodeMath
                     CodePointAt(Text(First(value)), 0) < 0x2100 && Name(Previous(value)) == "mi")
                     return " " + ret;
             }
+            // an opening bracket that nothing closes is closed by ┤, except before a fenced row at the end of the equation
+            // itself, which reading gives back as a row of the same elements ([𝑎|𝑏], not [𝑎|𝑏]┤)
             if (First(value) != null && Name(First(value)) == "mo" && IsOpenDelimiter(Text(First(value))) && Attr(First(value), "intent") != ":text")
             {
-                if (Name(Last(value)) != "mo" || Text(Last(value)).Length == 0)
+                if (Name(Last(value)) != "mo" && !(Name(value) == "math" && IsFenced(Last(value))) || Name(Last(value)) == "mo" && Text(Last(value)).Length == 0)
                     ret += "┤";
             }
             // an absolute value of bars (|𝑎|𝑏|𝑐|) or of parentheses keeps its content in parentheses, which only group

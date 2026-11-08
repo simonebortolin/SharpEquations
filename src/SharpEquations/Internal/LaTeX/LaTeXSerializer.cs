@@ -573,6 +573,10 @@ namespace SharpEquations.Internal.LaTeX
                     break;
 
                 case "mi":
+                    // in Word's LaTeX, an operator of UnicodeMath as an identifier (□, √) is escaped, as it is as an operator:
+                    // alone, it would be read as its structure (√𝑥, a square root) or not at all (□)
+                    if (!standard && IsStructureOperator(Text(value)) && !value.HasElements)
+                        return "\\" + Text(value);
                     if (standard)
                     {
                         ret = StandardIdentifier(value);

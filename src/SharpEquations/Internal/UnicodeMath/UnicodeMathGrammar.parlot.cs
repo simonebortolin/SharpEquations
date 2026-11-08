@@ -436,7 +436,11 @@ namespace SharpEquations.Internal.UnicodeMath
                         return (object)O("function", O(("f", O("atoms", c)), ("of", t.Item3)));
                     }),
                 functionName.AndSkip(Opt(__)).And(operand).AndSkip(Opt(_))
-                    .Then(t => (object)O("function", O(("f", O("atoms", O("chars", FunctionName(t.Item1, false)))), ("of", t.Item2)))));
+                    .Then(t => (object)O("function", O(("f", O("atoms", O("chars", FunctionName(t.Item1, false)))), ("of", t.Item2)))),
+                // a name marked as a function without an operand (NaN⁡,) is one name, as a function name is (sin⁡,), and not
+                // its letters; the function apply sign is read after it (but not one with scripts after the sign, argmax⁡┬(𝑥∈𝑆))
+                OneOrMany(alphaN).AndSkip(Not(Not(L("⁡").And(Not(opScript)))))
+                    .Then(t => (object)O("atoms", O(("chars", Join(t.ToList())), ("funct", true)))));
 
             // text, overrides, colors, comments, typewriter
             text.Parser = L("\"").SkipAnd(OneOrMany(OneOf(L("\\\"").Then(x => (object)"\""), Not(L("\"")).SkipAnd(anyChar)))).AndSkip(L("\""))
