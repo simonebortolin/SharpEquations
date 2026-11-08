@@ -639,7 +639,7 @@
   "id": "blackboard-bold",
   "latex": "\\Bbb {\\text{var} = 1+\\{b\\}}",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mtext mathvariant=\"double-struck\">var</mtext><mo mathvariant=\"double-struck\">=</mo><mn mathvariant=\"double-struck\">1</mn><mo mathvariant=\"double-struck\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"double-struck\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mtext>var</mtext><mo mathvariant=\"double-struck\">=</mo><mn mathvariant=\"double-struck\">1</mn><mo mathvariant=\"double-struck\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"double-struck\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow></math>"
  },
  {
   "id": "Bbb-group",
@@ -987,25 +987,25 @@
   "id": "mathbf",
   "latex": "\\mathbf {\\text{var} = 1+\\{b\\}}",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mtext mathvariant=\"bold\">var</mtext><mo mathvariant=\"bold\">=</mo><mn mathvariant=\"bold\">1</mn><mo mathvariant=\"bold\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"bold\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mtext>var</mtext><mo mathvariant=\"bold\">=</mo><mn mathvariant=\"bold\">1</mn><mo mathvariant=\"bold\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"bold\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow></math>"
  },
  {
   "id": "mathcal",
   "latex": "{\\mathcal {\\text{var} = 1+\\{b\\}}} + B",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext mathvariant=\"script\">var</mtext><mo mathvariant=\"script\">=</mo><mn mathvariant=\"script\">1</mn><mo mathvariant=\"script\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"script\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext>var</mtext><mo mathvariant=\"script\">=</mo><mn mathvariant=\"script\">1</mn><mo mathvariant=\"script\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"script\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
  },
  {
   "id": "mathfrak",
   "latex": "{\\mathfrak {\\text{var} = 1+\\{b\\}}} + B",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext mathvariant=\"fraktur\">var</mtext><mo mathvariant=\"fraktur\">=</mo><mn mathvariant=\"fraktur\">1</mn><mo mathvariant=\"fraktur\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"fraktur\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext>var</mtext><mo mathvariant=\"fraktur\">=</mo><mn mathvariant=\"fraktur\">1</mn><mo mathvariant=\"fraktur\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"fraktur\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
  },
  {
   "id": "mathit",
   "latex": "{\\mathit {\\text{var} = 1+\\{b\\}}} + B",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext mathvariant=\"italic\">var</mtext><mo mathvariant=\"italic\">=</mo><mn mathvariant=\"italic\">1</mn><mo mathvariant=\"italic\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"italic\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext>var</mtext><mo mathvariant=\"italic\">=</mo><mn mathvariant=\"italic\">1</mn><mo mathvariant=\"italic\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"italic\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
  },
  {
   "id": "mathrm",
@@ -1023,13 +1023,13 @@
   "id": "mathsf",
   "latex": "{\\mathsf {\\text{var} = 1+\\{b\\}}} + B",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext>var</mtext><mo>=</mo><mn>1</mn><mo>+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"sans-serif\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext>var</mtext><mo>=</mo><mn mathvariant=\"sans-serif\">1</mn><mo>+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"sans-serif\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
  },
  {
   "id": "mathtt",
   "latex": "{\\mathtt {\\text{var} = 1+\\{b\\}}} + B",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext mathvariant=\"monospace\">var</mtext><mo mathvariant=\"monospace\">=</mo><mn mathvariant=\"monospace\">1</mn><mo mathvariant=\"monospace\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"monospace\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext>var</mtext><mo mathvariant=\"monospace\">=</mo><mn mathvariant=\"monospace\">1</mn><mo mathvariant=\"monospace\">+</mo><mo stretchy=\"false\">{</mo><mi mathvariant=\"monospace\">b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
  },
  {
   "id": "math-commands-that-currently-does-nothing",
@@ -1383,7 +1383,7 @@
   "id": "mit",
   "latex": "{\\mit {\\text{var} = 1+\\{b\\}}} + B",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext mathvariant=\"italic\">var</mtext><mo mathvariant=\"italic\">=</mo><mn mathvariant=\"italic\">1</mn><mo mathvariant=\"italic\">+</mo><mo stretchy=\"false\">{</mo><mi>b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mrow><mrow><mtext>var</mtext><mo mathvariant=\"italic\">=</mo><mn mathvariant=\"italic\">1</mn><mo mathvariant=\"italic\">+</mo><mo stretchy=\"false\">{</mo><mi>b</mi><mo stretchy=\"false\">}</mo></mrow></mrow><mo>+</mo><mi>B</mi></mrow></math>"
  },
  {
   "id": "oldstyle",
