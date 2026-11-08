@@ -167,6 +167,61 @@ namespace SharpEquations.Tests.Omml
         }
 
         /// <summary>
+        /// The style of a digit, which omml2mml.xsl does not write on numbers, is kept: a styled digit is its
+        /// mathematical alphanumeric, an identifier of its own, as UnicodeMath and LaTeX read it.
+        /// </summary>
+        [Test]
+        [Arguments("<m:r><m:rPr><m:sty m:val=\"b\"/></m:rPr><m:t>1</m:t></m:r>", "<mi>𝟏</mi>")]
+        [Arguments("<m:r><m:rPr><m:sty m:val=\"b\"/></m:rPr><m:t>12</m:t></m:r>", "<mi>𝟏</mi><mi>𝟐</mi>")]
+        [Arguments("<m:r><m:rPr><m:sty m:val=\"b\"/></m:rPr><m:t>1+x</m:t></m:r>", "<mi>𝟏</mi><mo>+</mo><mi>𝐱</mi>")]
+        [Arguments("<m:r><m:rPr><m:scr m:val=\"double-struck\"/></m:rPr><m:t>1</m:t></m:r>", "<mi>𝟙</mi>")]
+        [Arguments("<m:r><m:rPr><m:scr m:val=\"sans-serif\"/><m:sty m:val=\"p\"/></m:rPr><m:t>1</m:t></m:r>", "<mi>𝟣</mi>")]
+        [Arguments("<m:r><m:rPr><m:scr m:val=\"sans-serif\"/><m:sty m:val=\"b\"/></m:rPr><m:t>1</m:t></m:r>", "<mi>𝟭</mi>")]
+        [Arguments("<m:r><m:rPr><m:sty m:val=\"p\"/></m:rPr><m:t>12</m:t></m:r>", "<mn>12</mn>")]
+        [Arguments("<m:r><m:rPr><m:sty m:val=\"bi\"/></m:rPr><m:t>1</m:t></m:r>", "<mn>1</mn>")]
+        [Arguments("<m:r><m:rPr><m:nor/><m:sty m:val=\"b\"/></m:rPr><m:t>12</m:t></m:r>", "<mtext>12</mtext>")]
+        public async Task ReadsStyledDigits(string runs, string mathML)
+        {
+            var equation = Equation.Parse("<m:oMath" + Namespaces + ">" + runs + "</m:oMath>", EquationFormat.Omml);
+            await Assert.That(equation.ToMathML().ToString(SaveOptions.DisableFormatting)).IsEqualTo(MathML(mathML));
+            await Assert.That(Equation.Parse(equation.ToOmml(), EquationFormat.Omml)).IsEqualTo(equation);
+        }
+
+        /// <summary>
+        /// A monospace digit is read, but not written back: mml2omml.xsl writes no m:scr for monospace.
+        /// </summary>
+        [Test]
+        public async Task ReadsMonospaceDigits()
+        {
+            var equation = Equation.Parse("<m:oMath" + Namespaces + "><m:r><m:rPr><m:scr m:val=\"monospace\"/></m:rPr><m:t>1</m:t></m:r></m:oMath>", EquationFormat.Omml);
+            await Assert.That(equation.ToMathML().ToString(SaveOptions.DisableFormatting)).IsEqualTo(MathML("<mi>𝟷</mi>"));
+        }
+
+        [Test]
+        [Arguments("𝟏", EquationFormat.UnicodeMath)]
+        [Arguments("𝟏𝟐+2", EquationFormat.UnicodeMath)]
+        [Arguments("𝟙", EquationFormat.UnicodeMath)]
+        [Arguments("𝟣", EquationFormat.UnicodeMath)]
+        [Arguments("𝟭", EquationFormat.UnicodeMath)]
+        [Arguments(@"\mathbf{12}+\mathbb{1}", EquationFormat.LaTeX)]
+        public async Task RoundTripsStyledDigitsThroughOmml(string source, EquationFormat format)
+        {
+            var equation = Equation.Parse(source, format);
+            var back = Equation.Parse(equation.ToOmml(), EquationFormat.Omml);
+            await Assert.That(back).IsEqualTo(equation);
+            await Assert.That(back.ToString(format)).IsEqualTo(equation.ToString(format));
+        }
+
+        [Test]
+        public async Task IndicatorFunctionsOfTheCorpusKeepTheirBoldOne()
+        {
+            var equation = Equation.Parse("K_c (r) = 𝟏_[¼,¾] (r) + ½ × 𝟏_[0,¼] (r)", EquationFormat.UnicodeMath);
+            var back = Equation.Parse(equation.ToOmml(), EquationFormat.Omml);
+            await Assert.That(back.ToMathML().Descendants(MathMLNamespaces.MathML + "msub").Select(s => s.Elements().First().ToString(SaveOptions.DisableFormatting)))
+                .IsEquivalentTo(new[] { "<mi xmlns=\"http://www.w3.org/1998/Math/MathML\">K</mi>", "<mi xmlns=\"http://www.w3.org/1998/Math/MathML\">𝟏</mi>", "<mi xmlns=\"http://www.w3.org/1998/Math/MathML\">𝟏</mi>" });
+        }
+
+        /// <summary>
         /// Depends on UTF-16 counting: an italic 🍕 of OMML (a run without m:sty) is written back upright, so it reads
         /// back as another equation. Counting code points, it would be written as it was read.
         /// </summary>
