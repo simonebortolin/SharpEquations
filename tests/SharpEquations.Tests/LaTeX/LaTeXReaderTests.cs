@@ -72,7 +72,7 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\{x\mid x>0\}", @"\{x\mid x>0\}", @"{𝑥∣𝑥>0}")]
         [Arguments(@"a\mid b", @"a\mid b", @"𝑎\∣𝑏")]
         [Arguments(@"\langle\psi\mid", @"\langle\psi\mid", @"⟨𝜓\∣")]
-        [Arguments(@"\mid\psi\rangle", @"|\psi\rangle", @"|𝜓⟩")]
+        [Arguments(@"\mid\psi\rangle", @"\mid\psi\rangle", @"\∣𝜓\⟩")]
         [Arguments(@"\overset{\to}{a}\overset{\to}{b}", @"\overset{\to}{a}\overset{\to}{b}", @"𝑎┴→ 𝑏┴→")]
         [Arguments(@"\mathring{a}\overleftarrow{b}", @"\mathring{a}\overleftarrow{b}", @"𝑎┴˚ 𝑏┴←")]
         [Arguments(@"\vphantom{\sum}_1^2\sum_3^4", @"\vphantom{\sum}_1^2\sum_3^4", @"⇳∑₁²∑₃⁴")]
@@ -351,6 +351,16 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"a\circledR b", "®")]
         [Arguments(@"a\S b", "§")]
         [Arguments(@"a\P b", "¶")]
+        [Arguments(@"a\geqslant b", "⩾")]
+        [Arguments(@"a\leqslant b", "⩽")]
+        [Arguments(@"a\therefore b", "∴")]
+        [Arguments(@"a\coloneqq b", "≔")]
+        [Arguments(@"a\dblcolon b", "∷")]
+        [Arguments(@"a\ngtr b", "≯")]
+        [Arguments(@"a\lozenge b", "◊")]
+        [Arguments(@"a\oslash b", "⊘")]
+        [Arguments(@"a\succeq b", "⪰")]
+        [Arguments(@"a\mid b", "∣")]
         public async Task ReadsSymbolsThatUnicodeMathHasNoControlWordFor(string latex, string symbol)
         {
             var math = Equation.Parse(latex, EquationFormat.LaTeX, Strict).ToMathML();
