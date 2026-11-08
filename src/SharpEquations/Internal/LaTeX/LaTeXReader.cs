@@ -306,6 +306,13 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 if (tex[i] != "\\")
                 {
+                    // the spaces before a script, which LaTeX ignores (\right| _0) and UnicodeMath would read as the end of the base
+                    if (tex[i] == " " && NonBlank(tex, i) is "_" or "^")
+                    {
+                        while (tex[i] == " ")
+                            i++;
+                        continue;
+                    }
                     // a script that is a command with arguments, x_\text{ab}: the script is the command and its arguments
                     if ((tex[i] == "_" || tex[i] == "^") && ScriptCommand(tex, i + 1) is var (command, after) && command != null)
                     {

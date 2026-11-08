@@ -155,6 +155,18 @@ namespace SharpEquations.Tests.LaTeX
             await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX)).IsEqualTo(Equation.Parse(latex, EquationFormat.LaTeX)).Because("the LaTeX written reads back");
         }
 
+        // the demos of math.webc.site, whose LaTeX and UnicodeMath read back to the same equation
+        [Test]
+        [Arguments(@"\left. \frac{df}{dx} \right| _0", @"{\left.\frac{df}{dx}\right|}_0", @"├𝑑𝑓/𝑑𝑥 ┤|₀")]
+        [Arguments(@"\sum _{i=1} ^n i", @"\sum_{i=1}^ni", @"∑_(𝑖=1)^𝑛 𝑖")]
+        public async Task ReadsLaTeXThatWritesBack(string latex, string expectedLaTeX, string expectedUnicodeMath)
+        {
+            await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);
+            var equation = Equation.Parse(latex, EquationFormat.LaTeX);
+            await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX)).IsEqualTo(equation).Because("the LaTeX written reads back");
+            await Assert.That(Equation.Parse(expectedUnicodeMath, EquationFormat.UnicodeMath)).IsEqualTo(equation).Because("the UnicodeMath written reads back");
+        }
+
         [Test]
         [Arguments(@"{x}^2", @"x^2")]
         [Arguments(@"{a+b}^2", @"{a+b}^2")]
