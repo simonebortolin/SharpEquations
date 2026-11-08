@@ -48,9 +48,12 @@ namespace SharpEquations.Internal.LaTeX
 
         private readonly bool standard;
 
-        private LaTeXSerializer(bool standard)
+        private readonly bool display;
+
+        private LaTeXSerializer(bool standard, bool display)
         {
             this.standard = standard;
+            this.display = display;
         }
 
         /// <summary>
@@ -59,7 +62,7 @@ namespace SharpEquations.Internal.LaTeX
         /// </summary>
         public static string Serialize(XElement math, bool standard = false)
         {
-            var latex = new LaTeXSerializer(standard).TeX(MathML.DefaultIntents.Restore(math));
+            var latex = new LaTeXSerializer(standard, (string)math.Attribute("display") == "block").TeX(MathML.DefaultIntents.Restore(math));
             return standard ? LaTeXSymbols.Tidy(latex) : latex;
         }
 
@@ -168,11 +171,31 @@ namespace SharpEquations.Internal.LaTeX
             return op + "{" + ret + "}";
         }
 
-        private string Binary(XElement node, string op) => CheckBracing(TeX(First(node)), true) + op + CheckBracing(TeX(Last(node)));
+        private string Binary(XElement node, string op) => CheckBracing(TeX(First(node)), true) + Limits(node) + op + CheckBracing(TeX(Last(node)));
 
         private string Ternary(XElement node, string op1, string op2)
         {
-            return CheckBracing(TeX(First(node)), true) + op1 + CheckBracing(TeX(Child(node, 1))) + op2 + CheckBracing(TeX(Last(node)));
+            return CheckBracing(TeX(First(node)), true) + Limits(node) + op1 + CheckBracing(TeX(Child(node, 1))) + op2 + CheckBracing(TeX(Last(node)));
+        }
+
+        /// <summary>
+        /// In standard LaTeX, \limits or \nolimits after a large operator whose scripts are not where TeX puts them:
+        /// TeX puts them under and over a summation (∑, ∏, ⋃...) in a display equation, and at the side of an integral
+        /// and of a summation in an inline one.
+        /// </summary>
+        private string Limits(XElement scripted)
+        {
+            var op = First(scripted);
+            while (Name(op) == "mrow" && ChildCount(op) == 1)
+                op = First(op);
+            if (!standard || Name(op) != "mo" || !IsLargeOperator(op) || Len(Text(op)) != 1)
+                return "";
+            var c = CodePointAt(Text(op), 0);
+            if (c >= 0x23DC && c <= 0x23E1)
+                return "";
+            bool underOver = Name(scripted) is "munder" or "mover" or "munderover";
+            bool summation = c >= 0x220F && c <= 0x2211 || c >= 0x22C0 && c <= 0x22C3 || c >= 0x2A00 && c <= 0x2A06;
+            return underOver == (summation && display) ? "" : underOver ? "\\limits" : "\\nolimits";
         }
 
         private string Nary(XElement node, string op, int cNode)
@@ -306,7 +329,8 @@ namespace SharpEquations.Internal.LaTeX
                     var notation = Attr(value, "notation");
                     if (notation == "top" || notation == "bottom")
                     {
-                        ret = Unary(value, notation == "top" ? "\\overline" : "\\underline");
+                        // the bar on top is the one of \bar (x̅), \overline being the overbar of UnicodeMath (¯x)
+                        ret = Unary(value, notation == "top" ? "\\bar" : "\\underline");
                         break;
                     }
                     if (standard && notation == "circle")
@@ -418,7 +442,7 @@ namespace SharpEquations.Internal.LaTeX
                     if (standard)
                     {
                         ret = TakesLimits(First(value)) && !HasAttr(value, "accent")
-                            ? CheckBracing(TeX(First(value)), true) + "^" + CheckBracing(TeX(Last(value)))
+                            ? CheckBracing(TeX(First(value)), true) + Limits(value) + "^" + CheckBracing(TeX(Last(value)))
                             : "\\overset{" + TeX(Last(value)) + "}{" + TeX(First(value)) + "}";
                         break;
                     }
@@ -451,7 +475,7 @@ namespace SharpEquations.Internal.LaTeX
                     }
                     if (standard)
                     {
-                        ret = CheckBracing(TeX(First(value)), true) + "_" + CheckBracing(TeX(Last(value)));
+                        ret = CheckBracing(TeX(First(value)), true) + Limits(value) + "_" + CheckBracing(TeX(Last(value)));
                         break;
                     }
                     if ((HasAttr(value, "accentunder") || HasAttr(value, "accent")) && IsCombiningMark(Text(Last(value))))
@@ -537,6 +561,7 @@ namespace SharpEquations.Internal.LaTeX
                         return "\\" + val + " ";
                     if (OperatorMap.TryGetValue(val, out var mapped))
                         return mapped;
+                    // escaped for the reader, in standard LaTeX its command if it has one (Ⓢ, \circledS)
                     if (IsStructureOperator(val))
                         return EscapedStructureOperator(val);
                     if (val == "$")
@@ -793,8 +818,8 @@ namespace SharpEquations.Internal.LaTeX
 
         /// <summary>
         /// An operator that builds a structure in UnicodeMath, alone: escaped in Word's LaTeX (\□, \√); in standard
-        /// LaTeX the symbol's command where it has one (\square, and {\surd}, which a braced group keeps from taking
-        /// what follows as its radicand), escaped otherwise.
+        /// LaTeX the symbol's command where it has one (\square, \circledS, and {\surd}, which a braced group keeps from
+        /// taking what follows as its radicand), escaped otherwise.
         /// </summary>
         private string EscapedStructureOperator(string val)
         {
@@ -803,7 +828,7 @@ namespace SharpEquations.Internal.LaTeX
             if (val == "√")
                 return "{\\surd}";
             var command = LaTeXSymbols.Math(val);
-            return command.Length > 1 && command[0] == '\\' && command != val ? command : "\\" + val;
+            return command != val ? command : "\\" + val;
         }
 
         /// <summary>The operators that build a structure in UnicodeMath (▭, √, ¦…), escaped when they are alone: \▭.</summary>
@@ -830,7 +855,8 @@ namespace SharpEquations.Internal.LaTeX
         private static readonly Dictionary<string, string> SpacingAccents = new Dictionary<string, string>
         {
             ["^"] = "hat", ["ˆ"] = "hat", ["~"] = "tilde", ["˜"] = "tilde", ["→"] = "vec", ["⃗"] = "vec", ["˙"] = "dot", ["¨"] = "ddot",
-            ["ˇ"] = "check", ["˘"] = "breve", ["´"] = "acute", ["`"] = "grave", ["‾"] = "bar", ["¯"] = "bar",
+            ["ˇ"] = "check", ["˘"] = "breve", ["´"] = "acute", ["`"] = "grave", ["‾"] = "bar", ["¯"] = "bar", ["―"] = "overline",
+            ["˚"] = "mathring", ["←"] = "overleftarrow", ["↔"] = "overleftrightarrow",
         };
 
         /// <summary>A closing fence that is not there: empty in Word mode, also a zero width space in standard LaTeX.</summary>
@@ -881,6 +907,9 @@ namespace SharpEquations.Internal.LaTeX
                 return LaTeXSymbols.Math(intent);
             if (Len(text) != 1)
             {
+                // an empty identifier, which holds a place (the base of {}^3, the left side of &=)
+                if (text.Length == 0)
+                    return "{}";
                 if (IsFunctionName(text))
                     return "\\" + text + " ";
                 var plain = string.Concat(Characters(text).Where(c => c.Length == 1 && (c[0] >= 'A' && c[0] <= 'Z' || c[0] >= 'a' && c[0] <= 'z')));

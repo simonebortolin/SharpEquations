@@ -64,7 +64,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 if (end > start + 1 && chars[end - 2] == "\\" && (chars[end - 1] == "]" || chars[end - 1] == ")"))
                     end -= 2;
             }
-            var unicodemath = LaTeXReader.ToUnicodeMath(string.Concat(chars.Skip(start).Take(end - start)), macros);
+            var unicodemath = LaTeXReader.ToUnicodeMath(string.Concat(chars.Skip(start).Take(end - start)), macros, display);
             var umChars = UnicodeMathText.Characters(unicodemath);
             if (umChars.Count > 0 && umChars[0] == "ⓓ" && umChars.Skip(1).FirstOrDefault(c => c != " ") != "{")
             {

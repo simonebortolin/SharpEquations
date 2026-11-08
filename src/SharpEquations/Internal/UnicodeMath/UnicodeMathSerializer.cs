@@ -727,6 +727,19 @@ namespace SharpEquations.Internal.UnicodeMath
         }
 
         /// <summary>The base of digit scripts (𝑥₁): grouped when it has scripts of its own or several parts.</summary>
+        /// <summary>
+        /// Whether an element ends with a script (𝑥_𝑖, →┴𝑛), which a space after it ends: not a digit script (𝑥²), an
+        /// accent (𝑥̂) or the limits of an n-ary operator, whose operand the space starts (∑_𝑖 1/𝑖).
+        /// </summary>
+        private static bool EndsWithScript(XElement node)
+        {
+            while (Name(node) == "mrow" && ChildCount(node) > 0)
+                node = Last(node);
+            if (IsNaryHead(node) || IsDigitArg(node) || Name(node) is "mover" or "munder" && (HasAttr(node, "accent") || HasAttr(node, "accentunder") || IsCombining(Text(Last(node)))))
+                return false;
+            return Name(node) is "msub" or "msup" or "msubsup" or "mover" or "munder" or "munderover";
+        }
+
         private string ScriptBase(XElement node)
         {
             var ret = Dump(node);
@@ -950,11 +963,13 @@ namespace SharpEquations.Internal.UnicodeMath
                             op = "⒞";
                     }
                     ret = Binary(value, op);
-                    // after a space operator, which does not end its numerator, the fraction is grouped
-                    if (Attr(parent, "intent") == ":function" || Name(Previous(value)) == "mo" && Text(Previous(value)).Length > 0 && Text(Previous(value)).Trim().Length == 0)
+                    // after a space operator or the function apply sign, which do not end its numerator, the fraction is grouped
+                    if (Attr(parent, "intent") == ":function" || Name(Previous(value)) == "mo" && Text(Previous(value)).Length > 0 &&
+                        (Text(Previous(value)).Trim().Length == 0 || Text(Previous(value)) == "⁡"))
                         ret = "〖" + ret.Trim(' ') + "〗";
                     else if (Previous(value) != null && Name(Previous(value)) != "mo")
-                        ret = " " + ret;
+                        // after a script, which the space ends, the fraction is grouped too: 𝑥_𝑖 〖1/2〗
+                        ret = " " + (EndsWithScript(Previous(value)) ? "〖" + ret.Trim(' ') + "〗" : ret);
                     break;
 
                 case "msup":

@@ -25,13 +25,14 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\left\lfloor x \right\rfloor", @"\lfloor x\rfloor", @"⌊𝑥⌋")]
         [Arguments(@"\bigl( x \bigr)", @"(x)", @"(𝑥)")]
         [Arguments(@"\Big( x \Big)", @"(x)", @"(𝑥)")]
-        [Arguments(@"\hat{x}\widehat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"\hat{x}\hat{xy}\overline{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"𝑥̂(𝑥𝑦)̂̄𝑥 𝑣⃗𝑥̇𝑥̈𝑥̃𝑥̌𝑥̆𝑥́𝑥̀")]
+        [Arguments(@"\hat{x}\widehat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"\hat{x}\hat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"𝑥̂(𝑥𝑦)̂̄𝑥 𝑣⃗𝑥̇𝑥̈𝑥̃𝑥̌𝑥̆𝑥́𝑥̀")]
         [Arguments(@"\overline{x+y}\underline{z}", @"\overline{x+y}\underline{z}", @"¯(𝑥+𝑦)▁𝑧")]
         [Arguments(@"\overbrace{a+b}^{n}", @"\overset{n}{\overbrace{a+b}}", @"⏞(𝑎+𝑏)┴𝑛")]
         [Arguments(@"\underbrace{a+b}_{n}", @"\underset{n}{\underbrace{a+b}}", @"⏟(𝑎+𝑏)┬𝑛")]
         [Arguments(@"\operatorname{rank} A", @"\operatorname{rank}A", @"rank⁡𝐴")]
-        [Arguments(@"\sum\limits_{i=1}^n i", @"\sum_{i=1}^ni", @"∑_(𝑖=1)^𝑛 𝑖")]
-        [Arguments(@"\int\limits_0^1 f", @"\int_0^1f", @"∫₀¹ 𝑓")]
+        [Arguments(@"\sum\limits_{i=1}^n i", @"\sum\limits_{i=1}^ni", @"∑1_(𝑖=1)^𝑛 𝑖")]
+        [Arguments(@"\int\limits_0^1 f", @"\int\limits_0^1f", @"∫1₀¹ 𝑓")]
+        [Arguments(@"\sum\nolimits_{i=1}^n i", @"\sum_{i=1}^ni", @"∑_(𝑖=1)^𝑛 𝑖")]
         [Arguments(@"\iint_D f\,dA + \oint_C F", @"\iint_Df\,dA+\oint_CF", @"∬_𝐷 〖𝑓 〗𝑑𝐴+∮_𝐶 𝐹")]
         [Arguments(@"\prod_{i} a_i \coprod \bigcup_i A_i \bigcap_j B_j", @"\prod_ia_i\coprod\bigcup_iA_i\bigcap_jB_j", @"∏_𝑖 𝑎_𝑖 ∐⋃_𝑖 𝐴_𝑖 ⋂_𝑗 𝐵_𝑗")]
         [Arguments(@"a \pmod{n}", @"a\;(\mod\,n)", @"𝑎 (mod⁡ 𝑛)")]
@@ -69,6 +70,14 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\mathop{\mathrm{argmin}}_x f", @"\operatorname{argmin}_xf", @"argmin⁡_𝑥 𝑓")]
         [Arguments(@"x\in\left\{1,2\right\}", @"x\in\{1,2\}", @"𝑥∈{1,2}")]
         [Arguments(@"\{x\mid x>0\}", @"\{x\mid x>0\}", @"{𝑥∣𝑥>0}")]
+        [Arguments(@"a\mid b", @"a\mid b", @"𝑎\∣𝑏")]
+        [Arguments(@"\langle\psi\mid", @"\langle\psi\mid", @"⟨𝜓\∣")]
+        [Arguments(@"\mid\psi\rangle", @"|\psi\rangle", @"|𝜓⟩")]
+        [Arguments(@"\overset{\to}{a}\overset{\to}{b}", @"\overset{\to}{a}\overset{\to}{b}", @"𝑎┴→ 𝑏┴→")]
+        [Arguments(@"\mathring{a}\overleftarrow{b}", @"\mathring{a}\overleftarrow{b}", @"𝑎┴˚ 𝑏┴←")]
+        [Arguments(@"\vphantom{\sum}_1^2\sum_3^4", @"\vphantom{\sum}_1^2\sum_3^4", @"⇳∑₁²∑₃⁴")]
+        [Arguments(@"\_\{\}", @"\_\{\}", @"\_{}")]
+        [Arguments(@"\Gamma=\mathit{\Gamma}", @"\Gamma=\mathit{\Gamma}", @"Γ=𝛤")]
         [Arguments(@"a\cdot b\times c\div d", @"a\cdot b\times c\div d", @"𝑎⋅𝑏×𝑐÷𝑑")]
         [Arguments(@"\hbar\ell\Re\Im\aleph", @"\hbar\ell  \Re\Im\aleph", @"ℏℓ Re⁡Im⁡ℵ")]
         [Arguments(@"\langle a, b\rangle", @"\langle a,b\rangle", @"⟨𝑎,𝑏⟩")]
@@ -155,8 +164,35 @@ namespace SharpEquations.Tests.LaTeX
             await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX)).IsEqualTo(Equation.Parse(latex, EquationFormat.LaTeX)).Because("the LaTeX written reads back");
         }
 
+        // the demos of math.webc.site, whose LaTeX and UnicodeMath read back to the same equation
+        [Test]
+        [Arguments(@"\left. \frac{df}{dx} \right| _0", @"{\left.\frac{df}{dx}\right|}_0", @"├𝑑𝑓/𝑑𝑥 ┤|₀")]
+        [Arguments(@"\sum _{i=1} ^n i", @"\sum_{i=1}^ni", @"∑_(𝑖=1)^𝑛 𝑖")]
+        [Arguments(@"a \lt 1 \gt b", @"a<1>b", @"𝑎<1>𝑏")]
+        [Arguments(@"y \lt 1 \tag{1}", @"y<1\tag{1}", @"𝑦<1#(1)")]
+        [Arguments(@"{\rm rxn}", @"\text{rxn}", @"""rxn""")]
+        [Arguments(@"{\rm d} x", @"\mathrm{d}x", @"""d""𝑥")]
+        [Arguments(@"{\bf x} + {\it ab} + {\cal F} + {\sf s} + {\tt t}", @"\mathbf{x}+ab+\mathcal{F}+\mathsf{s}+\mathtt{t}", @"𝐱+𝑎𝑏+ℱ+𝗌+𝚝")]
+        [Arguments(@"\Delta H_{\rm rxn}^\circ = -R T \ln K", @"\Delta H_{\text{rxn}}^\circ=-RT \ln K", @"Δ𝐻_""rxn""^∘ =−𝑅𝑇 ln⁡𝐾")]
+        [Arguments(@"\Gamma=\Omega", @"\Gamma=\Omega", @"Γ=Ω")]
+        [Arguments(@"\theta = 45\degree", @"\theta=45\degree", @"𝜃=45°")]
+        [Arguments(@"f \circ g", @"f\circ g", @"𝑓∘𝑔")]
+        [Arguments(@"\bar{x} = \frac{1}{n} \cdot \sum_{i=1}^n x_i", @"\bar{x}=\frac{1}{n}\cdot\sum_{i=1}^nx_i", @"̄𝑥=1/𝑛 ⋅∑_(𝑖=1)^𝑛 𝑥_𝑖")]
+        [Arguments(@"\bar{A\cup B}+\overline{A\cup B}", @"\bar{A\cup B}+\overline{A\cup B}", @"̄(𝐴∪𝐵)+¯(𝐴∪𝐵)")]
+        [Arguments(@"a\stackrel{n\to\infty}{\longrightarrow}b", @"a\overset{n\to\infty}{\longrightarrow}b", @"𝑎⟶┴(𝑛→∞) 𝑏")]
+        [Arguments(@"x\xrightarrow{f}y", @"x\overset{f}{\to}y", @"𝑥→┴𝑓 𝑦")]
+        [Arguments(@"{\overset{a}{b}}c", @"\overset{a}{b}c", @"𝑏┴𝑎 𝑐")]
+        public async Task ReadsLaTeXThatWritesBack(string latex, string expectedLaTeX, string expectedUnicodeMath)
+        {
+            await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);
+            var equation = Equation.Parse(latex, EquationFormat.LaTeX);
+            await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX)).IsEqualTo(equation).Because("the LaTeX written reads back");
+            await Assert.That(Equation.Parse(expectedUnicodeMath, EquationFormat.UnicodeMath)).IsEqualTo(equation).Because("the UnicodeMath written reads back");
+        }
+
         [Test]
         [Arguments(@"{x}^2", @"x^2")]
+        [Arguments(@"\overset{a}{b}^2", @"\overset{a}{b}^2")]
         [Arguments(@"{a+b}^2", @"{a+b}^2")]
         [Arguments(@"{a+b}_n", @"{a+b}_n")]
         [Arguments(@"x_\text{ab}", @"x_{\text{ab}}")]
