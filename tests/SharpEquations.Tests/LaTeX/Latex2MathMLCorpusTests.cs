@@ -200,12 +200,11 @@ namespace SharpEquations.Tests
         // \injlim, \operatorname*{argmax}_x), which UnicodeMath reads as letters, and the names of amsmath that are two
         // words (lim inf); \limits after \mathop; both scripts of \overbrace and \underbrace; \middle between empty
         // delimiters and bars with nothing between them (|\,|); a font over \text and escaped braces (\mathrm{\{b\}},
-        // \mathsf{\text{}}, \boldsymbol{1}); \newenvironment and ## in a macro
+        // \mathsf{\text{}}, \boldsymbol{1})
         private static readonly HashSet<string> NotReadYet = new HashSet<string>
         {
             "lg", "liminf", "limsup", "injlim", "projlim", "varinjlim", "operatornamewithlimits", "operatorname-star",
             "issue-125-4-limits", "overbrace-c", "underbrace-c", "middle", "spaces", "mathrm", "mathsf", "boldsymbol",
-            "newenvironment-multi-node", "newcommand-escaped-hash",
         };
 
         // the same equation, which SharpEquations holds otherwise: an equation number as the label of its row (\tag),
@@ -221,17 +220,17 @@ namespace SharpEquations.Tests
             "textsf", "texttt", "emph",
         };
 
-        // what is no LaTeX: \e, which no package defines, and ntext, a mistyped \text
-        private static readonly HashSet<string> NotLaTeX = new HashSet<string> { "backslash-e", "issue-125-1-overset" };
+        // what is no LaTeX: \e, which no package defines, ntext, a mistyped \text, and a # in math mode (## in the body of
+        // a macro is # in its expansion, which TeX rejects there)
+        private static readonly HashSet<string> NotLaTeX = new HashSet<string> { "backslash-e", "issue-125-1-overset", "newcommand-escaped-hash" };
 
         private static readonly HashSet<string> ReadOtherwise = new HashSet<string>(NotInWordLaTeX.Concat(NotReadYet).Concat(HeldOtherwise).Concat(NotLaTeX));
 
         // the macros the reader does not expand as LaTeX does: \DeclareMathOperator, the default of an optional argument,
-        // an empty body (which leaves an empty group), \newenvironment
+        // and an empty body (which leaves an empty group)
         private static readonly HashSet<string> NotExpanded = new HashSet<string>
         {
-            "declare-math-operator", "newcommand-optional-default", "newcommand-empty-body", "newenvironment",
-            "newenvironment-with-args",
+            "declare-math-operator", "newcommand-optional-default", "newcommand-empty-body",
         };
 
         private static string? Check(Func<string?> check)

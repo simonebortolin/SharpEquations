@@ -37,7 +37,7 @@ namespace SharpEquations.Internal.LaTeX
 
         /// <summary>
         /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def
-        /// or \newcommand go to <paramref name="macros"/>, where later conversions find them. In a display equation the
+        /// or \newcommand, and environments defined with \newenvironment, go to <paramref name="macros"/>, where later conversions find them. In a display equation the
         /// scripts of a large operator other than an integral (\sum, \prod, \bigcup...) go under and over it, as TeX
         /// puts them.
         /// </summary>
@@ -1060,9 +1060,145 @@ namespace SharpEquations.Internal.LaTeX
             return (null, -1);
         }
 
+        /// <summary>
+        /// The environments of \newenvironment{name}[n][default]{begin}{end} (and \renewenvironment) applied: the
+        /// definitions removed and kept in the macros under {name}, where later conversions find them, and each
+        /// \begin{name}{arguments}...\end{name} replaced by the begin code with its arguments (#1...), the body and the
+        /// end code, as TeX expands them.
+        /// </summary>
+        private string NewEnvironments(string latex)
+        {
+            var tex = new Text(latex);
+            var result = new StringBuilder();
+            int expansions = 0;
+            for (int i = 0; i < tex.Length;)
+            {
+                var cw = tex[i] == "\\" ? ControlWord(tex, i + 1) : "";
+                int j = i + 1 + cw.Length;
+                switch (cw)
+                {
+                    case "newenvironment" or "renewenvironment" when BracedArgument(tex, j) is var (name, afterName) && afterName >= 0 &&
+                        EnvironmentDefinition(tex, afterName) is var (_, _, _, _, afterDefinition) && afterDefinition >= 0:
+                        macros["{" + name.Trim() + "}"] = tex.Sub(afterName, afterDefinition);
+                        i = afterDefinition;
+                        continue;
+                    case "begin" when BracedArgument(tex, j) is var (name, afterName) && afterName >= 0 &&
+                        macros.TryGetValue("{" + name.Trim() + "}", out var definition) &&
+                        EnvironmentDefinition(new Text(definition), 0) is var (count, optional, begin, end, _) &&
+                        EnvironmentArguments(tex, afterName, count, optional) is var (arguments, afterArguments) && afterArguments >= 0 &&
+                        EnvironmentEnd(tex, afterArguments, name.Trim()) is var (bodyEnd, afterEnd) && bodyEnd >= 0:
+                        if (++expansions > 1000)
+                            throw new FormatException("The LaTeX environment " + name.Trim() + " does not stop expanding.");
+                        // the expansion read again, for the environments it uses
+                        var expansion = new StringBuilder();
+                        foreach (var part in new[] { Substitute(begin, arguments), tex.Sub(afterArguments, bodyEnd), end, tex.Sub(afterEnd) })
+                            Join(expansion, part);
+                        tex = new Text(expansion.ToString());
+                        i = 0;
+                        if (ContinuesControlWord(result, expansion.ToString()))
+                            result.Append(' ');
+                        continue;
+                    default:
+                        var next = cw.Length > 0 ? j : i + (tex[i] == "\\" ? 2 : 1);
+                        result.Append(tex.Sub(i, next));
+                        i = next;
+                        continue;
+                }
+            }
+            return result.ToString();
+        }
+
+        /// <summary>The [n][default]{begin}{end} of an environment definition at the index; Next -1 if there is none.</summary>
+        private static (int Count, string Optional, string Begin, string End, int Next) EnvironmentDefinition(Text tex, int i)
+        {
+            var (countText, afterCount) = OptionalArgument(tex, i);
+            int count = 0;
+            if (countText != null && (!int.TryParse(countText.Trim(), out count) || count < 0 || count > 9))
+                return (0, null, null, null, -1);
+            var (optional, afterOptional) = countText == null ? (null, afterCount) : OptionalArgument(tex, afterCount);
+            var (begin, afterBegin) = BracedArgument(tex, afterOptional);
+            var (end, afterEnd) = afterBegin < 0 ? (null, -1) : BracedArgument(tex, afterBegin);
+            return (count, optional, begin, end, afterEnd);
+        }
+
+        /// <summary>The arguments of an environment at the index (the first one optional when it has a default); Next -1 if missing.</summary>
+        private static (List<string> Arguments, int Next) EnvironmentArguments(Text tex, int i, int count, string optional)
+        {
+            var arguments = new List<string>();
+            if (optional != null && count > 0)
+            {
+                var (given, afterGiven) = OptionalArgument(tex, i);
+                arguments.Add(given ?? optional);
+                i = afterGiven;
+            }
+            return Arguments(tex, i, count - arguments.Count) is var (rest, next) ? (arguments.Concat(rest).ToList(), next) : (null, -1);
+        }
+
+        /// <summary>The index of the \end{name} that closes an environment whose body starts at the index, and the index after it; -1 if none.</summary>
+        private static (int End, int Next) EnvironmentEnd(Text tex, int i, string name)
+        {
+            int depth = 1;
+            for (; i < tex.Length; i++)
+            {
+                if (tex[i] != "\\")
+                    continue;
+                var cw = ControlWord(tex, i + 1);
+                if (cw is "begin" or "end" && BracedArgument(tex, i + 1 + cw.Length) is var (environment, after) && after >= 0 && environment.Trim() == name)
+                {
+                    depth += cw == "begin" ? 1 : -1;
+                    if (depth == 0)
+                        return (i, after);
+                }
+                i += Math.Max(1, cw.Length);
+            }
+            return (-1, -1);
+        }
+
+        /// <summary>The begin code of an environment with its #1... replaced by the arguments, and ## by #.</summary>
+        private static string Substitute(string code, List<string> arguments)
+        {
+            var tex = new Text(code);
+            var result = new StringBuilder();
+            for (int i = 0; i < tex.Length; i++)
+            {
+                switch (tex[i])
+                {
+                    case "#" when tex[i + 1] == "#":
+                        result.Append('#');
+                        i++;
+                        break;
+                    case "#" when tex[i + 1] is { Length: 1 } digit && digit[0] is >= '1' and <= '9' && digit[0] - '1' < arguments.Count:
+                        result.Append(arguments[digit[0] - '1']);
+                        i++;
+                        break;
+                    default:
+                        result.Append(tex[i]);
+                        break;
+                }
+            }
+            return result.ToString();
+        }
+
+        /// <summary>A part of an expansion appended, after a space if it would continue the control word before it (\alpha x).</summary>
+        private static void Join(StringBuilder expansion, string part)
+        {
+            if (ContinuesControlWord(expansion, part))
+                expansion.Append(' ');
+            expansion.Append(part);
+        }
+
+        private static bool ContinuesControlWord(StringBuilder before, string after)
+        {
+            var text = new Text(before.ToString());
+            int i = text.Length;
+            while (i > 0 && IsAsciiAlphabetic(text[i - 1]))
+                i--;
+            return i < text.Length && text[i - 1] == "\\" && IsAsciiAlphabetic(new Text(after)[0]);
+        }
+
         private string Convert(string latex)
         {
-            var tex = new Text(EscapeOddBars(RewriteTeXOnly(Limits(latex))));
+            var tex = new Text(EscapeOddBars(RewriteTeXOnly(Limits(NewEnvironments(latex)))));
             var cwPrev = "";
             bool needMacroPass = false;
             var uniTeX = new StringBuilder();
