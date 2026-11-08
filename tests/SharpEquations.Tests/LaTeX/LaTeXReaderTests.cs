@@ -161,6 +161,11 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\sum _{i=1} ^n i", @"\sum_{i=1}^ni", @"∑_(𝑖=1)^𝑛 𝑖")]
         [Arguments(@"a \lt 1 \gt b", @"a<1>b", @"𝑎<1>𝑏")]
         [Arguments(@"y \lt 1 \tag{1}", @"y<1\tag{1}", @"𝑦<1#(1)")]
+        [Arguments(@"{\rm rxn}", @"\text{rxn}", @"""rxn""")]
+        [Arguments(@"{\rm d} x", @"\mathrm{d}x", @"""d""𝑥")]
+        [Arguments(@"{\bf x} + {\it ab} + {\cal F} + {\sf s} + {\tt t}", @"\mathbf{x}+ab+\mathcal{F}+\mathsf{s}+\mathtt{t}", @"𝐱+𝑎𝑏+ℱ+𝗌+𝚝")]
+        [Arguments(@"\Delta H_{\rm rxn}^\circ = -R T \ln K", @"\Delta H_{\text{rxn}}^\circ=-RT \ln K", @"Δ𝐻_""rxn""^∘ =−𝑅𝑇 ln⁡𝐾")]
+        [Arguments(@"\Gamma=\Omega", @"\Gamma=\Omega", @"Γ=Ω")]
         public async Task ReadsLaTeXThatWritesBack(string latex, string expectedLaTeX, string expectedUnicodeMath)
         {
             await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);

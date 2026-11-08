@@ -189,9 +189,10 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>Upright text in math: \mathrm{x} for a letter, \text{...} for words.</summary>
         public static string Upright(string text)
         {
-            // an upright Greek letter is text: \alpha is italic, and \mathrm does not change it
+            // an upright Greek letter is text: \alpha is italic, and \mathrm does not change it; the capitals of LaTeX,
+            // \Delta, are upright
             if (Js.Len(text) == 1 && Commands.ContainsKey(text))
-                return char.IsLetter(text, 0) ? Text(text) : Math(text);
+                return char.IsLetter(text, 0) && !(text[0] >= 'Α' && text[0] <= 'Ω') ? Text(text) : Math(text);
             return Js.Len(text) == 1 ? "\\mathrm{" + Math(text) + "}" : Text(text);
         }
 
