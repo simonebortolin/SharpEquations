@@ -27,16 +27,22 @@ namespace SharpEquations.Internal.LaTeX
 
         private readonly IDictionary<string, string> macros;
 
-        private LaTeXReader(IDictionary<string, string> macros)
+        private readonly bool display;
+
+        private LaTeXReader(IDictionary<string, string> macros, bool display)
         {
             this.macros = macros ?? new Dictionary<string, string>();
+            this.display = display;
         }
 
         /// <summary>
         /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def
-        /// or \newcommand go to <paramref name="macros"/>, where later conversions find them.
+        /// or \newcommand go to <paramref name="macros"/>, where later conversions find them. In a display equation the
+        /// scripts of a large operator other than an integral (\sum, \prod, \bigcup...) go under and over it, as TeX
+        /// puts them.
         /// </summary>
-        public static string ToUnicodeMath(string tex, IDictionary<string, string> macros = null) => RestoreTextEscapes(new LaTeXReader(macros).Convert(tex));
+        public static string ToUnicodeMath(string tex, IDictionary<string, string> macros = null, bool display = false) =>
+            RestoreTextEscapes(new LaTeXReader(macros, display).Convert(tex));
 
         // the characters that \text escapes ({, \_, ...), held as noncharacters through the passes, which would read them as LaTeX
         private static readonly (string Escape, char Held, char Character)[] TextEscapes =
@@ -48,9 +54,8 @@ namespace SharpEquations.Internal.LaTeX
 
         private static readonly HashSet<string> TextCommands = new HashSet<string>(StringComparer.Ordinal)
         {
-            "text", "textrm", "textup", "textnormal", "textbf", "textit", "textsf", "texttt", "textmd", "mbox",
+            "text", "textrm", "textup", "textnormal", "textbf", "textit", "textsf", "texttt", "textmd", "mbox", "emph",
         };
-
         /// <summary>Text as a quoted UnicodeMath string, which keeps parentheses and backslashes as they are.</summary>
         private static string Quoted(string text) => text.Length == 0 ? "" : "\"" + text.Replace("\"", "\\\"") + "\"";
 
@@ -242,11 +247,122 @@ namespace SharpEquations.Internal.LaTeX
             [":"] = " ", [">"] = " ", [";"] = " ", ["!"] = "", [" "] = "\u00A0",
         };
 
+        // the large operators whose scripts TeX puts under and over them in a display equation; an integral keeps them
+        // at its side unless \limits puts them under and over
+        private static readonly HashSet<string> Summations = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "sum", "prod", "coprod", "bigcup", "bigcap", "bigvee", "bigwedge", "bigoplus", "bigotimes", "bigodot", "biguplus", "bigsqcup",
+            "∑", "∏", "∐", "⋃", "⋂", "⋁", "⋀", "⨁", "⨂", "⨀", "⨄", "⨆",
+        };
+
+        /// <summary>
+        /// The scripts of large operators where TeX puts them: under and over after \limits, and after a summation in a
+        /// display equation, as UnicodeMath's ┬ and ┴ (∑┬(𝑘=1)┴𝑛); at the side after \nolimits, the operator then
+        /// grouped (〖∑〗_(𝑘=1)^𝑛), since UnicodeMath puts the scripts of a summation under and over it in a display
+        /// equation. \limits and \nolimits are left out.
+        /// </summary>
+        private string Limits(string latex)
+        {
+            var tex = new Text(latex);
+            var result = new StringBuilder();
+            // where the last summation begins in the result, and whether it ends the result
+            int summation = -1;
+            for (int i = 0; i < tex.Length;)
+            {
+                var cw = tex[i] == "\\" ? ControlWord(tex, i + 1) : "";
+                var next = tex[i] == "\\" ? i + 1 + Math.Max(1, cw.Length) : i + 1;
+                if (cw is "limits" or "nolimits")
+                {
+                    var (under, over, afterScripts) = Scripts(tex, next);
+                    if (afterScripts == next)
+                    {
+                        i = next;
+                        continue;
+                    }
+                    if (cw == "limits")
+                        result.Append(UnderOver(under, over));
+                    else
+                    {
+                        if (display && summation >= 0)
+                            result.Insert(summation, '{').Append('}');
+                        result.Append(under == null ? "" : "_{" + under + "}").Append(over == null ? "" : "^{" + over + "}");
+                    }
+                    summation = -1;
+                    i = afterScripts;
+                    continue;
+                }
+                var token = tex.Sub(i, next);
+                var isSummation = Summations.Contains(cw.Length > 0 ? cw : tex[i]);
+                result.Append(token);
+                i = next;
+                summation = isSummation ? result.Length - token.Length : summation >= 0 && tex[i - 1] == " " ? summation : -1;
+                if (isSummation && display && NonBlank(tex, i) is "_" or "^")
+                {
+                    // the scripts of a summation in a display equation (\limits or \nolimits would come before them)
+                    var (under, over, afterScripts) = Scripts(tex, i);
+                    result.Append(UnderOver(under, over));
+                    summation = -1;
+                    i = afterScripts;
+                }
+            }
+            return result.ToString();
+        }
+
+        // the limits end at a space, which parts them from the operand: ∑┬𝑘 (−1)^𝑘, not ∑┬(𝑘(−1))
+        private static string UnderOver(string under, string over) =>
+            (under == null ? "" : "┬" + ScriptGroup(under)) + (over == null ? "" : "┴" + ScriptGroup(over)) + " ";
+
+        /// <summary>
+        /// A script braced unless it is one character (┴𝑛, ┬{𝑘=1}), as the scripts of _ and ^ are; a command is braced
+        /// too (┴{\infty}), since the space that ends its name would not part the script from the operand.
+        /// </summary>
+        private static string ScriptGroup(string script) => new Text(script).Length == 1 ? script : "{" + script + "}";
+
+        /// <summary>The subscript and the superscript at the index (in either order, after blanks), and the index after them.</summary>
+        private static (string Under, string Over, int Next) Scripts(Text tex, int i)
+        {
+            string under = null, over = null;
+            int next = i;
+            while (true)
+            {
+                int j = next;
+                while (j < tex.Length && tex[j] == " ")
+                    j++;
+                if (tex[j] is not ("_" or "^") || (tex[j] == "_" ? under : over) != null)
+                    return (under, over, next);
+                var (script, afterScript) = ScriptArgument(tex, j + 1);
+                if (afterScript < 0)
+                    return (under, over, next);
+                if (tex[j] == "_")
+                    under = script;
+                else
+                    over = script;
+                next = afterScript;
+            }
+        }
+
+        /// <summary>A script: a braced group, a command with its arguments, a command or a character; -1 if none.</summary>
+        private static (string Text, int Next) ScriptArgument(Text tex, int i)
+        {
+            while (i < tex.Length && tex[i] == " ")
+                i++;
+            if (i >= tex.Length)
+                return (null, -1);
+            if (tex[i] == "{")
+                return BracedArgument(tex, i);
+            if (tex[i] != "\\")
+                return (tex[i], i + 1);
+            if (ScriptCommand(tex, i) is var (command, after) && command != null)
+                return (command, after);
+            var end = i + 1 + Math.Max(1, ControlWord(tex, i + 1).Length);
+            return (tex.Sub(i, end), end);
+        }
+
         // the commands that only size or style what follows, left out (\displaystyle makes a display equation, ⓓ)
         private static readonly HashSet<string> Dropped = new HashSet<string>(StringComparer.Ordinal)
         {
             "big", "Big", "bigg", "Bigg", "bigl", "bigr", "Bigl", "Bigr", "biggl", "biggr", "Biggl", "Biggr", "bigm", "Bigm", "biggm", "Biggm",
-            "limits", "nolimits", "textstyle", "scriptstyle", "scriptscriptstyle", "nonumber", "notag",
+            "textstyle", "scriptstyle", "scriptscriptstyle", "nonumber", "notag", "hline", "hdashline", "hfil", "hfill",
         };
 
         // the commands that are others for MathML
@@ -254,13 +370,27 @@ namespace SharpEquations.Internal.LaTeX
         {
             ["dfrac"] = "\\frac", ["tfrac"] = "\\frac", ["cfrac"] = "\\frac", ["dbinom"] = "\\binom", ["tbinom"] = "\\binom",
             ["overrightarrow"] = "\\vec", ["Vert"] = "‖", ["lVert"] = "‖", ["rVert"] = "‖", ["bmod"] = "\\operatorname{mod}",
-            ["bm"] = "\\boldsymbol", ["lt"] = "<", ["gt"] = ">",
+            ["bm"] = "\\boldsymbol",
+            // the symbols of amsmath, amssymb and plain TeX that UnicodeMath has no control word for
+            ["lt"] = "<", ["gt"] = ">", ["dotsb"] = "⋯", ["dotsi"] = "⋯", ["dotsm"] = "⋯", ["dotsc"] = "…", ["dotso"] = "…",
+            ["ldotp"] = ".", ["gggtr"] = "⋙", ["llless"] = "⋘", ["gvertneqq"] = "≩", ["lvertneqq"] = "≨", ["ngeqq"] = "≱",
+            ["nshortmid"] = "∤", ["nshortparallel"] = "∦", ["nsubseteqq"] = "⊈", ["omicron"] = "ο", ["S"] = "§", ["shortmid"] = "∣",
+            ["smallfrown"] = "⌢", ["smallsmile"] = "⌣", ["thicksim"] = "∼", ["thickapprox"] = "≈", ["varsubsetneqq"] = "⫋",
+            ["varsupsetneq"] = "⊋", ["varsupsetneqq"] = "⫌", ["bigcirc"] = "\\◯", ["centerdot"] = "⬝", ["degree"] = "°",
+            ["intop"] = "\\int", ["smallint"] = "\\int", ["diagup"] = "\\╱", ["diagdown"] = "\\╲", ["thickspace"] = "\\;",
+            ["And"] = "\\&",
         };
 
         // the commands that put a script over a base, \overset{script}{base}, as the UnicodeMath operator (\underset is ⓤ)
         private static readonly Dictionary<string, string> Stacks = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["overset"] = "┴", ["stackrel"] = "┴",
+        };
+
+        // the commands that put a mark over a base, as \overset{mark}{base}
+        private static readonly Dictionary<string, string> OverArrows = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["mathring"] = "˚", ["overleftarrow"] = "\\leftarrow", ["overleftrightarrow"] = "\\leftrightarrow",
         };
 
         private static bool IsZeroLength(string length) => ZeroLength().IsMatch(length.Trim());
@@ -306,18 +436,21 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 if (tex[i] != "\\")
                 {
-                    // the spaces before a script, which LaTeX ignores (\right| _0) and UnicodeMath would read as the end of the base
-                    if (tex[i] == " " && NonBlank(tex, i) is "_" or "^")
-                    {
-                        while (tex[i] == " ")
-                            i++;
-                        continue;
-                    }
+                    // the blanks around a script, x ^ { 2 }, which LaTeX ignores and UnicodeMath would part the script at;
                     // a script that is a command with arguments, x_\text{ab}: the script is the command and its arguments
-                    if ((tex[i] == "_" || tex[i] == "^") && ScriptCommand(tex, i + 1) is var (command, after) && command != null)
+                    if (tex[i] == "_" || tex[i] == "^")
                     {
-                        result.Append(tex[i]).Append('{').Append(RewriteTeXOnly(command)).Append('}');
-                        i = after;
+                        while (result.Length > 0 && result[result.Length - 1] == ' ')
+                            result.Length--;
+                        result.Append(tex[i]);
+                        for (i++; i < tex.Length && tex[i] == " "; i++)
+                        {
+                        }
+                        if (ScriptCommand(tex, i) is var (command, after) && command != null)
+                        {
+                            result.Append('{').Append(RewriteTeXOnly(command)).Append('}');
+                            i = after;
+                        }
                         continue;
                     }
                     // a combining mark after its base (𝑎⃑), held: the passes read the marks of \vec and the like before theirs
@@ -333,6 +466,13 @@ namespace SharpEquations.Internal.LaTeX
                     if (tex[i + 1] == "|")
                     {
                         result.Append('‖');
+                        i += 2;
+                        continue;
+                    }
+                    // \_ held, which the passes would read as a subscript of what follows (\_\{\})
+                    if (tex[i + 1] == "_")
+                    {
+                        result.Append('\\').Append('\uFDD2');
                         i += 2;
                         continue;
                     }
@@ -388,6 +528,29 @@ namespace SharpEquations.Internal.LaTeX
                 {
                     result.Append('│');
                     i = j;
+                    continue;
+                }
+                if (cw == "mid" || cw == "circledS")
+                {
+                    // the relation ∣, a bar that EscapeOddBars escapes when it has no pair (the separator of a bra-ket
+                    // between angles), and Ⓢ, an operator of UnicodeMath
+                    result.Append(cw == "circledS" ? "\\Ⓢ" : angles > 0 ? "│" : "∣");
+                    i = j;
+                    continue;
+                }
+                if (OverArrows.TryGetValue(cw, out var over) && Argument(tex, j) is var (overBase, afterOverBase) && afterOverBase >= 0)
+                {
+                    // \mathring{a}, \overleftarrow{a}: the mark over the base, as \overset puts it
+                    result.Append(RewriteTeXOnly("\\overset{" + over + "}{" + overBase + "}"));
+                    i = afterOverBase;
+                    continue;
+                }
+                if (cw is "phantom" or "vphantom" or "hphantom" && BracedArgument(tex, j) is var (phantom, afterPhantom) && afterPhantom >= 0 &&
+                    NonBlank(tex, afterPhantom) is "_" or "^")
+                {
+                    // a phantom with scripts, \vphantom{\sum}_1^2, braced: UnicodeMath would take the scripts into the phantom
+                    result.Append("{\\").Append(cw).Append('{').Append(RewriteTeXOnly(phantom)).Append("}}");
+                    i = afterPhantom;
                     continue;
                 }
                 if ((cw == "newcommand" || cw == "renewcommand") && j < tex.Length && tex[j] == "\\")
@@ -458,7 +621,6 @@ namespace SharpEquations.Internal.LaTeX
                 if ((cw == "xrightarrow" || cw == "xleftarrow") && BracedArgument(tex, j) is var (arrowLabel, afterArrowLabel) && afterArrowLabel >= 0)
                 {
                     result.Append(RewriteTeXOnly("\\overset{" + arrowLabel + "}{" + (cw == "xrightarrow" ? "\\rightarrow" : "\\leftarrow") + "}"));
-                    EndScript(result, tex, afterArrowLabel);
                     i = afterArrowLabel;
                     continue;
                 }
@@ -470,6 +632,25 @@ namespace SharpEquations.Internal.LaTeX
                         name = name.Substring(8, name.Length - 9);
                     result.Append(name.All(char.IsLetter) ? "\\operatorname{" + name + "}" : RewriteTeXOnly(operatorText));
                     i = afterOperator;
+                    continue;
+                }
+                if (cw is "begin" or "end" && BracedArgument(tex, j) is var (environmentName, afterName) && afterName >= 0 &&
+                    (environmentName.EndsWith("matrix*", StringComparison.Ordinal) && Environments.ContainsKey(environmentName.TrimEnd('*')) ||
+                     cw == "begin" && (environmentName == "array" || environmentName.StartsWith("alignat", StringComparison.Ordinal))))
+                {
+                    // \begin{pmatrix*}[r] is the matrix, whose alignment an equation does not keep; the column
+                    // specification of an array follows its name, where the passes take it: \begin{array}{l}
+                    var plain = environmentName.EndsWith("matrix*", StringComparison.Ordinal) ? environmentName.TrimEnd('*') : environmentName;
+                    result.Append('\\').Append(cw).Append('{').Append(plain).Append('}');
+                    i = afterName;
+                    while (i < tex.Length && tex[i] == " ")
+                        i++;
+                    if (plain != environmentName && cw == "begin" && tex[i] == "[")
+                    {
+                        while (i < tex.Length && tex[i] != "]")
+                            i++;
+                        i++;
+                    }
                     continue;
                 }
                 // a combining mark over or under a base, \overset{̸}{b}, is its accent, as UnicodeMath writes it: (𝑏)̸
@@ -486,10 +667,8 @@ namespace SharpEquations.Internal.LaTeX
                     var (body, afterBody) = afterScript < 0 ? (null, -1) : BracedArgument(tex, afterScript);
                     if (afterBody >= 0)
                     {
-                        var stacked = "〖" + RewriteTeXOnly(body) + "〗" + stack + "(" + RewriteTeXOnly(script) + ")";
-                        // scripts of the whole, \overset{a}{b}^2, go on it grouped
-                        result.Append(tex[afterBody] is "_" or "^" ? "〖" + stacked + "〗" : stacked);
-                        EndScript(result, tex, afterBody);
+                        // grouped whole: 〖a〗┴(→)〖b〗┴(→) is not UnicodeMath
+                        result.Append("〖〖").Append(RewriteTeXOnly(body)).Append('〗').Append(stack).Append('(').Append(RewriteTeXOnly(script)).Append(")〗");
                         i = afterBody;
                         continue;
                     }
@@ -571,16 +750,6 @@ namespace SharpEquations.Internal.LaTeX
             ["rm"] = "mathrm", ["bf"] = "mathbf", ["it"] = "mathit", ["cal"] = "mathcal", ["sf"] = "mathsf", ["tt"] = "mathtt",
         };
 
-        /// <summary>
-        /// A space after the script of a stack (┴(a)), which would take what follows too in UnicodeMath
-        /// (\overset{a}{b}c, \overset{a}{b}\frac12), unless a space, a script or the end of the group follows.
-        /// </summary>
-        private static void EndScript(StringBuilder result, Text tex, int next)
-        {
-            if (next < tex.Length && tex[next] is not (" " or "_" or "^" or "}"))
-                result.Append(' ');
-        }
-
         /// <summary>The index of the brace that closes the group the index is in, or the length of the text.</summary>
         private static int GroupEnd(Text tex, int i)
         {
@@ -654,12 +823,13 @@ namespace SharpEquations.Internal.LaTeX
             var frames = new Stack<List<int>>();
             frames.Push(new List<int>());
             var escaped = new List<int>();
+            var kets = new HashSet<int>();
             void Close(List<int> bars, bool inBrackets)
             {
-                foreach (var bar in new[] { "|", "‖" })
+                foreach (var bar in new[] { "|", "‖", "∣" })
                 {
                     var some = bars.Where(b => tex[b] == bar).ToList();
-                    if (some.Count % 2 == 1 && !(inBrackets && some.Count == 1 && bar == "|"))
+                    if (some.Count % 2 == 1 && !(inBrackets && some.Count == 1 && bar != "‖"))
                         escaped.Add(some[some.Count - 1]);
                 }
             }
@@ -698,24 +868,27 @@ namespace SharpEquations.Internal.LaTeX
                         Close(frames.Pop(), true);
                         break;
                     case "⟩" when frames.Peek().Count > 0:
-                        // a ket (|𝑟⟩): its bar has no pair
+                        // a ket (|𝑟⟩): its bar has no pair, and ∣ (\mid) there is the bar of the ket
+                        var ket = frames.Peek()[frames.Peek().Count - 1];
+                        if (tex[ket] == "∣")
+                            kets.Add(ket);
                         frames.Peek().RemoveAt(frames.Peek().Count - 1);
                         break;
-                    case "|" or "‖":
+                    case "|" or "‖" or "∣":
                         frames.Peek().Add(i);
                         break;
                 }
             }
             while (frames.Count > 0)
                 Close(frames.Pop(), false);
-            if (escaped.Count == 0)
+            if (escaped.Count == 0 && kets.Count == 0)
                 return latex;
             var result = new StringBuilder();
             for (int i = 0; i < tex.Length; i++)
             {
                 if (escaped.Contains(i))
                     result.Append('\\');
-                result.Append(tex[i]);
+                result.Append(kets.Contains(i) ? "|" : tex[i]);
             }
             return result.ToString();
         }
@@ -769,7 +942,7 @@ namespace SharpEquations.Internal.LaTeX
 
         private string Convert(string latex)
         {
-            var tex = new Text(EscapeOddBars(RewriteTeXOnly(latex)));
+            var tex = new Text(EscapeOddBars(RewriteTeXOnly(Limits(latex))));
             var cwPrev = "";
             bool needMacroPass = false;
             var uniTeX = new StringBuilder();

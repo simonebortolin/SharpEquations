@@ -44,7 +44,7 @@ namespace SharpEquations.Tests.MathML
         [Arguments(@"<math><mrow><mo>{</mo><mtable><mtr><mtd><mn>1</mn></mtd></mtr></mtable><mo>}</mo></mrow></math>", @"\begin{Bmatrix}1\end{Bmatrix}", @"\begin{Bmatrix}1\end{Bmatrix}", @"Ⓢ(1)")]
         [Arguments(@"<math><mrow><mo>{</mo><mtable><mtr><mtd><mn>1</mn></mtd><mtd><mi>x</mi><mo>&gt;</mo><mn>0</mn></mtd></mtr></mtable></mrow></math>", @"\begin{cases}1&x>0\end{cases}", @"\begin{cases}1&𝑥>0\end{cases}", @"{■(1&𝑥>0)┤")]
         [Arguments(@"<math><mtable><mtr><mtd><mn>1</mn></mtd><mtd><mn>0</mn></mtd></mtr><mtr><mtd><mn>0</mn></mtd><mtd><mn>1</mn></mtd></mtr></mtable></math>", @"\begin{matrix}1&0\\0&1\end{matrix}", @"\begin{matrix}1&0\\0&1\end{matrix}", @"■(1&0@0&1)")]
-        [Arguments(@"<math><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>a</mi><mi>i</mi></msub></math>", @"\sum_{i=1}^na_i", @"∑┬{𝑖=1}┴𝑛𝑎_𝑖", @"∑┬(𝑖=1)┴𝑛 𝑎_𝑖")]
+        [Arguments(@"<math><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>a</mi><mi>i</mi></msub></math>", @"\sum\limits_{i=1}^na_i", @"∑┬{𝑖=1}┴𝑛𝑎_𝑖", @"∑┬(𝑖=1)┴𝑛 𝑎_𝑖")]
         [Arguments(@"<math><msubsup><mo>∫</mo><mn>0</mn><mn>1</mn></msubsup><mi>f</mi></math>", @"\int_0^1f", @"∫_0^1𝑓", @"∫₀¹𝑓")]
         [Arguments(@"<math><munder><mo>lim</mo><mrow><mi>x</mi><mo>→</mo><mn>0</mn></mrow></munder><mi>f</mi></math>", @"\lim_{x\to0}f", null, @"lim┬(𝑥→0) 𝑓")]
         [Arguments(@"<math><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi><mo>+</mo><mi>log</mi><mo>&#x2061;</mo><mi>y</mi><mo>+</mo><mi>sgn</mi><mo>&#x2061;</mo><mi>z</mi></math>", @"\sin x+\log y+\operatorname{sgn}z", null, @"sin⁡𝑥+log⁡𝑦+sgn⁡𝑧")]
