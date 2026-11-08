@@ -249,7 +249,7 @@
   "id": "issue-42",
   "latex": "\\sqrt { ( - 25 ) ^ { 2 } } = \\pm 25",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msqrt><mrow><mo stretchy=\"false\">(</mo><mo>−</mo><mn>25</mn><msup><mo stretchy=\"false\">)</mo><mrow><mn>2</mn></mrow></msup></mrow></msqrt><mo>=</mo><mi>±</mi><mn>25</mn></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msqrt><msup><mrow><mo stretchy=\"false\">(</mo><mo>−</mo><mn>25</mn><mo stretchy=\"false\">)</mo></mrow><mrow><mn>2</mn></mrow></msup></msqrt><mo>=</mo><mi>±</mi><mn>25</mn></mrow></math>"
  },
  {
   "id": "issue-45-lt",
@@ -375,7 +375,7 @@
   "id": "limit-at-plus-infinity",
   "latex": "\\lim_{x \\to +\\infty} f(x)",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msub><mo>lim</mo><mrow><mi>x</mi><mo>→</mo><mo>+</mo><mo>∞</mo></mrow></msub><mi>f</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><munder><mo>lim</mo><mrow><mi>x</mi><mo>→</mo><mo>+</mo><mo>∞</mo></mrow></munder><mi>f</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow></math>"
  },
  {
   "id": "inf",
@@ -597,7 +597,7 @@
   "id": "tilde-and-space-in-text",
   "latex": "\\text{ Hello~World }",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext>\u00A0Hello~World\u00A0</mtext></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext>\u00A0Hello\u00A0World\u00A0</mtext></mrow></math>"
  },
  {
   "id": "comments",
@@ -1143,7 +1143,7 @@
   "id": "omicron",
   "latex": "\\omicron",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo>ο</mo></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>ο</mi></mrow></math>"
  },
  {
   "id": "Pr",
@@ -1407,31 +1407,31 @@
   "id": "textbf",
   "latex": "\\textbf{ Hello~World }",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext mathvariant=\"bold\">\u00A0Hello~World\u00A0</mtext></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext mathvariant=\"bold\">\u00A0Hello\u00A0World\u00A0</mtext></mrow></math>"
  },
  {
   "id": "textit",
   "latex": "\\textit{ Hello~World }",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext mathvariant=\"italic\">\u00A0Hello~World\u00A0</mtext></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext mathvariant=\"italic\">\u00A0Hello\u00A0World\u00A0</mtext></mrow></math>"
  },
  {
   "id": "textrm",
   "latex": "\\textrm{ Hello~World }",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext>\u00A0Hello~World\u00A0</mtext></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext>\u00A0Hello\u00A0World\u00A0</mtext></mrow></math>"
  },
  {
   "id": "textsf",
   "latex": "\\textsf{ Hello~World }",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext mathvariant=\"sans-serif\">\u00A0Hello~World\u00A0</mtext></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext mathvariant=\"sans-serif\">\u00A0Hello\u00A0World\u00A0</mtext></mrow></math>"
  },
  {
   "id": "texttt",
   "latex": "\\texttt{ Hello~World }",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext mathvariant=\"monospace\">\u00A0Hello~World\u00A0</mtext></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mtext mathvariant=\"monospace\">\u00A0Hello\u00A0World\u00A0</mtext></mrow></math>"
  },
  {
   "id": "LaTeX",
