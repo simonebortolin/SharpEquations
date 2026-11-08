@@ -458,6 +458,7 @@ namespace SharpEquations.Internal.LaTeX
                 if ((cw == "xrightarrow" || cw == "xleftarrow") && BracedArgument(tex, j) is var (arrowLabel, afterArrowLabel) && afterArrowLabel >= 0)
                 {
                     result.Append(RewriteTeXOnly("\\overset{" + arrowLabel + "}{" + (cw == "xrightarrow" ? "\\rightarrow" : "\\leftarrow") + "}"));
+                    EndScript(result, tex, afterArrowLabel);
                     i = afterArrowLabel;
                     continue;
                 }
@@ -485,7 +486,10 @@ namespace SharpEquations.Internal.LaTeX
                     var (body, afterBody) = afterScript < 0 ? (null, -1) : BracedArgument(tex, afterScript);
                     if (afterBody >= 0)
                     {
-                        result.Append('〖').Append(RewriteTeXOnly(body)).Append('〗').Append(stack).Append('(').Append(RewriteTeXOnly(script)).Append(')');
+                        var stacked = "〖" + RewriteTeXOnly(body) + "〗" + stack + "(" + RewriteTeXOnly(script) + ")";
+                        // scripts of the whole, \overset{a}{b}^2, go on it grouped
+                        result.Append(tex[afterBody] is "_" or "^" ? "〖" + stacked + "〗" : stacked);
+                        EndScript(result, tex, afterBody);
                         i = afterBody;
                         continue;
                     }
@@ -566,6 +570,16 @@ namespace SharpEquations.Internal.LaTeX
         {
             ["rm"] = "mathrm", ["bf"] = "mathbf", ["it"] = "mathit", ["cal"] = "mathcal", ["sf"] = "mathsf", ["tt"] = "mathtt",
         };
+
+        /// <summary>
+        /// A space after the script of a stack (┴(a)), which would take what follows too in UnicodeMath
+        /// (\overset{a}{b}c, \overset{a}{b}\frac12), unless a space, a script or the end of the group follows.
+        /// </summary>
+        private static void EndScript(StringBuilder result, Text tex, int next)
+        {
+            if (next < tex.Length && tex[next] is not (" " or "_" or "^" or "}"))
+                result.Append(' ');
+        }
 
         /// <summary>The index of the brace that closes the group the index is in, or the length of the text.</summary>
         private static int GroupEnd(Text tex, int i)

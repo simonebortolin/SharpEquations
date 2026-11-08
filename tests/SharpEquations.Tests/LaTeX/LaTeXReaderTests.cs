@@ -170,6 +170,9 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"f \circ g", @"f\circ g", @"𝑓∘𝑔")]
         [Arguments(@"\bar{x} = \frac{1}{n} \cdot \sum_{i=1}^n x_i", @"\bar{x}=\frac{1}{n}\cdot\sum_{i=1}^nx_i", @"̄𝑥=1/𝑛 ⋅∑_(𝑖=1)^𝑛 𝑥_𝑖")]
         [Arguments(@"\bar{A\cup B}+\overline{A\cup B}", @"\bar{A\cup B}+\overline{A\cup B}", @"̄(𝐴∪𝐵)+¯(𝐴∪𝐵)")]
+        [Arguments(@"a\stackrel{n\to\infty}{\longrightarrow}b", @"a\overset{n\to\infty}{\longrightarrow}b", @"𝑎⟶┴(𝑛→∞) 𝑏")]
+        [Arguments(@"x\xrightarrow{f}y", @"x\overset{f}{\to}y", @"𝑥→┴𝑓 𝑦")]
+        [Arguments(@"{\overset{a}{b}}c", @"\overset{a}{b}c", @"𝑏┴𝑎 𝑐")]
         public async Task ReadsLaTeXThatWritesBack(string latex, string expectedLaTeX, string expectedUnicodeMath)
         {
             await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);
@@ -180,6 +183,7 @@ namespace SharpEquations.Tests.LaTeX
 
         [Test]
         [Arguments(@"{x}^2", @"x^2")]
+        [Arguments(@"\overset{a}{b}^2", @"\overset{a}{b}^2")]
         [Arguments(@"{a+b}^2", @"{a+b}^2")]
         [Arguments(@"{a+b}_n", @"{a+b}_n")]
         [Arguments(@"x_\text{ab}", @"x_{\text{ab}}")]
