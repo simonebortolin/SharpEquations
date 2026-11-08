@@ -648,6 +648,14 @@ namespace SharpEquations.Internal.LaTeX
                     i = afterUnderBase;
                     continue;
                 }
+                if (cw is "overbrace" or "underbrace" && Argument(tex, j) is var (braced, afterBraced) && afterBraced >= 0 &&
+                    Scripts(tex, afterBraced) is var (braceUnder, braceOver, afterBraceScripts) && braceUnder != null && braceOver != null)
+                {
+                    // \overbrace3^a_x: for TeX the brace is an operator with limits, both scripts under and over the whole construct
+                    result.Append(RewriteTeXOnly("\\underset{" + braceUnder + "}{\\overset{" + braceOver + "}{\\" + cw + "{" + braced + "}}}"));
+                    i = afterBraceScripts;
+                    continue;
+                }
                 if (cw == "underset" && Arguments(tex, j, 2) is var (underArguments, afterUnderset) &&
                     new Text(underArguments[1].Trim()) is var overText && overText.Find("\\overset", 0) == 0 &&
                     Arguments(overText, 8, 2) is var (overArguments, afterOverset) && afterOverset == overText.Length)
@@ -718,8 +726,14 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 if (cw == "mathop" && BracedArgument(tex, j) is var (operatorText, afterOperator) && afterOperator >= 0)
                 {
-                    // \mathop{\mathrm{argmin}}: an operator name
+                    // \mathop{\mathrm{argmin}}: an operator name; \mathop{x}, of one symbol, a group, which takes the limits
                     var name = operatorText.Trim();
+                    if (Js.Len(name) == 1)
+                    {
+                        result.Append('{').Append(RewriteTeXOnly(name)).Append('}');
+                        i = afterOperator;
+                        continue;
+                    }
                     if (name.StartsWith("\\mathrm{", StringComparison.Ordinal) && name[name.Length - 1] == '}')
                         name = name.Substring(8, name.Length - 9);
                     result.Append(name.All(char.IsLetter) ? "\\operatorname{" + name + "}" : RewriteTeXOnly(operatorText));
