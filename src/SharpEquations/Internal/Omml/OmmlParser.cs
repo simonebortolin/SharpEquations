@@ -284,7 +284,7 @@ namespace SharpEquations.Internal.Omml
                 var value = property.Attribute(M + "val");
                 property.SetAttributeValue(M + "val", value == null || IsTrue(value.Value) ? "on" : "off");
             }
-            // an upright word (max, argmin) is one identifier, which omml2mml would split letter by letter: it goes
+            // an upright word (max, argmin, sharet1) is one identifier, which omml2mml would split letter by letter: it goes
             // through the stylesheet as normal text, marked, and comes back as an mi (see UnmarkNames)
             foreach (var run in copy.Descendants(M + "r").Where(IsUprightName).ToList())
             {
@@ -333,7 +333,7 @@ namespace SharpEquations.Internal.Omml
             var texts = run.Elements(M + "t").ToList();
             return properties != null && properties.Element(M + "nor") == null && (string)properties.Element(M + "sty")?.Attribute(M + "val") == "p"
                 && !run.Ancestors(M + "fName").Any() && texts.Count == 1 && texts[0].Value.Length > 1
-                && AsciiPatterns.Letters().IsMatch(texts[0].Value);
+                && AsciiPatterns.Name().IsMatch(texts[0].Value);
         }
 
         private static void UnmarkNames(XElement math)

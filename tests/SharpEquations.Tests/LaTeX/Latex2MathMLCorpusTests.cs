@@ -143,12 +143,11 @@ namespace SharpEquations.Tests
             return string.Concat(math.Elements().Select(e => e.ToString(SaveOptions.DisableFormatting))).Replace(" xmlns=\"" + M.NamespaceName + "\"", "");
         }
 
-        // what does not read back as it was written, through the UnicodeMath that LaTeX is read as: a name of operator
-        // alone (\operatorname{lg}, which UnicodeMath reads as the letters l g), bars with nothing between them (|\,|\:|,
-        // \{\middle|\}), a parenthesis alone in a phantom (\mathstrut, \phantom{(})
+        // what does not read back as it was written, through the UnicodeMath that LaTeX is read as: bars with nothing
+        // between them (|\,|\:|, \{\middle|\}), a parenthesis alone in a phantom (\mathstrut, \phantom{(})
         private static readonly HashSet<string> NotWrittenBack = new HashSet<string>
         {
-            "spaces", "lg", "middle", "mathstrut",
+            "spaces", "middle", "mathstrut",
         };
 
         // what the reader does not read as latex2mathml does, in four groups; a case that starts to pass must leave its

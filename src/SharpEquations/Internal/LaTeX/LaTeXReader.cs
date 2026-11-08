@@ -370,7 +370,7 @@ namespace SharpEquations.Internal.LaTeX
         {
             ["dfrac"] = "\\frac", ["tfrac"] = "\\frac", ["cfrac"] = "\\frac", ["dbinom"] = "\\binom", ["tbinom"] = "\\binom",
             ["overrightarrow"] = "\\vec", ["Vert"] = "‖", ["lVert"] = "‖", ["rVert"] = "‖", ["bmod"] = "\\operatorname{mod}",
-            ["bm"] = "\\boldsymbol",
+            ["bm"] = "\\boldsymbol", ["square"] = "\\□", ["Box"] = "\\□",
             // the symbols of amsmath, amssymb and plain TeX that UnicodeMath has no control word for
             ["lt"] = "<", ["gt"] = ">", ["dotsb"] = "⋯", ["dotsi"] = "⋯", ["dotsm"] = "⋯", ["dotsc"] = "…", ["dotso"] = "…",
             ["ldotp"] = ".", ["gggtr"] = "⋙", ["llless"] = "⋘", ["gvertneqq"] = "≩", ["lvertneqq"] = "≨", ["ngeqq"] = "≱",
