@@ -1038,6 +1038,10 @@ namespace SharpEquations.Internal.LaTeX
                         }
                         if (symbol.Length > 0 && Js.Ch(symbol, 0) != "\"")
                             uniTeX.Append(symbol);
+                        // a control word not known ends where its letters do: a space ends it for UnicodeMath too, which
+                        // would otherwise read the letters or digits after it as part of it (\sgn r, \sgn2)
+                        else if (symbol.Length > 0)
+                            uniTeX.Append('\\').Append(cw).Append(tex[i] != null && tex[i].Length == 1 && IsAsciiLetterOrDigit(tex[i][0]) ? " " : "");
                         else if (cw.Length > 0)
                             uniTeX.Append('\\').Append(cw);
                         break;

@@ -311,12 +311,33 @@ namespace SharpEquations.Tests.LaTeX
         }
 
         [Test]
-        [Arguments(@"\foo x", @"Unknown control word \foox in the LaTeX.")]
+        [Arguments(@"\foo x", @"Unknown control word \foo in the LaTeX.")]
         [Arguments(@"a+\undefinedcommand", @"Unknown control word \undefinedcommand in the LaTeX.")]
+        [Arguments(@"\sgn r", @"Unknown control word \sgn in the LaTeX.")]
+        [Arguments(@"\lg d", @"Unknown control word \lg in the LaTeX.")]
+        [Arguments(@"\liminf v", @"Unknown control word \liminf in the LaTeX.")]
+        [Arguments(@"a \backslash b", @"Unknown control word \backslash in the LaTeX.")]
+        [Arguments(@"\sgn2", @"Unknown control word \sgn in the LaTeX.")]
         public async Task RejectsUnknownControlWordsWhenStrict(string latex, string message)
         {
             await Assert.That(() => Equation.Parse(latex, EquationFormat.LaTeX, Strict)).Throws<FormatException>().WithMessage(message);
             await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX).ToMathML().Descendants(MathMLNamespaces.MathML + "mtext")).IsNotEmpty();
+        }
+
+        [Test]
+        [Arguments(@"\sgn r", @"\sgn", "r")]
+        [Arguments(@"\lg d", @"\lg", "d")]
+        [Arguments(@"\liminf v", @"\liminf", "v")]
+        [Arguments(@"a \backslash b", @"\backslash", "b")]
+        [Arguments(@"\sgn  r", @"\sgn", "r")]
+        [Arguments(@"\sgn{r}", @"\sgn", "r")]
+        [Arguments(@"\text{\sgn} r", @"\sgn", "r")]
+        [Arguments(@"\sgn2", @"\sgn", "2")]
+        public async Task EndsUnknownControlWordsAtTheirLetters(string latex, string text, string after)
+        {
+            var math = Equation.Parse(latex, EquationFormat.LaTeX).ToMathML();
+            await Assert.That(math.Descendants(MathMLNamespaces.MathML + "mtext").Select(e => e.Value).ToList()).IsEquivalentTo(new[] { text });
+            await Assert.That(math.Descendants().Where(e => e.Name.LocalName is "mi" or "mn").Select(e => e.Value).Last()).IsEqualTo(after);
         }
 
         [Test]
