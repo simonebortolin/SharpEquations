@@ -7,6 +7,7 @@ namespace SharpEquations.Internal.Omml
     using System.Text.RegularExpressions;
     using System.Xml.Linq;
     using SharpEquations.Internal.Text;
+    using SharpEquations.Internal.UnicodeMath;
     using static SharpEquations.Internal.Omml.Omml;
 
     /// <summary>
@@ -292,7 +293,36 @@ namespace SharpEquations.Internal.Omml
                 var text = run.Element(M + "t")!;
                 text.Value = NameMark + text.Value;
             }
+            // omml2mml writes no mathvariant on numbers, which would lose the style of a bold or double-struck digit:
+            // the digits of a styled run go through the stylesheet as their mathematical alphanumerics (𝟏, 𝟙), each an
+            // identifier, as UnicodeMath and LaTeX read them
+            foreach (var run in copy.Descendants(M + "r"))
+            {
+                var properties = run.Elements(M + "rPr").LastOrDefault();
+                if (properties == null || (string)properties.Element(M + "nor")?.Attribute(M + "val") == "on")
+                    continue;
+                var style = DigitStyle((string)properties.Element(M + "scr")?.Attribute(M + "val"), (string)properties.Element(M + "sty")?.Attribute(M + "val"));
+                if (style == null)
+                    continue;
+                foreach (var text in run.Elements(M + "t"))
+                    text.Value = string.Concat(CodePoints.Of(text.Value).Select(c => c.Value is >= '0' and <= '9' ? UnicodeMathText.GetMathAlphanumeric(c.ToString(), style) : c.ToString()));
+            }
             return copy;
+        }
+
+        /// <summary>The style of the mathematical digits for the m:scr and m:sty of a run, null for plain digits.</summary>
+        private static string DigitStyle(string script, string style)
+        {
+            return (script, style) switch
+            {
+                ("monospace", _) => "mtt",
+                ("sans-serif", "b") => "mbfsans",
+                ("sans-serif", "i" or "bi") => null,
+                ("sans-serif", _) => "msans",
+                ("double-struck", _) => "Bbb",
+                ("roman" or null or "", "b") => "mbf",
+                _ => null,
+            };
         }
 
         private const char NameMark = '\uF8FF';
