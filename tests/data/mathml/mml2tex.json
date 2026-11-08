@@ -1,0 +1,32 @@
+[
+ {
+  "source": "xspec/mtable.xspec",
+  "label": "a 2x3 matrix",
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mtable><mtr><mtd><mi>11</mi></mtd><mtd><mi>=</mi></mtd><mtd><mi>13</mi></mtd></mtr><mtr><mtd><mi>21</mi></mtd><mtd><mi>=</mi></mtd><mtd><mi>23</mi></mtd></mtr></mtable></math>",
+  "tex": "\\begin{array}{ccc}\n11 & = & 13\\\\\n21 & = & 23\n\\end{array}"
+ },
+ {
+  "source": "xspec/subsup.xspec",
+  "label": "Given nested msubs",
+  "mathml": "<math display=\"block\" xmlns=\"http://www.w3.org/1998/Math/MathML\"><msub><mrow><msub><mrow><mi>t</mi></mrow><mrow><mi>r</mi><mi>m</mi></mrow></msub></mrow><mrow><mn>2</mn></mrow></msub></math>",
+  "tex": "{t_{rm}}_{2}"
+ },
+ {
+  "source": "xspec/subsup.xspec",
+  "label": "Given nested msups",
+  "mathml": "<math display=\"block\" xmlns=\"http://www.w3.org/1998/Math/MathML\"><msup><mrow><msub><mrow><mi>t</mi></mrow><mrow><mi>r</mi><mi>m</mi></mrow></msub></mrow><mrow><mn>2</mn></mrow></msup></math>",
+  "tex": "{t_{rm}}^{2}"
+ },
+ {
+  "source": "example/example.xml",
+  "label": null,
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mfenced separators=\"\"><mtable columnalign=\"left\"><mtr><mtd><mn>1</mn></mtd><mtd><mo>⋯</mo></mtd><mtd><mn>0</mn></mtd></mtr><mtr><mtd><mo>⋮</mo></mtd><mtd><mo>⋱</mo></mtd><mtd><mo>⋮</mo></mtd></mtr><mtr><mtd><mn>0</mn></mtd><mtd><mo>⋯</mo></mtd><mtd><mn>1</mn></mtd></mtr></mtable></mfenced></math>",
+  "tex": null
+ },
+ {
+  "source": "example/katexify-example.xml",
+  "label": null,
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi>Γ</mi><mo>=</mo><mi>π</mi><msup><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msup></math>",
+  "tex": null
+ }
+]

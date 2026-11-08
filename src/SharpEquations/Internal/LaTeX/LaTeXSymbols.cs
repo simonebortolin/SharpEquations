@@ -38,6 +38,7 @@ namespace SharpEquations.Internal.LaTeX
             ["ℵ"] = "aleph", ["∅"] = "emptyset", ["∀"] = "forall", ["∃"] = "exists", ["∄"] = "nexists", ["¬"] = "neg",
             ["…"] = "ldots", ["⋯"] = "cdots", ["⋮"] = "vdots", ["⋱"] = "ddots", ["°"] = "circ", ["†"] = "dagger", ["‡"] = "ddagger",
             ["∠"] = "angle", ["△"] = "triangle", ["□"] = "square", ["◊"] = "lozenge", ["⊤"] = "top", ["⊥"] = "perp", ["⊺"] = "intercal",
+            ["Ⓢ"] = "circledS",
             // large operators
             ["∑"] = "sum", ["∏"] = "prod", ["∐"] = "coprod", ["∫"] = "int", ["∬"] = "iint", ["∭"] = "iiint", ["∮"] = "oint",
             ["⋃"] = "bigcup", ["⋂"] = "bigcap", ["⋁"] = "bigvee", ["⋀"] = "bigwedge", ["⨁"] = "bigoplus", ["⨂"] = "bigotimes", ["⨀"] = "bigodot",
@@ -178,7 +179,8 @@ namespace SharpEquations.Internal.LaTeX
             if (Alphanumerics.TryGetValue(ch, out var styled))
             {
                 var letter = Commands.TryGetValue(styled.Plain, out var greek) ? "\\" + greek + " " : styled.Plain;
-                var font = FontCommands[styled.Style];
+                // a capital Greek letter is upright in TeX (\Gamma): italic, it is \mathit{\Gamma}
+                var font = styled.Style == "mit" && IsCapitalGreek(styled.Plain) && greek != null ? "mathit" : FontCommands[styled.Style];
                 return font.Length == 0 ? letter : "\\" + font + "{" + letter.TrimEnd() + "}";
             }
             if (Commands.TryGetValue(ch, out var command))
@@ -189,11 +191,14 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>Upright text in math: \mathrm{x} for a letter, \text{...} for words.</summary>
         public static string Upright(string text)
         {
-            // an upright Greek letter is text: \alpha is italic, and \mathrm does not change it
+            // an upright Greek letter is text: \alpha is italic, and \mathrm does not change it; a capital one (\Gamma) is
+            // upright already
             if (Js.Len(text) == 1 && Commands.ContainsKey(text))
-                return char.IsLetter(text, 0) ? Text(text) : Math(text);
+                return char.IsLetter(text, 0) && !IsCapitalGreek(text) ? Text(text) : Math(text);
             return Js.Len(text) == 1 ? "\\mathrm{" + Math(text) + "}" : Text(text);
         }
+
+        private static bool IsCapitalGreek(string ch) => Js.Len(ch) == 1 && ch[0] is (>= 'Α' and <= 'Ω') or 'ϴ';
 
         /// <summary>\text{...}, with the characters that are special in LaTeX escaped.</summary>
         public static string Text(string text)
