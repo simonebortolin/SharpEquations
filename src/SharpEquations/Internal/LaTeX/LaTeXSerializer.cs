@@ -306,7 +306,8 @@ namespace SharpEquations.Internal.LaTeX
                     var notation = Attr(value, "notation");
                     if (notation == "top" || notation == "bottom")
                     {
-                        ret = Unary(value, notation == "top" ? "\\overline" : "\\underline");
+                        // the bar on top is the one of \bar (x̅), \overline being the overbar of UnicodeMath (¯x)
+                        ret = Unary(value, notation == "top" ? "\\bar" : "\\underline");
                         break;
                     }
                     if (standard && notation == "circle")

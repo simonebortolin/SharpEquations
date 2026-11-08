@@ -25,7 +25,7 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\left\lfloor x \right\rfloor", @"\lfloor x\rfloor", @"⌊𝑥⌋")]
         [Arguments(@"\bigl( x \bigr)", @"(x)", @"(𝑥)")]
         [Arguments(@"\Big( x \Big)", @"(x)", @"(𝑥)")]
-        [Arguments(@"\hat{x}\widehat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"\hat{x}\hat{xy}\overline{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"𝑥̂(𝑥𝑦)̂̄𝑥 𝑣⃗𝑥̇𝑥̈𝑥̃𝑥̌𝑥̆𝑥́𝑥̀")]
+        [Arguments(@"\hat{x}\widehat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"\hat{x}\hat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"𝑥̂(𝑥𝑦)̂̄𝑥 𝑣⃗𝑥̇𝑥̈𝑥̃𝑥̌𝑥̆𝑥́𝑥̀")]
         [Arguments(@"\overline{x+y}\underline{z}", @"\overline{x+y}\underline{z}", @"¯(𝑥+𝑦)▁𝑧")]
         [Arguments(@"\overbrace{a+b}^{n}", @"\overset{n}{\overbrace{a+b}}", @"⏞(𝑎+𝑏)┴𝑛")]
         [Arguments(@"\underbrace{a+b}_{n}", @"\underset{n}{\underbrace{a+b}}", @"⏟(𝑎+𝑏)┬𝑛")]
@@ -168,6 +168,8 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\Gamma=\Omega", @"\Gamma=\Omega", @"Γ=Ω")]
         [Arguments(@"\theta = 45\degree", @"\theta=45\degree", @"𝜃=45°")]
         [Arguments(@"f \circ g", @"f\circ g", @"𝑓∘𝑔")]
+        [Arguments(@"\bar{x} = \frac{1}{n} \cdot \sum_{i=1}^n x_i", @"\bar{x}=\frac{1}{n}\cdot\sum_{i=1}^nx_i", @"̄𝑥=1/𝑛 ⋅∑_(𝑖=1)^𝑛 𝑥_𝑖")]
+        [Arguments(@"\bar{A\cup B}+\overline{A\cup B}", @"\bar{A\cup B}+\overline{A\cup B}", @"̄(𝐴∪𝐵)+¯(𝐴∪𝐵)")]
         public async Task ReadsLaTeXThatWritesBack(string latex, string expectedLaTeX, string expectedUnicodeMath)
         {
             await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);

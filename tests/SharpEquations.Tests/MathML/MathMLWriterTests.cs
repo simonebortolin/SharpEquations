@@ -20,7 +20,7 @@ namespace SharpEquations.Tests.MathML
         [Arguments(@"<math><mover><mrow><mi>a</mi><mi>b</mi></mrow><mo>&#x23DE;</mo></mover></math>", @"\overbrace{ab}", @"\overbrace{𝑎𝑏}", @"⏞𝑎𝑏")]
         [Arguments(@"<math><munder><mrow><mi>a</mi><mi>b</mi></mrow><mo>&#x23DF;</mo></munder></math>", @"\underbrace{ab}", @"\underbrace{𝑎𝑏}", @"⏟𝑎𝑏")]
         [Arguments(@"<math><menclose notation=""box""><mi>x</mi></menclose></math>", @"\boxed{x}", @"\boxed{𝑥}", @"▭𝑥")]
-        [Arguments(@"<math><menclose notation=""top""><mi>x</mi></menclose></math>", @"\overline{x}", @"\overline{𝑥}", @"̄𝑥")]
+        [Arguments(@"<math><menclose notation=""top""><mi>x</mi></menclose></math>", @"\bar{x}", @"\bar{𝑥}", @"̄𝑥")]
         [Arguments(@"<math><menclose notation=""bottom""><mi>x</mi></menclose></math>", @"\underline{x}", @"\underline{𝑥}", @"▁𝑥")]
         [Arguments(@"<math><menclose notation=""updiagonalstrike""><mi>x</mi></menclose></math>", @"\cancel{x}", @"\cancel{𝑥}", @"▭(143&𝑥)")]
         [Arguments(@"<math><menclose notation=""downdiagonalstrike""><mi>x</mi></menclose></math>", @"\bcancel{x}", @"\bcancel{𝑥}", @"▭(79&𝑥)")]
