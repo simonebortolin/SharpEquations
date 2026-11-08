@@ -36,7 +36,7 @@ namespace SharpEquations.Internal.LaTeX
             // letterlike and miscellaneous
             ["∞"] = "infty", ["∂"] = "partial", ["∇"] = "nabla", ["ℏ"] = "hbar", ["ℓ"] = "ell", ["℘"] = "wp", ["ℜ"] = "Re", ["ℑ"] = "Im",
             ["ℵ"] = "aleph", ["∅"] = "emptyset", ["∀"] = "forall", ["∃"] = "exists", ["∄"] = "nexists", ["¬"] = "neg",
-            ["…"] = "ldots", ["⋯"] = "cdots", ["⋮"] = "vdots", ["⋱"] = "ddots", ["°"] = "circ", ["†"] = "dagger", ["‡"] = "ddagger",
+            ["…"] = "ldots", ["⋯"] = "cdots", ["⋮"] = "vdots", ["⋱"] = "ddots", ["°"] = "degree", ["†"] = "dagger", ["‡"] = "ddagger",
             ["∠"] = "angle", ["△"] = "triangle", ["□"] = "square", ["◊"] = "lozenge", ["⊤"] = "top", ["⊥"] = "perp", ["⊺"] = "intercal",
             ["Ⓢ"] = "circledS",
             // large operators

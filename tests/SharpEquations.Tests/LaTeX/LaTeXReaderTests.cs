@@ -25,7 +25,7 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\left\lfloor x \right\rfloor", @"\lfloor x\rfloor", @"⌊𝑥⌋")]
         [Arguments(@"\bigl( x \bigr)", @"(x)", @"(𝑥)")]
         [Arguments(@"\Big( x \Big)", @"(x)", @"(𝑥)")]
-        [Arguments(@"\hat{x}\widehat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"\hat{x}\hat{xy}\overline{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"𝑥̂(𝑥𝑦)̂̄𝑥 𝑣⃗𝑥̇𝑥̈𝑥̃𝑥̌𝑥̆𝑥́𝑥̀")]
+        [Arguments(@"\hat{x}\widehat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"\hat{x}\hat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"𝑥̂(𝑥𝑦)̂̄𝑥 𝑣⃗𝑥̇𝑥̈𝑥̃𝑥̌𝑥̆𝑥́𝑥̀")]
         [Arguments(@"\overline{x+y}\underline{z}", @"\overline{x+y}\underline{z}", @"¯(𝑥+𝑦)▁𝑧")]
         [Arguments(@"\overbrace{a+b}^{n}", @"\overset{n}{\overbrace{a+b}}", @"⏞(𝑎+𝑏)┴𝑛")]
         [Arguments(@"\underbrace{a+b}_{n}", @"\underset{n}{\underbrace{a+b}}", @"⏟(𝑎+𝑏)┬𝑛")]
@@ -145,7 +145,7 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\mathrm{x_1}", @"\mathrm{x}_1", @"""x""₁")]
         [Arguments(@"\mathrm{A \{b\}}", @"\mathrm{A}\{\mathrm{b}\}", @"""A""{""b""}")]
         [Arguments(@"\mathsf{\text{var} = 1+\{b\}}", @"\text{var}=\mathsf{1}+\{\mathsf{b}\}", @"""var""=𝟣+{𝖻}")]
-        [Arguments(@"\mathbf{\text{var}\,x}", @"\text{var}\,\mathbf{x}", @"""var"" 𝐱")]
+        [Arguments(@"\mathbf{\text{var}+x}", @"\text{var}+\mathbf{x}", @"""var""+𝐱")]
         [Arguments(@"\boldsymbol{1}\boldsymbol{x1\alpha}", @"\mathbf{1}\boldsymbol{x}\mathbf{1}\boldsymbol{\alpha}", @"𝟏𝒙𝟏𝜶")]
         [Arguments(@"\mathbf{\mathrm{x}y}", @"\mathrm{x}\mathbf{y}", @"""x""𝐲")]
         [Arguments(@"\mathbf{\Gamma+\sin x}", @"\mathbf{\Gamma}+\sin\mathbf{x}", @"𝚪+sin⁡𝐱")]
@@ -180,8 +180,35 @@ namespace SharpEquations.Tests.LaTeX
             await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX)).IsEqualTo(Equation.Parse(latex, EquationFormat.LaTeX)).Because("the LaTeX written reads back");
         }
 
+        // the demos of math.webc.site, whose LaTeX and UnicodeMath read back to the same equation
+        [Test]
+        [Arguments(@"\left. \frac{df}{dx} \right| _0", @"{\left.\frac{df}{dx}\right|}_0", @"├𝑑𝑓/𝑑𝑥 ┤|₀")]
+        [Arguments(@"\sum _{i=1} ^n i", @"\sum_{i=1}^ni", @"∑_(𝑖=1)^𝑛 𝑖")]
+        [Arguments(@"a \lt 1 \gt b", @"a<1>b", @"𝑎<1>𝑏")]
+        [Arguments(@"y \lt 1 \tag{1}", @"y<1\tag{1}", @"𝑦<1#(1)")]
+        [Arguments(@"{\rm rxn}", @"\text{rxn}", @"""rxn""")]
+        [Arguments(@"{\rm d} x", @"\mathrm{d}x", @"""d""𝑥")]
+        [Arguments(@"{\bf x} + {\it ab} + {\cal F} + {\sf s} + {\tt t}", @"\mathbf{x}+ab+\mathcal{F}+\mathsf{s}+\mathtt{t}", @"𝐱+𝑎𝑏+ℱ+𝗌+𝚝")]
+        [Arguments(@"\Delta H_{\rm rxn}^\circ = -R T \ln K", @"\Delta H_{\text{rxn}}^\circ=-RT \ln K", @"Δ𝐻_""rxn""^∘ =−𝑅𝑇 ln⁡𝐾")]
+        [Arguments(@"\Gamma=\Omega", @"\Gamma=\Omega", @"Γ=Ω")]
+        [Arguments(@"\theta = 45\degree", @"\theta=45\degree", @"𝜃=45°")]
+        [Arguments(@"f \circ g", @"f\circ g", @"𝑓∘𝑔")]
+        [Arguments(@"\bar{x} = \frac{1}{n} \cdot \sum_{i=1}^n x_i", @"\bar{x}=\frac{1}{n}\cdot\sum_{i=1}^nx_i", @"̄𝑥=1/𝑛 ⋅∑_(𝑖=1)^𝑛 𝑥_𝑖")]
+        [Arguments(@"\bar{A\cup B}+\overline{A\cup B}", @"\bar{A\cup B}+\overline{A\cup B}", @"̄(𝐴∪𝐵)+¯(𝐴∪𝐵)")]
+        [Arguments(@"a\stackrel{n\to\infty}{\longrightarrow}b", @"a\overset{n\to\infty}{\longrightarrow}b", @"𝑎⟶┴(𝑛→∞) 𝑏")]
+        [Arguments(@"x\xrightarrow{f}y", @"x\overset{f}{\to}y", @"𝑥→┴𝑓 𝑦")]
+        [Arguments(@"{\overset{a}{b}}c", @"\overset{a}{b}c", @"𝑏┴𝑎 𝑐")]
+        public async Task ReadsLaTeXThatWritesBack(string latex, string expectedLaTeX, string expectedUnicodeMath)
+        {
+            await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);
+            var equation = Equation.Parse(latex, EquationFormat.LaTeX);
+            await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX)).IsEqualTo(equation).Because("the LaTeX written reads back");
+            await Assert.That(Equation.Parse(expectedUnicodeMath, EquationFormat.UnicodeMath)).IsEqualTo(equation).Because("the UnicodeMath written reads back");
+        }
+
         [Test]
         [Arguments(@"{x}^2", @"x^2")]
+        [Arguments(@"\overset{a}{b}^2", @"\overset{a}{b}^2")]
         [Arguments(@"{a+b}^2", @"{a+b}^2")]
         [Arguments(@"{a+b}_n", @"{a+b}_n")]
         [Arguments(@"x_\text{ab}", @"x_{\text{ab}}")]

@@ -1,0 +1,8 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Packages.props', '$(MSBuildThisFileDirectory)..'))" />
+  <PropertyGroup>
+    <!-- BenchmarkDotNet needs a later Roslyn than the 4.8.0 the regex polyfill is built against; this also covers the
+         projects BenchmarkDotNet generates under bin -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+</Project>
