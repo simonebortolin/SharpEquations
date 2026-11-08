@@ -177,7 +177,7 @@ namespace SharpEquations.Internal.UnicodeMath
             var text = Text(mo);
             if (Len(text) != 1)
                 return false;
-            if ("▭√∛∜⟡▢◯⬭".Contains(text))
+            if ("▭√∛∜⟡▢◯⬭".Contains(text) || LaTeX.LaTeXSerializer.IsStructureOperator(text))
                 return true;
             var parent = mo.Parent;
             if (text is "|" or "‖" && Role(parent) == ":fenced" && First(parent) != mo && Last(parent) != mo && Text(First(parent)) is not ("|" or "‖" or "⟨"))
@@ -1189,6 +1189,13 @@ namespace SharpEquations.Internal.UnicodeMath
                     if (IsDoubleStruck(intent))
                     {
                         ret = intent;
+                        break;
+                    }
+                    // an operator that builds a structure (□, √) as an identifier would be read as that structure, or not
+                    // at all: it is in a remark, read back as the operator
+                    if (!value.HasElements && LaTeX.LaTeXSerializer.IsStructureOperator(Text(value)))
+                    {
+                        ret = "ⓡ(" + Text(value) + "&U+" + CodePointAt(Text(value), 0).ToString("X4", System.Globalization.CultureInfo.InvariantCulture) + ")";
                         break;
                     }
                     if (Len(Text(value)) == 1 && !value.HasElements)

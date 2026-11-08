@@ -91,6 +91,42 @@ namespace SharpEquations.Tests.Regression
         }
 
         [Test]
+        [Arguments("<mi>□</mi>", @"\square", "<mo intent=\":text\">□</mo>")]
+        [Arguments("<mi>□</mi><mi>x</mi>", @"\square x", "<mo intent=\":text\">□</mo><mi>x</mi>")]
+        [Arguments("<mi>√</mi><mi>x</mi>", @"{\surd}x", "<mo>√</mo><mi>x</mi>")]
+        [Arguments("<mo>√</mo><mi>x</mi>", @"{\surd}x", "<mo>√</mo><mi>x</mi>")]
+        public async Task StandardLaTeXWritesAStructureOperatorAsItsSymbol(string mathML, string latex, string read)
+        {
+            var equation = MathML(mathML);
+            await Assert.That(equation.ToString(EquationFormat.LaTeX)).IsEqualTo(latex);
+            var back = RoundTrip(equation, EquationFormat.LaTeX);
+            await Assert.That(back).IsEqualTo(MathML(read));
+            await Assert.That(RoundTrip(back, EquationFormat.LaTeX)).IsEqualTo(back);
+        }
+
+        [Test]
+        [Arguments(@"\square")]
+        [Arguments(@"\Box")]
+        public async Task LaTeXReadsTheSquareSymbol(string latex)
+        {
+            await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX)).IsEqualTo(MathML("<mo intent=\":text\">□</mo>"));
+        }
+
+        [Test]
+        [Arguments("<mi>□</mi>", "ⓡ(□&U+25A1)", "<mo>□</mo>")]
+        [Arguments("<mi>□</mi><mi>x</mi>", "ⓡ(□&U+25A1)𝑥", "<mo>□</mo><mi>x</mi>")]
+        [Arguments("<mo>□</mo><mi>x</mi>", "ⓡ(□&U+25A1)𝑥", "<mo>□</mo><mi>x</mi>")]
+        [Arguments("<mi>√</mi><mi>x</mi>", "ⓡ(√&U+221A)𝑥", "<mo>√</mo><mi>x</mi>")]
+        public async Task UnicodeMathWritesAStructureOperatorAsARemark(string mathML, string unicodeMath, string read)
+        {
+            var equation = MathML(mathML);
+            await Assert.That(equation.ToString(EquationFormat.UnicodeMath)).IsEqualTo(unicodeMath);
+            var back = RoundTrip(equation, EquationFormat.UnicodeMath);
+            await Assert.That(back).IsEqualTo(MathML(read));
+            await Assert.That(RoundTrip(back, EquationFormat.UnicodeMath)).IsEqualTo(back);
+        }
+
+        [Test]
         [Arguments("<mi href=\"#t1\">sharet1</mi>", "<mi>sharet1</mi>")]
         [Arguments("<mi>x1</mi>", "<mi>x1</mi>")]
         public async Task OmmlKeepsAnUprightNameWithDigits(string mathML, string read)
