@@ -7,6 +7,7 @@ namespace SharpEquations.Internal.Omml
     using System.Text.RegularExpressions;
     using System.Xml.Linq;
     using SharpEquations.Internal.Text;
+    using SharpEquations.Internal.UnicodeMath;
     using static SharpEquations.Internal.Omml.Omml;
 
     /// <summary>
@@ -283,7 +284,7 @@ namespace SharpEquations.Internal.Omml
                 var value = property.Attribute(M + "val");
                 property.SetAttributeValue(M + "val", value == null || IsTrue(value.Value) ? "on" : "off");
             }
-            // an upright word (max, argmin) is one identifier, which omml2mml would split letter by letter: it goes
+            // an upright word (max, argmin, sharet1) is one identifier, which omml2mml would split letter by letter: it goes
             // through the stylesheet as normal text, marked, and comes back as an mi (see UnmarkNames)
             foreach (var run in copy.Descendants(M + "r").Where(IsUprightName).ToList())
             {
@@ -292,7 +293,36 @@ namespace SharpEquations.Internal.Omml
                 var text = run.Element(M + "t")!;
                 text.Value = NameMark + text.Value;
             }
+            // omml2mml writes no mathvariant on numbers, which would lose the style of a bold or double-struck digit:
+            // the digits of a styled run go through the stylesheet as their mathematical alphanumerics (𝟏, 𝟙), each an
+            // identifier, as UnicodeMath and LaTeX read them
+            foreach (var run in copy.Descendants(M + "r"))
+            {
+                var properties = run.Elements(M + "rPr").LastOrDefault();
+                if (properties == null || (string)properties.Element(M + "nor")?.Attribute(M + "val") == "on")
+                    continue;
+                var style = DigitStyle((string)properties.Element(M + "scr")?.Attribute(M + "val"), (string)properties.Element(M + "sty")?.Attribute(M + "val"));
+                if (style == null)
+                    continue;
+                foreach (var text in run.Elements(M + "t"))
+                    text.Value = string.Concat(CodePoints.Of(text.Value).Select(c => c.Value is >= '0' and <= '9' ? UnicodeMathText.GetMathAlphanumeric(c.ToString(), style) : c.ToString()));
+            }
             return copy;
+        }
+
+        /// <summary>The style of the mathematical digits for the m:scr and m:sty of a run, null for plain digits.</summary>
+        private static string DigitStyle(string script, string style)
+        {
+            return (script, style) switch
+            {
+                ("monospace", _) => "mtt",
+                ("sans-serif", "b") => "mbfsans",
+                ("sans-serif", "i" or "bi") => null,
+                ("sans-serif", _) => "msans",
+                ("double-struck", _) => "Bbb",
+                ("roman" or null or "", "b") => "mbf",
+                _ => null,
+            };
         }
 
         private const char NameMark = '\uF8FF';
@@ -303,7 +333,7 @@ namespace SharpEquations.Internal.Omml
             var texts = run.Elements(M + "t").ToList();
             return properties != null && properties.Element(M + "nor") == null && (string)properties.Element(M + "sty")?.Attribute(M + "val") == "p"
                 && !run.Ancestors(M + "fName").Any() && texts.Count == 1 && texts[0].Value.Length > 1
-                && AsciiPatterns.Letters().IsMatch(texts[0].Value);
+                && AsciiPatterns.Name().IsMatch(texts[0].Value);
         }
 
         private static void UnmarkNames(XElement math)

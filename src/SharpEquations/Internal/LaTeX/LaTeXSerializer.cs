@@ -329,7 +329,8 @@ namespace SharpEquations.Internal.LaTeX
                     var notation = Attr(value, "notation");
                     if (notation == "top" || notation == "bottom")
                     {
-                        ret = Unary(value, notation == "top" ? "\\overline" : "\\underline");
+                        // the bar on top is the one of \bar (x̅), \overline being the overbar of UnicodeMath (¯x)
+                        ret = Unary(value, notation == "top" ? "\\bar" : "\\underline");
                         break;
                     }
                     if (standard && notation == "circle")
@@ -562,7 +563,7 @@ namespace SharpEquations.Internal.LaTeX
                         return mapped;
                     // escaped for the reader, in standard LaTeX its command if it has one (Ⓢ, \circledS)
                     if (IsStructureOperator(val))
-                        return standard && LaTeXSymbols.Math(val) != val ? LaTeXSymbols.Math(val) : "\\" + val;
+                        return EscapedStructureOperator(val);
                     if (val == "$")
                     {
                         ret = "\\$";
@@ -597,6 +598,10 @@ namespace SharpEquations.Internal.LaTeX
                     break;
 
                 case "mi":
+                    // an operator of UnicodeMath as an identifier (□, √) is escaped, as it is as an operator: alone, it would
+                    // be read as its structure (√𝑥, a square root) or not at all (□)
+                    if (IsStructureOperator(Text(value)) && !value.HasElements)
+                        return EscapedStructureOperator(Text(value));
                     if (standard)
                     {
                         ret = StandardIdentifier(value);
@@ -809,6 +814,21 @@ namespace SharpEquations.Internal.LaTeX
             if (open == "{" && Name(Child(value, 1)) == "mtable")
                 return false;
             return (open.Length > 0 || close.Length > 0) && !(IsOneOf(open, OpeningFences) && IsOneOf(close, ClosingFences));
+        }
+
+        /// <summary>
+        /// An operator that builds a structure in UnicodeMath, alone: escaped in Word's LaTeX (\□, \√); in standard
+        /// LaTeX the symbol's command where it has one (\square, \circledS, and {\surd}, which a braced group keeps from
+        /// taking what follows as its radicand), escaped otherwise.
+        /// </summary>
+        private string EscapedStructureOperator(string val)
+        {
+            if (!standard)
+                return "\\" + val;
+            if (val == "√")
+                return "{\\surd}";
+            var command = LaTeXSymbols.Math(val);
+            return command != val ? command : "\\" + val;
         }
 
         /// <summary>The operators that build a structure in UnicodeMath (▭, √, ¦…), escaped when they are alone: \▭.</summary>
