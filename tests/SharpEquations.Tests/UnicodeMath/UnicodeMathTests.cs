@@ -129,6 +129,19 @@ namespace SharpEquations.Tests.UnicodeMath
             await Assert.That(Equation.Parse(expected, EquationFormat.UnicodeMath)).IsEqualTo(equation);
         }
 
+        // a fraction after a function or a script, which UnicodeMath would make its numerator
+        [Test]
+        [Arguments(@"\lim_{h\to0}\frac{f(x)}{h}", "lim_(ℎ→0) ⁡〖𝑓(𝑥)/ℎ〗")]
+        [Arguments(@"\sin\frac{x}{2}", "sin⁡〖𝑥/2〗")]
+        [Arguments(@"a\stackrel{n\to\infty}{\longrightarrow}\frac{1}{2}", "𝑎⟶┴(𝑛→∞) 〖1/2〗")]
+        [Arguments(@"x_i\frac{1}{2}+x^n\frac{1}{2}", "𝑥_𝑖 〖1/2〗+𝑥^𝑛 〖1/2〗")]
+        [Arguments(@"x^2\frac{1}{2}+\hat{x}\frac{1}{2}", "𝑥² 1/2+𝑥̂ 1/2")]        public async Task WritesFractionsApartFromWhatPrecedes(string latex, string expected)
+        {
+            var equation = Equation.Parse(latex, EquationFormat.LaTeX);
+            await Assert.That(equation.ToString(EquationFormat.UnicodeMath)).IsEqualTo(expected);
+            await Assert.That(Equation.Parse(expected, EquationFormat.UnicodeMath)).IsEqualTo(equation);
+        }
+
         [Test]
         [Arguments("\"\\foo\"", "\\foo")]
         [Arguments("\"\\p\"", "\\p")]

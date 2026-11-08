@@ -156,7 +156,7 @@ namespace SharpEquations.Tests
 
         // commands of MathJax, KaTeX, plain TeX or packages that Word's LaTeX, which the reader follows, does not have:
         // links, classes, colors, boxes and moves, sizes, \hbox and \verb, \LaTeX, \skew, the primitives of plain TeX
-        // (\matrix{}, \cr, \eqalign, \displaylines, \above, \atop, \brace) and its font switches (\rm, \cal, \Bbb),
+        // (\matrix{}, \cr, \eqalign, \displaylines, \above, \atop, \brace) and its font switches (\Bbb, \frak, \scr, and \rm or \tt over text),
         // the classes of \mathord and the like, the bra-kets of the physics package, \mathsfit, \argmax, \widecheck,
         // the arrows of mathtools
         private static readonly HashSet<string> NotInWordLaTeX = new HashSet<string>
@@ -167,7 +167,7 @@ namespace SharpEquations.Tests
             "LaTeX", "LaTeX-with-style", "TeX", "TeX-with-style", "hbox", "hbox-with-math-mode", "hbox-with-backslash-in-text",
             "fbox", "leftroot-uproot", "skew", "skew-with-braces", "displaylines", "eqalign", "matrix-without-begin-and-end",
             "hfil", "above", "abovewithdelims", "atop-and-atopwithdelims", "brace", "brace-1", "oldstyle", "scr", "tt",
-            "calligraphic-mode", "fraktur", "blackboard-bold", "global-fonts", "greatest-common-divisor",
+            "fraktur", "blackboard-bold", "global-fonts", "greatest-common-divisor",
             "math-commands-that-currently-does-nothing", "mathbin", "mathord", "mathrel", "mathop", "issue-125-4-mathop",
             "bra", "ket", "braket", "mathsfit", "argmax", "widecheck", "xLeftarrow-double", "xleftrightarrow", "xhookleftarrow",
         };
