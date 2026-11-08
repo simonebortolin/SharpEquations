@@ -246,6 +246,11 @@ namespace SharpEquations.Internal.LaTeX
             ["dfrac"] = "\\frac", ["tfrac"] = "\\frac", ["cfrac"] = "\\frac", ["dbinom"] = "\\binom", ["tbinom"] = "\\binom",
             ["overrightarrow"] = "\\vec", ["Vert"] = "‖", ["lVert"] = "‖", ["rVert"] = "‖", ["bmod"] = "\\operatorname{mod}",
             ["bm"] = "\\boldsymbol",
+            // the symbols of LaTeX and amssymb that UnicodeMath has no control word for, and \square, \blacksquare and
+            // \surd, which are symbols in LaTeX and build a box or a root in UnicodeMath
+            ["yen"] = "¥", ["circledR"] = "®", ["S"] = "§", ["P"] = "¶", ["mho"] = "℧", ["rightsquigarrow"] = "↝",
+            ["leftrightsquigarrow"] = "↭", ["measuredangle"] = "∡", ["sphericalangle"] = "∢", ["eqsim"] = "≂", ["doteqdot"] = "≑",
+            ["triangleq"] = "≜", ["square"] = "\\□", ["blacksquare"] = "\\■", ["surd"] = "\\√",
         };
 
         // the commands that put a script over a base, \overset{script}{base}, as the UnicodeMath operator (\underset is ⓤ)

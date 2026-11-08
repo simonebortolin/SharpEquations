@@ -42,7 +42,8 @@ init-only record: `Display`, `Strict`, `PreserveFormatting`, `LaTeXFlavor` stand
   `menclose notation="bottom"`. The default intents (`:fenced`, `:function`, `absolute-value`,
   `binomial-coefficient`, the matrices...) are not kept, since they would make an equation differ by how it was
   written (`\binom`, `⒞`, `(¦)`); `DefaultIntents.Restore` infers them again from the structure for the LaTeX and
-  UnicodeMath writers.
+  UnicodeMath writers. Content MathML of the source (`apply`, `ci`, `cn`..., outside the annotations) is first rewritten
+  as presentation MathML by `ctop.xsl` (David Carlisle's, see `NOTICE`), keeping the presentation MathML around it.
 - `Internal/Omml/`: OMML ↔ MathML with the XSLT 1.0 stylesheets of `Resources/` (from the TEI Stylesheets, see
   `NOTICE`), run with `XslCompiledTransform`. OMML is written as Word writes it (plain letters with `m:sty`/`m:scr`,
   underbars as `m:bar`), and an upright word of OMML (`max`) is read as one identifier.

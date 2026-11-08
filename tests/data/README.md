@@ -59,3 +59,8 @@ author expects for each (the `results` table of `dist/unicodemathml-integration.
 [MurrayIII/UnicodeMathML](https://github.com/MurrayIII/UnicodeMathML) (commit 636dc8f), as `{mathml, unicodemath, tex}`:
 MathML with the UnicodeMath and the TeX its author expects for it. Copyright (c) 2019 Noah Doersing, MIT License;
 maintained by Murray Sargent.
+
+`contentmathml/ctop-*.mml`: the 40 equations of `ctop/tests/ctopxslt.html` of
+[davidcarlisle/web-xslt](https://github.com/davidcarlisle/web-xslt) (commit 64a32a4a4f78529010f548524f3acc7241be54d5),
+one file each, as they are there: Content MathML, some of it mixed with presentation MathML. Copyright David Carlisle,
+MIT License.

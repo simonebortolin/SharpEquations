@@ -1,0 +1,8 @@
+<math display="block">
+<apply><product/>
+  <bvar><ci>i</ci></bvar>
+  <lowlimit><cn>0</cn></lowlimit>
+  <uplimit><cn>100</cn></uplimit>
+  <apply><power/><ci>x</ci><ci>i</ci></apply>
+</apply>
+</math>

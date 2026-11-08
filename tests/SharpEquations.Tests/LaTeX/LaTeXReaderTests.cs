@@ -305,5 +305,45 @@ namespace SharpEquations.Tests.LaTeX
         {
             await Assert.That(() => Equation.Parse(latex, EquationFormat.LaTeX)).ThrowsExactly<FormatException>();
         }
+
+        [Test]
+        [Arguments(@"a\square b", "□")]
+        [Arguments(@"a\blacksquare b", "■")]
+        [Arguments(@"a\surd b", "√")]
+        [Arguments(@"a\triangleq b", "≜")]
+        [Arguments(@"a\eqsim b", "≂")]
+        [Arguments(@"a\doteqdot b", "≑")]
+        [Arguments(@"a\rightsquigarrow b", "↝")]
+        [Arguments(@"a\leftrightsquigarrow b", "↭")]
+        [Arguments(@"a\measuredangle b", "∡")]
+        [Arguments(@"a\sphericalangle b", "∢")]
+        [Arguments(@"a\mho b", "℧")]
+        [Arguments(@"a\yen b", "¥")]
+        [Arguments(@"a\circledR b", "®")]
+        [Arguments(@"a\S b", "§")]
+        [Arguments(@"a\P b", "¶")]
+        public async Task ReadsSymbolsThatUnicodeMathHasNoControlWordFor(string latex, string symbol)
+        {
+            var math = Equation.Parse(latex, EquationFormat.LaTeX, Strict).ToMathML();
+            await Assert.That(math.Elements().Select(e => e.Value).ToList()).IsEquivalentTo(new[] { "a", symbol, "b" });
+        }
+
+        [Test]
+        [Arguments("□", @"a\square b")]
+        [Arguments("√", @"a\surd b")]
+        [Arguments("≦", @"a\leqq b")]
+        [Arguments("↠", @"a\twoheadrightarrow b")]
+        [Arguments("⇄", @"a\rightleftarrows b")]
+        [Arguments("≼", @"a\preccurlyeq b")]
+        [Arguments("∌", @"a\not\ni b")]
+        [Arguments("〈", @"a\langle b")]
+        public async Task WritesTheSymbolsOfAmssymbAsCommands(string symbol, string latex)
+        {
+            var equation = Equation.Parse("<math><mi>a</mi><mo>" + symbol + "</mo><mi>b</mi></math>", EquationFormat.MathML);
+            var written = equation.ToString(EquationFormat.LaTeX);
+            await Assert.That(written).IsEqualTo(latex);
+            var back = Equation.Parse(written, EquationFormat.LaTeX, Strict);
+            await Assert.That(Equation.Parse(back.ToString(EquationFormat.LaTeX), EquationFormat.LaTeX)).IsEqualTo(back);
+        }
     }
 }

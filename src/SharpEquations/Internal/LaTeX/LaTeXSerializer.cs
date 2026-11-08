@@ -534,8 +534,9 @@ namespace SharpEquations.Internal.LaTeX
                         return "\\" + val + " ";
                     if (OperatorMap.TryGetValue(val, out var mapped))
                         return mapped;
+                    // escaped as the reader reads it, but as a command (\square, \surd) in standard LaTeX, which has one
                     if (IsStructureOperator(val))
-                        return "\\" + val;
+                        return standard && LaTeXSymbols.IsCommand(val) ? LaTeXSymbols.Math(val) : "\\" + val;
                     if (val == "$")
                     {
                         ret = "\\$";
