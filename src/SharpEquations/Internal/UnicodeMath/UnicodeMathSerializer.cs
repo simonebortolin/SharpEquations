@@ -169,18 +169,32 @@ namespace SharpEquations.Internal.UnicodeMath
 
         /// <summary>
         /// An operator that reading would take for a structure: an enclosure or a root sign without its operand, or an
-        /// opening bracket that nothing closes inside a row.
+        /// opening bracket that nothing closes inside a row, or a bar without its pair inside brackets ([𝑎|𝑏], which
+        /// reading takes for [𝑎 and the fence |𝑏]).
         /// </summary>
         private static bool IsLoneStructure(XElement mo)
         {
             var text = Text(mo);
             if (Len(text) != 1)
                 return false;
-            if ("▭√∛∜⟡▢◯⬭".Contains(text))
+            if ("▭√∛∜⟡▢◯⬭".Contains(text) || LaTeX.LaTeXSerializer.IsStructureOperator(text))
                 return true;
             var parent = mo.Parent;
+            if (text is "|" or "‖" && Role(parent) == ":fenced" && First(parent) != mo && Last(parent) != mo && Text(First(parent)) is not ("|" or "‖" or "⟨"))
+                return Children(parent).Count(c => c != First(parent) && c != Last(parent) && Name(c) == "mo" && Text(c) == text) % 2 == 1;
             return (IsOpening(text) || IsOpenDelimiter(text)) && text != "|" && text != "‖" && Name(parent) == "mrow" && First(parent) != mo &&
                 !(Last(parent) == mo && IsFence(First(parent))) && Role(parent) != ":fenced" && !mo.ElementsAfterSelf().Any(e => Name(e) == "mo" && IsClosing(Text(e)));
+        }
+
+        /// <summary>
+        /// Whether a slash has an operand before it that reading takes for its numerator: not when nothing is written
+        /// before it (an empty &lt;mn/&gt;) or an operator is (=∕=), where ∕ does not parse.
+        /// </summary>
+        private static bool HasOperandBefore(XElement mo)
+        {
+            var previous = Previous(mo);
+            return previous != null && (previous.HasElements || Text(previous).Length > 0) &&
+                !(Name(previous) == "mo" && !IsCloseDelimiter(Text(previous)) && !IsClosing(Text(previous)));
         }
 
         private static bool IsNaryOperator(string op) => "∑∏∐∫∬∭∮∯∰∱∲∳⨌⨀⨁⨂⨃⨄⨅⨆⋀⋁⋂⋃".Contains(op);
@@ -713,6 +727,19 @@ namespace SharpEquations.Internal.UnicodeMath
         }
 
         /// <summary>The base of digit scripts (𝑥₁): grouped when it has scripts of its own or several parts.</summary>
+        /// <summary>
+        /// Whether an element ends with a script (𝑥_𝑖, →┴𝑛), which a space after it ends: not a digit script (𝑥²), an
+        /// accent (𝑥̂) or the limits of an n-ary operator, whose operand the space starts (∑_𝑖 1/𝑖).
+        /// </summary>
+        private static bool EndsWithScript(XElement node)
+        {
+            while (Name(node) == "mrow" && ChildCount(node) > 0)
+                node = Last(node);
+            if (IsNaryHead(node) || IsDigitArg(node) || Name(node) is "mover" or "munder" && (HasAttr(node, "accent") || HasAttr(node, "accentunder") || IsCombining(Text(Last(node)))))
+                return false;
+            return Name(node) is "msub" or "msup" or "msubsup" or "mover" or "munder" or "munderover";
+        }
+
         private string ScriptBase(XElement node)
         {
             var ret = Dump(node);
@@ -936,11 +963,13 @@ namespace SharpEquations.Internal.UnicodeMath
                             op = "⒞";
                     }
                     ret = Binary(value, op);
-                    // after a space operator, which does not end its numerator, the fraction is grouped
-                    if (Attr(parent, "intent") == ":function" || Name(Previous(value)) == "mo" && Text(Previous(value)).Length > 0 && Text(Previous(value)).Trim().Length == 0)
+                    // after a space operator or the function apply sign, which do not end its numerator, the fraction is grouped
+                    if (Attr(parent, "intent") == ":function" || Name(Previous(value)) == "mo" && Text(Previous(value)).Length > 0 &&
+                        (Text(Previous(value)).Trim().Length == 0 || Text(Previous(value)) == "⁡"))
                         ret = "〖" + ret.Trim(' ') + "〗";
                     else if (Previous(value) != null && Name(Previous(value)) != "mo")
-                        ret = " " + ret;
+                        // after a script, which the space ends, the fraction is grouped too: 𝑥_𝑖 〖1/2〗
+                        ret = " " + (EndsWithScript(Previous(value)) ? "〖" + ret.Trim(' ') + "〗" : ret);
                     break;
 
                 case "msup":
@@ -1121,7 +1150,7 @@ namespace SharpEquations.Internal.UnicodeMath
                         break;
                     }
                     // an operator that reading would not take for one (ℏ, an n-ary operator without operand) is in a remark
-                    if (rawOperators.Contains(value) || IsLoneStructure(value))
+                    if (rawOperators.Contains(value) || IsLoneStructure(value) || val == "/" && !HasOperandBefore(value))
                     {
                         ret = "ⓡ(" + val + "&U+" + CodePointAt(val, 0).ToString("X4", System.Globalization.CultureInfo.InvariantCulture) + ")";
                         break;
@@ -1130,6 +1159,12 @@ namespace SharpEquations.Internal.UnicodeMath
                     {
                         // a slash that is not a fraction: ∕ reads as one, \/ as the slash of text
                         ret = "∕";
+                        break;
+                    }
+                    // a bar that is the base of a script (|_ℤ) does not open or close: ├|_ℤ
+                    if (val is "|" or "‖" && Name(parent) is "msub" or "msup" or "msubsup" && First(parent) == value)
+                    {
+                        ret = "├" + val;
                         break;
                     }
                     if (val == "|")
@@ -1169,6 +1204,13 @@ namespace SharpEquations.Internal.UnicodeMath
                     if (IsDoubleStruck(intent))
                     {
                         ret = intent;
+                        break;
+                    }
+                    // an operator that builds a structure (□, √) as an identifier would be read as that structure, or not
+                    // at all: it is in a remark, read back as the operator
+                    if (!value.HasElements && LaTeX.LaTeXSerializer.IsStructureOperator(Text(value)))
+                    {
+                        ret = "ⓡ(" + Text(value) + "&U+" + CodePointAt(Text(value), 0).ToString("X4", System.Globalization.CultureInfo.InvariantCulture) + ")";
                         break;
                     }
                     if (Len(Text(value)) == 1 && !value.HasElements)
@@ -1425,9 +1467,11 @@ namespace SharpEquations.Internal.UnicodeMath
                     CodePointAt(Text(First(value)), 0) < 0x2100 && Name(Previous(value)) == "mi")
                     return " " + ret;
             }
+            // an opening bracket that nothing closes is closed by ┤, except before a fenced row at the end of the equation
+            // itself, which reading gives back as a row of the same elements ([𝑎|𝑏], not [𝑎|𝑏]┤)
             if (First(value) != null && Name(First(value)) == "mo" && IsOpenDelimiter(Text(First(value))) && Attr(First(value), "intent") != ":text")
             {
-                if (Name(Last(value)) != "mo" || Text(Last(value)).Length == 0)
+                if (Name(Last(value)) != "mo" && !(Name(value) == "math" && IsFenced(Last(value))) || Name(Last(value)) == "mo" && Text(Last(value)).Length == 0)
                     ret += "┤";
             }
             // an absolute value of bars (|𝑎|𝑏|𝑐|) or of parentheses keeps its content in parentheses, which only group
