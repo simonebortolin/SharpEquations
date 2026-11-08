@@ -166,6 +166,8 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"{\bf x} + {\it ab} + {\cal F} + {\sf s} + {\tt t}", @"\mathbf{x}+ab+\mathcal{F}+\mathsf{s}+\mathtt{t}", @"𝐱+𝑎𝑏+ℱ+𝗌+𝚝")]
         [Arguments(@"\Delta H_{\rm rxn}^\circ = -R T \ln K", @"\Delta H_{\text{rxn}}^\circ=-RT \ln K", @"Δ𝐻_""rxn""^∘ =−𝑅𝑇 ln⁡𝐾")]
         [Arguments(@"\Gamma=\Omega", @"\Gamma=\Omega", @"Γ=Ω")]
+        [Arguments(@"\theta = 45\degree", @"\theta=45\degree", @"𝜃=45°")]
+        [Arguments(@"f \circ g", @"f\circ g", @"𝑓∘𝑔")]
         public async Task ReadsLaTeXThatWritesBack(string latex, string expectedLaTeX, string expectedUnicodeMath)
         {
             await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);
