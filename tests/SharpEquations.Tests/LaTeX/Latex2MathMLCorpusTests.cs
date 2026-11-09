@@ -172,12 +172,11 @@ namespace SharpEquations.Tests
             return string.Concat(math.Elements().Select(e => e.ToString(SaveOptions.DisableFormatting))).Replace(" xmlns=\"" + M.NamespaceName + "\"", "");
         }
 
-        // what does not read back as it was written, through the UnicodeMath that LaTeX is read as: a name of operator
-        // alone (\operatorname{lg}, which UnicodeMath reads as the letters l g), bars with nothing between them (|\,|\:|,
-        // \{\middle|\}), a parenthesis alone in a phantom (\mathstrut, \phantom{(})
+        // what does not read back as it was written, through the UnicodeMath that LaTeX is read as: bars with nothing
+        // between them (|\,|\:|, \{\middle|\}), a parenthesis alone in a phantom (\mathstrut, \phantom{(})
         private static readonly HashSet<string> NotWrittenBack = new HashSet<string>
         {
-            "spaces", "lg", "middle", "mathstrut",
+            "spaces", "middle", "mathstrut",
         };
 
         // what the reader does not read as latex2mathml does, in four groups; a case that starts to pass must leave its
@@ -185,8 +184,9 @@ namespace SharpEquations.Tests
 
         // commands of MathJax, KaTeX, plain TeX or packages that Word's LaTeX, which the reader follows, does not have:
         // links, classes, colors, boxes and moves, sizes, \hbox and \verb, \LaTeX, \skew, the primitives of plain TeX
-        // (\matrix{}, \cr, \eqalign, \displaylines, \above, \atop, \brace) and its font switches (\rm, \cal), the classes
-        // of \mathord, \mathbin and \mathrel, the bra-kets of the physics package, \mathsfit, \argmax, \widecheck
+        // (\matrix{}, \cr, \eqalign, \displaylines, \above, \atop, \brace) and its font switches (\frak, \scr, and \rm over text),
+        // the classes of \mathord, \mathbin and \mathrel, the bra-kets of the physics package, \mathsfit, \argmax,
+        // \widecheck
         private static readonly HashSet<string> NotInWordLaTeX = new HashSet<string>
         {
             "href", "class", "style", "textcolor", "colorbox", "fcolorbox", "raise", "lower", "moveleft", "moveright",
@@ -194,16 +194,16 @@ namespace SharpEquations.Tests
             "mathchoice-inline", "unicode", "verb", "huge", "large", "normalsize-scriptsize", "small-tiny", "footnotesize",
             "LaTeX", "LaTeX-with-style", "TeX", "TeX-with-style", "hbox", "hbox-with-math-mode", "hbox-with-backslash-in-text",
             "fbox", "leftroot-uproot", "skew", "skew-with-braces", "displaylines", "eqalign", "matrix-without-begin-and-end",
-            "hfil", "above", "abovewithdelims", "atop-and-atopwithdelims", "brace", "brace-1", "oldstyle", "scr", "tt",
-            "calligraphic-mode", "fraktur", "global-fonts", "greatest-common-divisor",
-            "math-commands-that-currently-does-nothing", "mathbin", "mathord", "mathrel", "bra", "ket", "braket", "mathsfit",
-            "argmax", "widecheck",
+            "hfil", "above", "abovewithdelims", "atop-and-atopwithdelims", "brace", "brace-1", "oldstyle", "scr",
+            "fraktur", "global-fonts", "greatest-common-divisor",
+            "math-commands-that-currently-does-nothing", "mathbin", "mathord", "mathrel",
+            "bra", "ket", "braket", "mathsfit", "argmax", "widecheck",
         };
 
         // LaTeX and amsmath that the reader does not read yet: an operator name with nothing after it (\lg, \liminf,
         // \injlim, \operatorname*{argmax}_x), which UnicodeMath reads as letters, and the names of amsmath that are two
-        // words (lim inf); \limits after \mathop; both scripts of \overbrace and \underbrace; a font over \text and escaped braces (\mathrm{\{b\}},
-        // \mathsf{\text{}}, \boldsymbol{1}); \newenvironment and ## in a macro
+        // words (lim inf); \limits after \mathop; both scripts of \overbrace and \underbrace; a font over \text and
+        // escaped braces (\mathrm{\{b\}}, \mathsf{\text{}}, \boldsymbol{1}); \newenvironment and ## in a macro
         private static readonly HashSet<string> NotReadYet = new HashSet<string>
         {
             "lg", "liminf", "limsup", "injlim", "projlim", "varinjlim", "operatornamewithlimits", "operatorname-star",
