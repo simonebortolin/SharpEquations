@@ -5,8 +5,6 @@ name: PR Pre-release Cleanup
 on:
   pull_request:
     types: [closed]
-    branches:
-      - main
 
 permissions:
   contents: read

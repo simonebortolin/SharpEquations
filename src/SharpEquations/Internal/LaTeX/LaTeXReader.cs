@@ -648,6 +648,14 @@ namespace SharpEquations.Internal.LaTeX
                     i = afterUnderBase;
                     continue;
                 }
+                if (cw is "overbrace" or "underbrace" && Argument(tex, j) is var (braced, afterBraced) && afterBraced >= 0 &&
+                    Scripts(tex, afterBraced) is var (braceUnder, braceOver, afterBraceScripts) && braceUnder != null && braceOver != null)
+                {
+                    // \overbrace3^a_x: for TeX the brace is an operator with limits, both scripts under and over the whole construct
+                    result.Append(RewriteTeXOnly("\\underset{" + braceUnder + "}{\\overset{" + braceOver + "}{\\" + cw + "{" + braced + "}}}"));
+                    i = afterBraceScripts;
+                    continue;
+                }
                 if (cw == "underset" && Arguments(tex, j, 2) is var (underArguments, afterUnderset) &&
                     new Text(underArguments[1].Trim()) is var overText && overText.Find("\\overset", 0) == 0 &&
                     Arguments(overText, 8, 2) is var (overArguments, afterOverset) && afterOverset == overText.Length)
@@ -718,8 +726,14 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 if (cw == "mathop" && BracedArgument(tex, j) is var (operatorText, afterOperator) && afterOperator >= 0)
                 {
-                    // \mathop{\mathrm{argmin}}: an operator name
+                    // \mathop{\mathrm{argmin}}: an operator name; \mathop{x}, of one symbol, a group, which takes the limits
                     var name = operatorText.Trim();
+                    if (Js.Len(name) == 1)
+                    {
+                        result.Append('{').Append(RewriteTeXOnly(name)).Append('}');
+                        i = afterOperator;
+                        continue;
+                    }
                     if (name.StartsWith("\\mathrm{", StringComparison.Ordinal) && name[name.Length - 1] == '}')
                         name = name.Substring(8, name.Length - 9);
                     result.Append(name.All(char.IsLetter) ? "\\operatorname{" + name + "}" : RewriteTeXOnly(operatorText));
@@ -1060,6 +1074,73 @@ namespace SharpEquations.Internal.LaTeX
 
         /// <summary>The text of the {...} argument at the index (after blanks) and the index after it; -1 if there is none.</summary>
         private static bool IsAsciiLetterOrDigit(char c) => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9';
+
+        /// <summary>
+        /// The argument of a font command in the font, as TeX sets it: its ASCII letters and digits, between escaped braces
+        /// too (\mathrm{\{b\}}), but not the text (\text{var}), which has the text font, nor the argument of an inner font
+        /// command, which has its own. Upright letters are quoted, as UnicodeMath writes them; a digit, which has no bold
+        /// italic form, is bold upright in a bold italic style (\boldsymbol{1}, 𝟏).
+        /// </summary>
+        private static string InFont(string argument, int style)
+        {
+            var tex = new Text(argument);
+            var mathStyle = MathStyles[style];
+            var digitStyle = mathStyle switch
+            {
+                "mbfit" or "mbfscr" or "mbffrak" => "mbf",
+                "mbfitsans" => "mbfsans",
+                _ => mathStyle,
+            };
+            var result = new StringBuilder();
+            for (int i = 0; i < tex.Length;)
+            {
+                var ch = tex[i];
+                int end;
+                switch (ch)
+                {
+                    case "ⓣ" when tex[i + 1] == "{" && FindClosingBrace(tex, i + 2) is var close && close != -1:
+                        end = close + 1;
+                        break;
+                    case "Ⅎ" when IsAsciiAlphabetic(tex[i + 1]) && tex[i + 2] == "{" && FindClosingBrace(tex, i + 3) is var close && close != -1:
+                        end = close + 1;
+                        break;
+                    case "\\" when IsAsciiAlphabetic(tex[i + 1]):
+                        end = i + 1 + ControlWord(tex, i + 1).Length;
+                        break;
+                    case "\\":
+                        end = System.Math.Min(i + 2, tex.Length);
+                        break;
+                    case var _ when IsAsciiAlphabetic(ch):
+                        end = i;
+                        while (IsAsciiAlphabetic(tex[end]))
+                            end++;
+                        var letters = tex.Sub(i, end);
+                        // a function name (\sin, which the first pass leaves as its letters) is in its own font
+                        if (IsFunctionName(letters))
+                            result.Append(letters);
+                        else if (mathStyle == "mup")
+                            result.Append(Quoted(letters));
+                        else
+                            result.Append(string.Concat(Characters(letters).Select(c => GetMathAlphanumeric(c, mathStyle))));
+                        i = end;
+                        continue;
+                    case var _ when ch.Length == 1 && char.IsLetter(ch[0]) && mathStyle != "mup":
+                        result.Append(GetMathAlphanumeric(ch, mathStyle));
+                        i++;
+                        continue;
+                    case var _ when ch.Length == 1 && ch[0] >= '0' && ch[0] <= '9':
+                        result.Append(GetMathAlphanumeric(ch, digitStyle));
+                        i++;
+                        continue;
+                    default:
+                        end = i + 1;
+                        break;
+                }
+                result.Append(tex.Sub(i, end));
+                i = end;
+            }
+            return result.ToString();
+        }
 
         private static (string Text, int Next) BracedArgument(Text tex, int i)
         {
@@ -1656,10 +1737,10 @@ namespace SharpEquations.Internal.LaTeX
                                 RemoveLast(uniTeX);
                                 uniTeX.Append(Quoted(argument));
                             }
-                            else if (style > 0 && style < MathStyles.Length && argument.Length > 0 && argument.All(IsAsciiLetterOrDigit))
+                            else if (style > 0 && style < MathStyles.Length && argument.Length > 0 && argument.All(char.IsLetterOrDigit))
                             {
                                 RemoveLast(uniTeX);
-                                uniTeX.Append(string.Concat(argument.Select(c => GetMathAlphanumeric(c.ToString(), MathStyles[style]))));
+                                uniTeX.Append(InFont(argument, style));
                             }
                             else if (argument.All(char.IsLetterOrDigit))
                             {
@@ -1670,10 +1751,7 @@ namespace SharpEquations.Internal.LaTeX
                                 // other mathematics in a font (\mathbf{b\times c}, \mathrm{x_1}): its ASCII letters and digits in
                                 // the font, the rest as it is
                                 RemoveLast(uniTeX);
-                                var styled = style > 0 && style < MathStyles.Length
-                                    ? string.Concat(Characters(argument).Select(c => c.Length == 1 && IsAsciiLetterOrDigit(c[0]) ? GetMathAlphanumeric(c, MathStyles[style]) : c))
-                                    : argument;
-                                uniTeX.Append(Pass2(styled));
+                                uniTeX.Append(Pass2(style >= 0 && style < MathStyles.Length ? InFont(argument, style) : argument));
                             }
                             i = j + 1;
                         }
