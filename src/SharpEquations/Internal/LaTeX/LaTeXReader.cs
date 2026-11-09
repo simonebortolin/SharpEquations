@@ -370,7 +370,7 @@ namespace SharpEquations.Internal.LaTeX
         {
             ["dfrac"] = "\\frac", ["tfrac"] = "\\frac", ["cfrac"] = "\\frac", ["dbinom"] = "\\binom", ["tbinom"] = "\\binom",
             ["overrightarrow"] = "\\vec", ["Vert"] = "‖", ["lVert"] = "‖", ["rVert"] = "‖", ["bmod"] = "\\operatorname{mod}",
-            ["bm"] = "\\boldsymbol",
+            ["bm"] = "\\boldsymbol", ["square"] = "\\□", ["Box"] = "\\□",
             // the symbols of amsmath, amssymb and plain TeX that UnicodeMath has no control word for
             ["lt"] = "<", ["gt"] = ">", ["dotsb"] = "⋯", ["dotsi"] = "⋯", ["dotsm"] = "⋯", ["dotsc"] = "…", ["dotso"] = "…",
             ["ldotp"] = ".", ["gggtr"] = "⋙", ["llless"] = "⋘", ["gvertneqq"] = "≩", ["lvertneqq"] = "≨", ["ngeqq"] = "≱",
@@ -378,7 +378,7 @@ namespace SharpEquations.Internal.LaTeX
             ["smallfrown"] = "⌢", ["smallsmile"] = "⌣", ["thicksim"] = "∼", ["thickapprox"] = "≈", ["varsubsetneqq"] = "⫋",
             ["varsupsetneq"] = "⊋", ["varsupsetneqq"] = "⫌", ["bigcirc"] = "\\◯", ["centerdot"] = "⬝", ["degree"] = "°",
             ["intop"] = "\\int", ["smallint"] = "\\int", ["diagup"] = "\\╱", ["diagdown"] = "\\╲", ["thickspace"] = "\\;",
-            ["And"] = "\\&", ["lvert"] = "|", ["rvert"] = "|", ["Box"] = "\\□", ["idotsint"] = "\\∫⋯\\∫",
+            ["And"] = "\\&", ["lvert"] = "|", ["rvert"] = "|", ["idotsint"] = "\\∫⋯\\∫",
             ["mathscr"] = "\\mathcal", ["operatornamewithlimits"] = "\\operatorname", ["mathstrut"] = "\\vphantom{\\(}",
         };
 
@@ -814,18 +814,8 @@ namespace SharpEquations.Internal.LaTeX
                         var (body, afterBody) = BracedArgument(tex, afterColor);
                         if (afterBody < 0)
                         {
-                            int depth = 0, end = afterColor;
-                            for (; end < tex.Length; end++)
-                            {
-                                if (tex[end] == "\\")
-                                    end++;
-                                else if (tex[end] == "{")
-                                    depth++;
-                                else if (tex[end] == "}" && depth-- == 0)
-                                    break;
-                            }
-                            body = tex.Sub(afterColor, end);
-                            afterBody = end;
+                            afterBody = GroupEnd(tex, afterColor);
+                            body = tex.Sub(afterColor, afterBody);
                         }
                         // \color{} has no color: the body alone
                         if (color.Trim().Length == 0)
@@ -836,10 +826,40 @@ namespace SharpEquations.Internal.LaTeX
                         continue;
                     }
                 }
+                else if (FontSwitches.TryGetValue(cw, out var font))
+                {
+                    // an old font switch, {\rm rxn}, styles the rest of its group: \mathrm{rxn}
+                    var end = GroupEnd(tex, j);
+                    result.Append('\\').Append(font).Append('{').Append(RewriteTeXOnly(tex.Sub(j, end).Trim())).Append('}');
+                    i = end;
+                    continue;
+                }
                 result.Append(tex.Sub(i, j));
                 i = j;
             }
             return result.ToString();
+        }
+
+        // the font switches of plain TeX, which style the rest of their group, as the LaTeX commands with an argument
+        private static readonly Dictionary<string, string> FontSwitches = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["rm"] = "mathrm", ["bf"] = "mathbf", ["it"] = "mathit", ["cal"] = "mathcal", ["sf"] = "mathsf", ["tt"] = "mathtt",
+        };
+
+        /// <summary>The index of the brace that closes the group the index is in, or the length of the text.</summary>
+        private static int GroupEnd(Text tex, int i)
+        {
+            int depth = 0;
+            for (; i < tex.Length; i++)
+            {
+                if (tex[i] == "\\")
+                    i++;
+                else if (tex[i] == "{")
+                    depth++;
+                else if (tex[i] == "}" && depth-- == 0)
+                    break;
+            }
+            return Math.Min(i, tex.Length);
         }
 
         // the commands with one or two arguments that can be a script without braces, as x_\text{ab} or x^\frac12
