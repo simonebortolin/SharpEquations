@@ -333,6 +333,27 @@ namespace SharpEquations.Tests.LaTeX
         }
 
         [Test]
+        [Arguments(@"\newenvironment{wrapper}{a +}{+ c} \begin{wrapper} b \end{wrapper}", @"a+b+c")]
+        [Arguments(@"\newenvironment{paren}[1]{\left( #1 +}{\right)} \begin{paren}{x} y \end{paren}", @"\left(x+y\right)")]
+        [Arguments(@"\newenvironment{e}[2][1]{#1+#2}{} \begin{e}{a} b\end{e}", @"1+ab")]
+        [Arguments(@"\newenvironment{e}[2][1]{#1+#2}{} \begin{e}[2]{a}\end{e}", @"2+a")]
+        [Arguments(@"\newenvironment{g}{(}{)} \begin{g} a \begin{g} b \end{g} \end{g}", @"(a(b))")]
+        [Arguments(@"\newenvironment{al}{\alpha}{\beta}\begin{al}x\end{al}y", @"\alpha x\beta y")]
+        [Arguments(@"\newenvironment{e}{a}{} \renewenvironment{e}{b}{} \begin{e}\end{e}", @"b")]
+        [Arguments(@"\newenvironment{m}{\begin{pmatrix}}{\end{pmatrix}} \begin{m} 1 & 2 \end{m}", @"\begin{pmatrix}1&2\end{pmatrix}")]
+        [Arguments(@"\newenvironment{h}{\newcommand{\f}[1]{##1^2}}{} \begin{h}\f{x}\end{h}", @"x^2")]
+        public async Task ExpandsEnvironments(string latex, string equivalent)
+        {
+            await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX)).IsEqualTo(Equation.Parse(equivalent, EquationFormat.LaTeX));
+        }
+
+        [Test]
+        public async Task RejectsEnvironmentsThatExpandForever()
+        {
+            await Assert.That(Equation.TryParse(@"\newenvironment{r}{\begin{r}}{\end{r}} \begin{r} x \end{r}", EquationFormat.LaTeX, out _)).IsFalse();
+        }
+
+        [Test]
         [Arguments(@"\foo x", @"Unknown control word \foox in the LaTeX.")]
         [Arguments(@"a+\undefinedcommand", @"Unknown control word \undefinedcommand in the LaTeX.")]
         public async Task RejectsUnknownControlWordsWhenStrict(string latex, string message)
