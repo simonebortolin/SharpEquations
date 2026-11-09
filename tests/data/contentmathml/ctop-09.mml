@@ -1,0 +1,7 @@
+<math display="block">
+<set>
+  <bvar><ci>x</ci></bvar> 
+  <domainofapplication><integers/></domainofapplication>
+  <apply><times/><cn>2</cn><ci>x</ci></apply>
+</set>
+</math>

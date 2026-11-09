@@ -39,10 +39,10 @@ namespace SharpEquations.Internal.LaTeX
         /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def
         /// or \newcommand, and environments defined with \newenvironment, go to <paramref name="macros"/>, where later conversions find them. In a display equation the
         /// scripts of a large operator other than an integral (\sum, \prod, \bigcup...) go under and over it, as TeX
-        /// puts them.
+        /// puts them. The \ce and \pu of mhchem are rewritten as plain LaTeX first (<see cref="Mhchem"/>).
         /// </summary>
         public static string ToUnicodeMath(string tex, IDictionary<string, string> macros = null, bool display = false) =>
-            RestoreTextEscapes(new LaTeXReader(macros, display).Convert(tex));
+            RestoreTextEscapes(new LaTeXReader(macros, display).Convert(Mhchem.Rewrite(tex)));
 
         // the characters that \text escapes ({, \_, ...), held as noncharacters through the passes, which would read them as LaTeX
         private static readonly (string Escape, char Held, char Character)[] TextEscapes =
@@ -370,17 +370,27 @@ namespace SharpEquations.Internal.LaTeX
         {
             ["dfrac"] = "\\frac", ["tfrac"] = "\\frac", ["cfrac"] = "\\frac", ["dbinom"] = "\\binom", ["tbinom"] = "\\binom",
             ["overrightarrow"] = "\\vec", ["Vert"] = "‖", ["lVert"] = "‖", ["rVert"] = "‖", ["bmod"] = "\\operatorname{mod}",
-            ["bm"] = "\\boldsymbol", ["square"] = "\\□", ["Box"] = "\\□",
-            // the symbols of amsmath, amssymb and plain TeX that UnicodeMath has no control word for
+            ["bm"] = "\\boldsymbol",
+            // the symbols of LaTeX, amsmath, amssymb and plain TeX that UnicodeMath has no control word for (the others of
+            // LaTeXSymbols are read from it), and \square, \Box, \blacksquare, \surd and \oslash, which are symbols in LaTeX
+            // and build a box, a root or a fraction in UnicodeMath
+            ["oslash"] = "\\⊘", ["yen"] = "¥", ["circledR"] = "®", ["S"] = "§", ["P"] = "¶", ["mho"] = "℧", ["rightsquigarrow"] = "↝",
+            ["leftrightsquigarrow"] = "↭", ["measuredangle"] = "∡", ["sphericalangle"] = "∢", ["eqsim"] = "≂", ["doteqdot"] = "≑",
+            ["triangleq"] = "≜", ["square"] = "\\□", ["Box"] = "\\□", ["blacksquare"] = "\\■", ["surd"] = "{\\surd}",
             ["lt"] = "<", ["gt"] = ">", ["dotsb"] = "⋯", ["dotsi"] = "⋯", ["dotsm"] = "⋯", ["dotsc"] = "…", ["dotso"] = "…",
             ["ldotp"] = ".", ["gggtr"] = "⋙", ["llless"] = "⋘", ["gvertneqq"] = "≩", ["lvertneqq"] = "≨", ["ngeqq"] = "≱",
-            ["nshortmid"] = "∤", ["nshortparallel"] = "∦", ["nsubseteqq"] = "⊈", ["omicron"] = "ο", ["S"] = "§", ["shortmid"] = "∣",
+            ["nshortmid"] = "∤", ["nshortparallel"] = "∦", ["nsubseteqq"] = "⊈", ["omicron"] = "ο", ["shortmid"] = "∣",
             ["smallfrown"] = "⌢", ["smallsmile"] = "⌣", ["thicksim"] = "∼", ["thickapprox"] = "≈", ["varsubsetneqq"] = "⫋",
             ["varsupsetneq"] = "⊋", ["varsupsetneqq"] = "⫌", ["bigcirc"] = "\\◯", ["centerdot"] = "⬝", ["degree"] = "°",
             ["intop"] = "\\int", ["smallint"] = "\\int", ["diagup"] = "\\╱", ["diagdown"] = "\\╲", ["thickspace"] = "\\;",
             ["And"] = "\\&", ["lvert"] = "|", ["rvert"] = "|", ["idotsint"] = "\\∫⋯\\∫",
             ["mathscr"] = "\\mathcal", ["operatornamewithlimits"] = "\\operatorname", ["mathstrut"] = "\\vphantom{\\(}",
         };
+
+        private static readonly HashSet<string> OpeningBrackets = new HashSet<string>(StringComparer.Ordinal) { "(", "[", "{", "⟨", "⌈", "⌊" };
+        private static readonly HashSet<string> ClosingBrackets = new HashSet<string>(StringComparer.Ordinal) { ")", "]", "}", "⟩", "⌉", "⌋" };
+        private static readonly HashSet<string> OpeningBracketCommands = new HashSet<string>(StringComparer.Ordinal) { "langle", "lceil", "lfloor", "lbrace" };
+        private static readonly HashSet<string> ClosingBracketCommands = new HashSet<string>(StringComparer.Ordinal) { "rangle", "rceil", "rfloor", "rbrace" };
 
         // the commands that put a script over a base, \overset{script}{base}, as the UnicodeMath operator (\underset is ⓤ)
         private static readonly Dictionary<string, string> Stacks = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -418,6 +428,8 @@ namespace SharpEquations.Internal.LaTeX
             var result = new StringBuilder();
             // between ⟨ and ⟩ a bar parts a bra from a ket (│), as in UnicodeMath: ⟨a│b⟩
             int angles = 0;
+            // in brackets \mid is the separator ∣ of UnicodeMath, {x∣x>0}; outside them the relation, escaped
+            int brackets = 0;
             for (int i = 0; i < tex.Length;)
             {
                 if (tex[i] == "|" && angles > 0)
@@ -428,6 +440,8 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 if (tex[i] == "⟨" && AngleCloses(tex, i + 1) || tex[i] == "⟩")
                     angles = Math.Max(0, angles + (tex[i] == "⟨" ? 1 : -1));
+                if (OpeningBrackets.Contains(tex[i]) || ClosingBrackets.Contains(tex[i]))
+                    brackets = Math.Max(0, brackets + (OpeningBrackets.Contains(tex[i]) ? 1 : -1));
                 // a slash of LaTeX is a slash, (a+b)/2, where UnicodeMath would build a fraction: the escaped one of UnicodeMath
                 if (tex[i] == "/")
                 {
@@ -477,6 +491,8 @@ namespace SharpEquations.Internal.LaTeX
                 int j = i + 1 + cw.Length;
                 if (cw.Length == 0)
                 {
+                    if (tex[i + 1] == "{" || tex[i + 1] == "}")
+                        brackets = Math.Max(0, brackets + (tex[i + 1] == "{" ? 1 : -1));
                     // \| is the double bar ‖, not an escaped bar
                     if (tex[i + 1] == "|")
                     {
@@ -498,6 +514,14 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 if (cw == "langle" && AngleCloses(tex, j) || cw == "rangle")
                     angles = Math.Max(0, angles + (cw == "langle" ? 1 : -1));
+                if (OpeningBracketCommands.Contains(cw) || ClosingBracketCommands.Contains(cw))
+                    brackets = Math.Max(0, brackets + (OpeningBracketCommands.Contains(cw) ? 1 : -1));
+                if (cw == "mid" && brackets == 0)
+                {
+                    result.Append("\\∣");
+                    i = j;
+                    continue;
+                }
                 if (cw == "middle")
                 {
                     // \middle| between \left and \right, the bar of UnicodeMath; UnicodeMath wants no spaces around the
@@ -692,6 +716,19 @@ namespace SharpEquations.Internal.LaTeX
                     // \sideset{_1^2}{_3^4}\sum: the scripts before the operator on its phantom, as MathML writes them
                     result.Append(RewriteTeXOnly("{\\vphantom{" + sideset[2] + "}}" + sideset[0] + "{" + sideset[2] + "}" + sideset[1]));
                     i = afterSideset;
+                    continue;
+                }
+                if (cw == "prescript" && Arguments(tex, j, 3) is var (prescript, afterPrescript))
+                {
+                    // \prescript{sup}{sub}{base} of mathtools: the scripts at the start of the group of their base, where
+                    // UnicodeMath reads them as prescripts
+                    result.Append('{');
+                    if (prescript[0].Trim().Length > 0)
+                        result.Append("^{").Append(RewriteTeXOnly(prescript[0])).Append('}');
+                    if (prescript[1].Trim().Length > 0)
+                        result.Append("_{").Append(RewriteTeXOnly(prescript[1])).Append('}');
+                    result.Append(RewriteTeXOnly(prescript[2])).Append('}');
+                    i = afterPrescript;
                     continue;
                 }
                 if (cw == "pod" && Argument(tex, j) is var (pod, afterPod) && afterPod >= 0)
@@ -1377,6 +1414,10 @@ namespace SharpEquations.Internal.LaTeX
                         else
                         {
                             symbol = UnicodeMathInput.ResolveControlWords("\\" + cw);
+                            // the symbols of LaTeX and amssymb that UnicodeMath has no control word for, or another one
+                            // (\succeq is ⪰, ≽ in UnicodeMath), as the writer writes them
+                            if (!IsFunctionName(cw) && LaTeXSymbols.TryGetCharacter(cw, out var character) && LaTeXSymbols.Math(symbol).TrimEnd() != "\\" + cw)
+                                symbol = character;
                             if (tex[i] == " " && !IsFunctionName(cw))
                                 i++;
                             // a function name with limits, as Word writes it (\lim _{x→0}): the space would end the name

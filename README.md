@@ -19,7 +19,7 @@ format) and LaTeX, in .NET, with MathML as the common representation.
 
 | Format | Read | Write |
 |---|---|---|
-| MathML | ✓ | ✓ |
+| MathML (presentation; Content MathML is read as the presentation it is written as) | ✓ | ✓ |
 | OMML (Office Math Markup Language, the equations of `.docx`) | ✓ | ✓ |
 | MTEF (MathType, Equation Editor 3.0) | ✓ | |
 | UnicodeMath | ✓ | ✓ |

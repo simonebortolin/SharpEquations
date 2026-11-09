@@ -1,0 +1,13 @@
+<math display="block">
+<apply><plus/><apply><minus/><cn>4</cn></apply><cn>1</cn><cn>-2</cn><cn>3</cn><apply><minus/><cn>4</cn></apply></apply>
+<mo>&#x27f6;</mo>
+<apply><plus/><apply><minus/><ci>x</ci></apply><ci>y</ci><ci>z</ci></apply>
+<mo>&#x27f6;</mo>
+<apply><plus/>
+<ci>x</ci>
+<apply><times/><cn>-2</cn><ci>y</ci></apply>
+<apply><times/><apply><minus/><ci>x</ci></apply><ci>z</ci></apply>
+<cn>1</cn>
+<cn>2</cn>
+</apply>
+</math>

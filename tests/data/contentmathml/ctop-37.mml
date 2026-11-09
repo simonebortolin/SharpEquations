@@ -1,0 +1,5 @@
+<math display="block">
+<apply><plus/><csymbol>a</csymbol><cn>1</cn><csymbol>b</csymbol></apply>
+<mo>,</mo>
+<apply><plus/><csymbol>x<mfrac><mi>1</mi><mi>2</mi></mfrac></csymbol><cn>1</cn><csymbol>b</csymbol></apply>
+</math>

@@ -72,7 +72,7 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\{x\mid x>0\}", @"\{x\mid x>0\}", @"{𝑥∣𝑥>0}")]
         [Arguments(@"a\mid b", @"a\mid b", @"𝑎\∣𝑏")]
         [Arguments(@"\langle\psi\mid", @"\langle\psi\mid", @"⟨𝜓\∣")]
-        [Arguments(@"\mid\psi\rangle", @"|\psi\rangle", @"|𝜓⟩")]
+        [Arguments(@"\mid\psi\rangle", @"\mid\psi\rangle", @"\∣𝜓\⟩")]
         [Arguments(@"\overset{\to}{a}\overset{\to}{b}", @"\overset{\to}{a}\overset{\to}{b}", @"𝑎┴→ 𝑏┴→")]
         [Arguments(@"\mathring{a}\overleftarrow{b}", @"\mathring{a}\overleftarrow{b}", @"𝑎┴˚ 𝑏┴←")]
         [Arguments(@"\vphantom{\sum}_1^2\sum_3^4", @"\vphantom{\sum}_1^2\sum_3^4", @"⇳∑₁²∑₃⁴")]
@@ -81,6 +81,7 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\xrightarrow[y]{x} \xleftarrow x", @"\underset{y}{\overset{x}{\to}}\overset{x}{\leftarrow}", @"→┬𝑦┴𝑥 ←┴𝑥")]
         [Arguments(@"\underset ab+\underleftarrow{c}", @"\underset{a}{b}+\underset{\leftarrow}{c}", @"𝑏┬𝑎+𝑐┬←")]
         [Arguments(@"\sideset{_1^2}{_3^4}\sum", @"\vphantom{\sum}_1^2\sum_3^4", @"⇳∑₁²∑₃⁴")]
+        [Arguments(@"\prescript{14}{6}{C}+\prescript{}{2}{x}", @"{}_6^{14}C+{}_2x", @"_6^14 𝐶+(_2)𝑥")]
         [Arguments(@"\genfrac\{]{0pt}{}{a}{b}+\dbinom a b", @"\{\genfrac{}{}{0pt}{}{a}{b}]+\binom{a}{b}", @"{𝑎¦𝑏]+𝑎⒞𝑏")]
         [Arguments(@"a \pod{n}+\not a", @"a\quad(n)+\overset{̸}{a}", @"𝑎 (𝑛)+𝑎̸")]
         [Arguments(@"^3+{'x}", @"{}^3+{}'x", @"⬚³+⬚′𝑥")]
@@ -376,6 +377,56 @@ namespace SharpEquations.Tests.LaTeX
         public async Task RejectsLaTeXThatIsNotAnEquation(string latex)
         {
             await Assert.That(() => Equation.Parse(latex, EquationFormat.LaTeX)).ThrowsExactly<FormatException>();
+        }
+
+        [Test]
+        [Arguments(@"a\square b", "□")]
+        [Arguments(@"a\blacksquare b", "■")]
+        [Arguments(@"a\surd b", "√")]
+        [Arguments(@"a\triangleq b", "≜")]
+        [Arguments(@"a\eqsim b", "≂")]
+        [Arguments(@"a\doteqdot b", "≑")]
+        [Arguments(@"a\rightsquigarrow b", "↝")]
+        [Arguments(@"a\leftrightsquigarrow b", "↭")]
+        [Arguments(@"a\measuredangle b", "∡")]
+        [Arguments(@"a\sphericalangle b", "∢")]
+        [Arguments(@"a\mho b", "℧")]
+        [Arguments(@"a\yen b", "¥")]
+        [Arguments(@"a\circledR b", "®")]
+        [Arguments(@"a\S b", "§")]
+        [Arguments(@"a\P b", "¶")]
+        [Arguments(@"a\geqslant b", "⩾")]
+        [Arguments(@"a\leqslant b", "⩽")]
+        [Arguments(@"a\therefore b", "∴")]
+        [Arguments(@"a\coloneqq b", "≔")]
+        [Arguments(@"a\dblcolon b", "∷")]
+        [Arguments(@"a\ngtr b", "≯")]
+        [Arguments(@"a\lozenge b", "◊")]
+        [Arguments(@"a\oslash b", "⊘")]
+        [Arguments(@"a\succeq b", "⪰")]
+        [Arguments(@"a\mid b", "∣")]
+        public async Task ReadsSymbolsThatUnicodeMathHasNoControlWordFor(string latex, string symbol)
+        {
+            var math = Equation.Parse(latex, EquationFormat.LaTeX, Strict).ToMathML();
+            await Assert.That(math.Elements().Select(e => e.Value).ToList()).IsEquivalentTo(new[] { "a", symbol, "b" });
+        }
+
+        [Test]
+        [Arguments("□", @"a\square b")]
+        [Arguments("√", @"a{\surd}b")]
+        [Arguments("≦", @"a\leqq b")]
+        [Arguments("↠", @"a\twoheadrightarrow b")]
+        [Arguments("⇄", @"a\rightleftarrows b")]
+        [Arguments("≼", @"a\preccurlyeq b")]
+        [Arguments("∌", @"a\not\ni b")]
+        [Arguments("〈", @"a\langle b")]
+        public async Task WritesTheSymbolsOfAmssymbAsCommands(string symbol, string latex)
+        {
+            var equation = Equation.Parse("<math><mi>a</mi><mo>" + symbol + "</mo><mi>b</mi></math>", EquationFormat.MathML);
+            var written = equation.ToString(EquationFormat.LaTeX);
+            await Assert.That(written).IsEqualTo(latex);
+            var back = Equation.Parse(written, EquationFormat.LaTeX, Strict);
+            await Assert.That(Equation.Parse(back.ToString(EquationFormat.LaTeX), EquationFormat.LaTeX)).IsEqualTo(back);
         }
     }
 }

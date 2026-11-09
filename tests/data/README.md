@@ -60,6 +60,11 @@ author expects for each (the `results` table of `dist/unicodemathml-integration.
 MathML with the UnicodeMath and the TeX its author expects for it. Copyright (c) 2019 Noah Doersing, MIT License;
 maintained by Murray Sargent.
 
+`contentmathml/ctop-*.mml`: the 40 equations of `ctop/tests/ctopxslt.html` of
+[davidcarlisle/web-xslt](https://github.com/davidcarlisle/web-xslt) (commit 64a32a4a4f78529010f548524f3acc7241be54d5),
+one file each, as they are there: Content MathML, some of it mixed with presentation MathML. Copyright David Carlisle,
+MIT License.
+
 `latex/latex2mathml-converter.json`: the LaTeX of the `test_converter` and `test_converter_inline` cases of
 `tests/test_converter.py` of [roniemartinez/latex2mathml](https://github.com/roniemartinez/latex2mathml) (commit
 b9ee564589d79c3b7bfaf4bb920962745abbb694), with the MathML of their snapshots (`tests/__snapshots__/test_converter`,
@@ -78,3 +83,8 @@ of `\mathsf{1}` is sans-serif (`mathsf`).
 (commit 9458a7a2f5125609c92eb178fcd0f8b8419e2c40), MathML with the LaTeX mml2tex writes for it, and the MathML of
 `example/*.xml`, which has none, as `{source, label, mathml, tex}` (namespace prefixes, processing instructions and
 whitespace removed). Copyright (c) 2015, transpect.io, BSD 2-Clause License.
+
+`latex/treeblood-mhchem.json`: the LaTeX of the `chemistry` cases of `test/TESTCASES.yaml` of
+[Wyatt915/treeblood](https://github.com/Wyatt915/treeblood) (commit 83ddf845ee4aafc040ea4639dae0f8536aeda071), the
+`\ce` formulas of mhchem, as a list of strings; their MathML, which treeblood writes in its own form, is not kept.
+Copyright (c) 2024 Wyatt Sheffield, MIT License.
