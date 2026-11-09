@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/demo/" Id="5d20aa90-6969-d8bd-9dcd-8634f4692fda">
+    <Project Path="samples/SharpEquations.Avalonia.Demo/SharpEquations.Avalonia.Demo.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path="AGENTS.md" />
     <File Path="BuildVersion.props" />
@@ -9,20 +12,17 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/SharpEquations/SharpEquations.csproj" />
-    <Project Path="src/SharpEquations.RegexPolyfill/SharpEquations.RegexPolyfill.csproj" />
-    <Project Path="src/SharpEquations.Editing/SharpEquations.Editing.csproj" />
     <Project Path="src/SharpEquations.Rendering/SharpEquations.Rendering.csproj" />
+    <Project Path="src/SharpEquations/SharpEquations.csproj" />
     <Project Path="src/SharpEquations.Avalonia/SharpEquations.Avalonia.csproj" />
-  </Folder>
-  <Folder Name="/samples/">
-    <Project Path="samples/SharpEquations.Avalonia.Demo/SharpEquations.Avalonia.Demo.csproj" />
+    <Project Path="src/SharpEquations.Editing/SharpEquations.Editing.csproj" />
+    <Project Path="src/SharpEquations.RegexPolyfill/SharpEquations.RegexPolyfill.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/SharpEquations.Benchmarks/SharpEquations.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/SharpEquations.Tests/SharpEquations.Tests.csproj" />
     <Project Path="tests/SharpEquations.Avalonia.Tests/SharpEquations.Avalonia.Tests.csproj" />
+    <Project Path="tests/SharpEquations.Tests/SharpEquations.Tests.csproj" />
   </Folder>
 </Solution>
