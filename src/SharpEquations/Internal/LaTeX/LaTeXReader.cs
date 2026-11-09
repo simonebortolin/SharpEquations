@@ -37,12 +37,12 @@ namespace SharpEquations.Internal.LaTeX
 
         /// <summary>
         /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def
-        /// or \newcommand go to <paramref name="macros"/>, where later conversions find them. In a display equation the
+        /// or \newcommand, and environments defined with \newenvironment, go to <paramref name="macros"/>, where later conversions find them. In a display equation the
         /// scripts of a large operator other than an integral (\sum, \prod, \bigcup...) go under and over it, as TeX
-        /// puts them.
+        /// puts them. The \ce and \pu of mhchem are rewritten as plain LaTeX first (<see cref="Mhchem"/>).
         /// </summary>
         public static string ToUnicodeMath(string tex, IDictionary<string, string> macros = null, bool display = false) =>
-            RestoreTextEscapes(new LaTeXReader(macros, display).Convert(tex));
+            RestoreTextEscapes(new LaTeXReader(macros, display).Convert(Mhchem.Rewrite(tex)));
 
         // the characters that \text escapes ({, \_, ...), held as noncharacters through the passes, which would read them as LaTeX
         private static readonly (string Escape, char Held, char Character)[] TextEscapes =
@@ -418,17 +418,27 @@ namespace SharpEquations.Internal.LaTeX
         {
             ["dfrac"] = "\\frac", ["tfrac"] = "\\frac", ["cfrac"] = "\\frac", ["dbinom"] = "\\binom", ["tbinom"] = "\\binom",
             ["overrightarrow"] = "\\vec", ["Vert"] = "‖", ["lVert"] = "‖", ["rVert"] = "‖", ["bmod"] = "\\operatorname{mod}",
-            ["bm"] = "\\boldsymbol", ["lg"] = "\\operatorname{lg}", ["square"] = "\\□", ["Box"] = "\\□",
-            // the symbols of amsmath, amssymb and plain TeX that UnicodeMath has no control word for
+            ["bm"] = "\\boldsymbol", ["lg"] = "\\operatorname{lg}",
+            // the symbols of LaTeX, amsmath, amssymb and plain TeX that UnicodeMath has no control word for (the others of
+            // LaTeXSymbols are read from it), and \square, \Box, \blacksquare, \surd and \oslash, which are symbols in LaTeX
+            // and build a box, a root or a fraction in UnicodeMath
+            ["oslash"] = "\\⊘", ["yen"] = "¥", ["circledR"] = "®", ["S"] = "§", ["P"] = "¶", ["mho"] = "℧", ["rightsquigarrow"] = "↝",
+            ["leftrightsquigarrow"] = "↭", ["measuredangle"] = "∡", ["sphericalangle"] = "∢", ["eqsim"] = "≂", ["doteqdot"] = "≑",
+            ["triangleq"] = "≜", ["square"] = "\\□", ["Box"] = "\\□", ["blacksquare"] = "\\■", ["surd"] = "{\\surd}",
             ["lt"] = "<", ["gt"] = ">", ["dotsb"] = "⋯", ["dotsi"] = "⋯", ["dotsm"] = "⋯", ["dotsc"] = "…", ["dotso"] = "…",
             ["ldotp"] = ".", ["gggtr"] = "⋙", ["llless"] = "⋘", ["gvertneqq"] = "≩", ["lvertneqq"] = "≨", ["ngeqq"] = "≱",
-            ["nshortmid"] = "∤", ["nshortparallel"] = "∦", ["nsubseteqq"] = "⊈", ["omicron"] = "ο", ["S"] = "§", ["shortmid"] = "∣",
+            ["nshortmid"] = "∤", ["nshortparallel"] = "∦", ["nsubseteqq"] = "⊈", ["omicron"] = "ο", ["shortmid"] = "∣",
             ["smallfrown"] = "⌢", ["smallsmile"] = "⌣", ["thicksim"] = "∼", ["thickapprox"] = "≈", ["varsubsetneqq"] = "⫋",
             ["varsupsetneq"] = "⊋", ["varsupsetneqq"] = "⫌", ["bigcirc"] = "\\◯", ["centerdot"] = "⬝", ["degree"] = "°",
             ["intop"] = "\\int", ["smallint"] = "\\int", ["diagup"] = "\\╱", ["diagdown"] = "\\╲", ["thickspace"] = "\\;",
             ["And"] = "\\&", ["lvert"] = "|", ["rvert"] = "|", ["idotsint"] = "\\∫⋯\\∫",
             ["mathscr"] = "\\mathcal", ["operatornamewithlimits"] = "\\operatorname", ["mathstrut"] = "\\vphantom{\\(}",
         };
+
+        private static readonly HashSet<string> OpeningBrackets = new HashSet<string>(StringComparer.Ordinal) { "(", "[", "{", "⟨", "⌈", "⌊" };
+        private static readonly HashSet<string> ClosingBrackets = new HashSet<string>(StringComparer.Ordinal) { ")", "]", "}", "⟩", "⌉", "⌋" };
+        private static readonly HashSet<string> OpeningBracketCommands = new HashSet<string>(StringComparer.Ordinal) { "langle", "lceil", "lfloor", "lbrace" };
+        private static readonly HashSet<string> ClosingBracketCommands = new HashSet<string>(StringComparer.Ordinal) { "rangle", "rceil", "rfloor", "rbrace" };
 
         // the commands that put a script over a base, \overset{script}{base}, as the UnicodeMath operator (\underset is ⓤ)
         private static readonly Dictionary<string, string> Stacks = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -466,6 +476,8 @@ namespace SharpEquations.Internal.LaTeX
             var result = new StringBuilder();
             // between ⟨ and ⟩ a bar parts a bra from a ket (│), as in UnicodeMath: ⟨a│b⟩
             int angles = 0;
+            // in brackets \mid is the separator ∣ of UnicodeMath, {x∣x>0}; outside them the relation, escaped
+            int brackets = 0;
             for (int i = 0; i < tex.Length;)
             {
                 if (tex[i] == "|" && angles > 0)
@@ -476,6 +488,8 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 if (tex[i] == "⟨" && AngleCloses(tex, i + 1) || tex[i] == "⟩")
                     angles = Math.Max(0, angles + (tex[i] == "⟨" ? 1 : -1));
+                if (OpeningBrackets.Contains(tex[i]) || ClosingBrackets.Contains(tex[i]))
+                    brackets = Math.Max(0, brackets + (OpeningBrackets.Contains(tex[i]) ? 1 : -1));
                 // a slash of LaTeX is a slash, (a+b)/2, where UnicodeMath would build a fraction: the escaped one of UnicodeMath
                 if (tex[i] == "/")
                 {
@@ -525,11 +539,22 @@ namespace SharpEquations.Internal.LaTeX
                 int j = i + 1 + cw.Length;
                 if (cw.Length == 0)
                 {
+                    if (tex[i + 1] == "{" || tex[i + 1] == "}")
+                        brackets = Math.Max(0, brackets + (tex[i + 1] == "{" ? 1 : -1));
                     // \| is the double bar ‖, not an escaped bar
                     if (tex[i + 1] == "|")
                     {
                         result.Append('‖');
                         i += 2;
+                        continue;
+                    }
+                    // \\ outside an environment, a line break, which an equation does not keep: \!, no space
+                    if (tex[i + 1] == "\\" && !InEnvironment(tex, i))
+                    {
+                        result.Append("\\!");
+                        for (i += 2; i < tex.Length && tex[i] == " "; i++)
+                        {
+                        }
                         continue;
                     }
                     // \_ held, which the passes would read as a subscript of what follows (\_\{\})
@@ -546,6 +571,14 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 if (cw == "langle" && AngleCloses(tex, j) || cw == "rangle")
                     angles = Math.Max(0, angles + (cw == "langle" ? 1 : -1));
+                if (OpeningBracketCommands.Contains(cw) || ClosingBracketCommands.Contains(cw))
+                    brackets = Math.Max(0, brackets + (OpeningBracketCommands.Contains(cw) ? 1 : -1));
+                if (cw == "mid" && brackets == 0)
+                {
+                    result.Append("\\∣");
+                    i = j;
+                    continue;
+                }
                 if (cw == "middle")
                 {
                     // \middle| between \left and \right, the bar of UnicodeMath; UnicodeMath wants no spaces around the
@@ -555,36 +588,30 @@ namespace SharpEquations.Internal.LaTeX
                         k++;
                     while (result.Length > 0 && result[result.Length - 1] == ' ')
                         result.Length--;
-                    if (tex[k] == "\\" && tex[k + 1] == "|")
-                    {
-                        result.Append("\\‖");
-                        for (i = k + 2; i < tex.Length && tex[i] == " "; i++)
-                        {
-                        }
-                        continue;
-                    }
-                    if (tex[k] == "|")
-                    {
-                        result.Append('│');
-                        i = k + 1;
-                        continue;
-                    }
-                    if (tex.Sub(k, k + 5) == "\\vert")
-                    {
-                        result.Append('│');
-                        i = k + 5;
-                        continue;
-                    }
                     // another delimiter in the middle is the delimiter itself, a slash the slash of UnicodeMath
-                    if (tex[k] == "/")
-                    {
-                        result.Append("\\/");
-                        for (i = k + 1; i < tex.Length && tex[i] == " "; i++)
-                        {
-                        }
+                    var (middle, afterMiddle) = tex[k] == "\\" && tex[k + 1] == "|" ? ("\\‖", k + 2)
+                        : tex[k] == "|" ? ("│", k + 1)
+                        : tex.Sub(k, k + 5) == "\\vert" && !IsAsciiAlphabetic(tex[k + 5]) ? ("│", k + 5)
+                        : tex[k] == "/" ? ("\\/", k + 1)
+                        : (null, k);
+                    i = afterMiddle;
+                    if (middle == null)
                         continue;
+                    if (middle != "│")
+                    {
+                        while (i < tex.Length && tex[i] == " ")
+                            i++;
                     }
-                    i = k;
+                    // UnicodeMath wants something on each side of the bar (├{│┤} is no UnicodeMath): an empty side holds
+                    // the placeholder, which the writer writes as {}
+                    if (EndsWithOpening(result))
+                        result.Append('⬚');
+                    result.Append(middle);
+                    int afterBlanks = i;
+                    while (tex[afterBlanks] == " ")
+                        afterBlanks++;
+                    if (tex[afterBlanks] == "\\" && ControlWord(tex, afterBlanks + 1) is "right" or "middle")
+                        result.Append('⬚');
                     continue;
                 }
                 if (cw == "vert" && angles > 0)
@@ -663,9 +690,20 @@ namespace SharpEquations.Internal.LaTeX
                     i = afterModulus;
                     continue;
                 }
-                if (cw == "hspace" && BracedArgument(tex, tex[j] == "*" ? j + 1 : j) is var (_, afterSpace) && afterSpace >= 0)
+                if (SpaceCommands.TryGetValue(cw, out var spaceCommand))
                 {
-                    result.Append("\\quad ");
+                    result.Append(spaceCommand);
+                    i = j;
+                    while (i < tex.Length && tex[i] == " ")
+                        i++;
+                    continue;
+                }
+                if (LengthCommands.Contains(cw))
+                {
+                    // \hspace{10ex}, \kern-1.5pt, \mkern10mu: the space of UnicodeMath nearest to the length, an em one when
+                    // the length is not a number with a unit
+                    var (length, afterSpace) = LengthArgument(tex, cw == "hspace" && tex[j] == "*" ? j + 1 : j);
+                    result.Append(Space(length ?? 18));
                     i = afterSpace;
                     continue;
                 }
@@ -694,6 +732,14 @@ namespace SharpEquations.Internal.LaTeX
                 {
                     result.Append(RewriteTeXOnly("\\underset{" + underArrow + "}{" + underBase + "}"));
                     i = afterUnderBase;
+                    continue;
+                }
+                if (cw is "overbrace" or "underbrace" && Argument(tex, j) is var (braced, afterBraced) && afterBraced >= 0 &&
+                    Scripts(tex, afterBraced) is var (braceUnder, braceOver, afterBraceScripts) && braceUnder != null && braceOver != null)
+                {
+                    // \overbrace3^a_x: for TeX the brace is an operator with limits, both scripts under and over the whole construct
+                    result.Append(RewriteTeXOnly("\\underset{" + braceUnder + "}{\\overset{" + braceOver + "}{\\" + cw + "{" + braced + "}}}"));
+                    i = afterBraceScripts;
                     continue;
                 }
                 if (cw == "underset" && Arguments(tex, j, 2) is var (underArguments, afterUnderset) &&
@@ -734,6 +780,19 @@ namespace SharpEquations.Internal.LaTeX
                     i = afterSideset;
                     continue;
                 }
+                if (cw == "prescript" && Arguments(tex, j, 3) is var (prescript, afterPrescript))
+                {
+                    // \prescript{sup}{sub}{base} of mathtools: the scripts at the start of the group of their base, where
+                    // UnicodeMath reads them as prescripts
+                    result.Append('{');
+                    if (prescript[0].Trim().Length > 0)
+                        result.Append("^{").Append(RewriteTeXOnly(prescript[0])).Append('}');
+                    if (prescript[1].Trim().Length > 0)
+                        result.Append("_{").Append(RewriteTeXOnly(prescript[1])).Append('}');
+                    result.Append(RewriteTeXOnly(prescript[2])).Append('}');
+                    i = afterPrescript;
+                    continue;
+                }
                 if (cw == "pod" && Argument(tex, j) is var (pod, afterPod) && afterPod >= 0)
                 {
                     result.Append("\\quad(").Append(RewriteTeXOnly(pod)).Append(')');
@@ -766,8 +825,14 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 if (cw == "mathop" && BracedArgument(tex, j) is var (operatorText, afterOperator) && afterOperator >= 0)
                 {
-                    // \mathop{\mathrm{argmin}}: an operator name
+                    // \mathop{\mathrm{argmin}}: an operator name; \mathop{x}, of one symbol, a group, which takes the limits
                     var name = operatorText.Trim();
+                    if (Js.Len(name) == 1)
+                    {
+                        result.Append('{').Append(RewriteTeXOnly(name)).Append('}');
+                        i = afterOperator;
+                        continue;
+                    }
                     if (name.StartsWith("\\mathrm{", StringComparison.Ordinal) && name[name.Length - 1] == '}')
                         name = name.Substring(8, name.Length - 9);
                     result.Append(name.All(char.IsLetter) ? "\\operatorname{" + name + "}" : RewriteTeXOnly(operatorText));
@@ -968,13 +1033,37 @@ namespace SharpEquations.Internal.LaTeX
             frames.Push(new List<int>());
             var escaped = new List<int>();
             var kets = new HashSet<int>();
+            bool ZeroSpacesBetween(int first, int second)
+            {
+                bool zero = false;
+                for (int k = first + 1; k < second; k++)
+                {
+                    if (tex[k] == "\\" && tex[k + 1] == "!")
+                    {
+                        zero = true;
+                        k++;
+                    }
+                    else if (tex[k] != " ")
+                        return false;
+                }
+                return zero;
+            }
             void Close(List<int> bars, bool inBrackets)
             {
                 foreach (var bar in new[] { "|", "‖", "∣" })
                 {
                     var some = bars.Where(b => tex[b] == bar).ToList();
-                    if (some.Count % 2 == 1 && !(inBrackets && some.Count == 1 && bar != "‖"))
-                        escaped.Add(some[some.Count - 1]);
+                    if (inBrackets && some.Count == 1 && bar != "‖")
+                        continue;
+                    // bars in pairs, but two with only zero spaces between them (|\!|, which UnicodeMath would read as
+                    // ||, one double bar): the first is then a bar alone
+                    for (int k = 0; k < some.Count; k++)
+                    {
+                        if (k + 1 < some.Count && !ZeroSpacesBetween(some[k], some[k + 1]))
+                            k++;
+                        else
+                            escaped.Add(some[k]);
+                    }
                 }
             }
             for (int i = 0; i < tex.Length; i++)
@@ -1109,6 +1198,73 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>The text of the {...} argument at the index (after blanks) and the index after it; -1 if there is none.</summary>
         private static bool IsAsciiLetterOrDigit(char c) => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9';
 
+        /// <summary>
+        /// The argument of a font command in the font, as TeX sets it: its ASCII letters and digits, between escaped braces
+        /// too (\mathrm{\{b\}}), but not the text (\text{var}), which has the text font, nor the argument of an inner font
+        /// command, which has its own. Upright letters are quoted, as UnicodeMath writes them; a digit, which has no bold
+        /// italic form, is bold upright in a bold italic style (\boldsymbol{1}, 𝟏).
+        /// </summary>
+        private static string InFont(string argument, int style)
+        {
+            var tex = new Text(argument);
+            var mathStyle = MathStyles[style];
+            var digitStyle = mathStyle switch
+            {
+                "mbfit" or "mbfscr" or "mbffrak" => "mbf",
+                "mbfitsans" => "mbfsans",
+                _ => mathStyle,
+            };
+            var result = new StringBuilder();
+            for (int i = 0; i < tex.Length;)
+            {
+                var ch = tex[i];
+                int end;
+                switch (ch)
+                {
+                    case "ⓣ" when tex[i + 1] == "{" && FindClosingBrace(tex, i + 2) is var close && close != -1:
+                        end = close + 1;
+                        break;
+                    case "Ⅎ" when IsAsciiAlphabetic(tex[i + 1]) && tex[i + 2] == "{" && FindClosingBrace(tex, i + 3) is var close && close != -1:
+                        end = close + 1;
+                        break;
+                    case "\\" when IsAsciiAlphabetic(tex[i + 1]):
+                        end = i + 1 + ControlWord(tex, i + 1).Length;
+                        break;
+                    case "\\":
+                        end = System.Math.Min(i + 2, tex.Length);
+                        break;
+                    case var _ when IsAsciiAlphabetic(ch):
+                        end = i;
+                        while (IsAsciiAlphabetic(tex[end]))
+                            end++;
+                        var letters = tex.Sub(i, end);
+                        // a function name (\sin, which the first pass leaves as its letters) is in its own font
+                        if (IsFunctionName(letters))
+                            result.Append(letters);
+                        else if (mathStyle == "mup")
+                            result.Append(Quoted(letters));
+                        else
+                            result.Append(string.Concat(Characters(letters).Select(c => GetMathAlphanumeric(c, mathStyle))));
+                        i = end;
+                        continue;
+                    case var _ when ch.Length == 1 && char.IsLetter(ch[0]) && mathStyle != "mup":
+                        result.Append(GetMathAlphanumeric(ch, mathStyle));
+                        i++;
+                        continue;
+                    case var _ when ch.Length == 1 && ch[0] >= '0' && ch[0] <= '9':
+                        result.Append(GetMathAlphanumeric(ch, digitStyle));
+                        i++;
+                        continue;
+                    default:
+                        end = i + 1;
+                        break;
+                }
+                result.Append(tex.Sub(i, end));
+                i = end;
+            }
+            return result.ToString();
+        }
+
         private static (string Text, int Next) BracedArgument(Text tex, int i)
         {
             while (i < tex.Length && tex[i] == " ")
@@ -1128,9 +1284,145 @@ namespace SharpEquations.Internal.LaTeX
             return (null, -1);
         }
 
+        /// <summary>
+        /// The environments of \newenvironment{name}[n][default]{begin}{end} (and \renewenvironment) applied: the
+        /// definitions removed and kept in the macros under {name}, where later conversions find them, and each
+        /// \begin{name}{arguments}...\end{name} replaced by the begin code with its arguments (#1...), the body and the
+        /// end code, as TeX expands them.
+        /// </summary>
+        private string NewEnvironments(string latex)
+        {
+            var tex = new Text(latex);
+            var result = new StringBuilder();
+            int expansions = 0;
+            for (int i = 0; i < tex.Length;)
+            {
+                var cw = tex[i] == "\\" ? ControlWord(tex, i + 1) : "";
+                int j = i + 1 + cw.Length;
+                switch (cw)
+                {
+                    case "newenvironment" or "renewenvironment" when BracedArgument(tex, j) is var (name, afterName) && afterName >= 0 &&
+                        EnvironmentDefinition(tex, afterName) is var (_, _, _, _, afterDefinition) && afterDefinition >= 0:
+                        macros["{" + name.Trim() + "}"] = tex.Sub(afterName, afterDefinition);
+                        i = afterDefinition;
+                        continue;
+                    case "begin" when BracedArgument(tex, j) is var (name, afterName) && afterName >= 0 &&
+                        macros.TryGetValue("{" + name.Trim() + "}", out var definition) &&
+                        EnvironmentDefinition(new Text(definition), 0) is var (count, optional, begin, end, _) &&
+                        EnvironmentArguments(tex, afterName, count, optional) is var (arguments, afterArguments) && afterArguments >= 0 &&
+                        EnvironmentEnd(tex, afterArguments, name.Trim()) is var (bodyEnd, afterEnd) && bodyEnd >= 0:
+                        if (++expansions > 1000)
+                            throw new FormatException("The LaTeX environment " + name.Trim() + " does not stop expanding.");
+                        // the expansion read again, for the environments it uses
+                        var expansion = new StringBuilder();
+                        foreach (var part in new[] { Substitute(begin, arguments), tex.Sub(afterArguments, bodyEnd), end, tex.Sub(afterEnd) })
+                            Join(expansion, part);
+                        tex = new Text(expansion.ToString());
+                        i = 0;
+                        if (ContinuesControlWord(result, expansion.ToString()))
+                            result.Append(' ');
+                        continue;
+                    default:
+                        var next = cw.Length > 0 ? j : i + (tex[i] == "\\" ? 2 : 1);
+                        result.Append(tex.Sub(i, next));
+                        i = next;
+                        continue;
+                }
+            }
+            return result.ToString();
+        }
+
+        /// <summary>The [n][default]{begin}{end} of an environment definition at the index; Next -1 if there is none.</summary>
+        private static (int Count, string Optional, string Begin, string End, int Next) EnvironmentDefinition(Text tex, int i)
+        {
+            var (countText, afterCount) = OptionalArgument(tex, i);
+            int count = 0;
+            if (countText != null && (!int.TryParse(countText.Trim(), out count) || count < 0 || count > 9))
+                return (0, null, null, null, -1);
+            var (optional, afterOptional) = countText == null ? (null, afterCount) : OptionalArgument(tex, afterCount);
+            var (begin, afterBegin) = BracedArgument(tex, afterOptional);
+            var (end, afterEnd) = afterBegin < 0 ? (null, -1) : BracedArgument(tex, afterBegin);
+            return (count, optional, begin, end, afterEnd);
+        }
+
+        /// <summary>The arguments of an environment at the index (the first one optional when it has a default); Next -1 if missing.</summary>
+        private static (List<string> Arguments, int Next) EnvironmentArguments(Text tex, int i, int count, string optional)
+        {
+            var arguments = new List<string>();
+            if (optional != null && count > 0)
+            {
+                var (given, afterGiven) = OptionalArgument(tex, i);
+                arguments.Add(given ?? optional);
+                i = afterGiven;
+            }
+            return Arguments(tex, i, count - arguments.Count) is var (rest, next) ? (arguments.Concat(rest).ToList(), next) : (null, -1);
+        }
+
+        /// <summary>The index of the \end{name} that closes an environment whose body starts at the index, and the index after it; -1 if none.</summary>
+        private static (int End, int Next) EnvironmentEnd(Text tex, int i, string name)
+        {
+            int depth = 1;
+            for (; i < tex.Length; i++)
+            {
+                if (tex[i] != "\\")
+                    continue;
+                var cw = ControlWord(tex, i + 1);
+                if (cw is "begin" or "end" && BracedArgument(tex, i + 1 + cw.Length) is var (environment, after) && after >= 0 && environment.Trim() == name)
+                {
+                    depth += cw == "begin" ? 1 : -1;
+                    if (depth == 0)
+                        return (i, after);
+                }
+                i += Math.Max(1, cw.Length);
+            }
+            return (-1, -1);
+        }
+
+        /// <summary>The begin code of an environment with its #1... replaced by the arguments, and ## by #.</summary>
+        private static string Substitute(string code, List<string> arguments)
+        {
+            var tex = new Text(code);
+            var result = new StringBuilder();
+            for (int i = 0; i < tex.Length; i++)
+            {
+                switch (tex[i])
+                {
+                    case "#" when tex[i + 1] == "#":
+                        result.Append('#');
+                        i++;
+                        break;
+                    case "#" when tex[i + 1] is { Length: 1 } digit && digit[0] is >= '1' and <= '9' && digit[0] - '1' < arguments.Count:
+                        result.Append(arguments[digit[0] - '1']);
+                        i++;
+                        break;
+                    default:
+                        result.Append(tex[i]);
+                        break;
+                }
+            }
+            return result.ToString();
+        }
+
+        /// <summary>A part of an expansion appended, after a space if it would continue the control word before it (\alpha x).</summary>
+        private static void Join(StringBuilder expansion, string part)
+        {
+            if (ContinuesControlWord(expansion, part))
+                expansion.Append(' ');
+            expansion.Append(part);
+        }
+
+        private static bool ContinuesControlWord(StringBuilder before, string after)
+        {
+            var text = new Text(before.ToString());
+            int i = text.Length;
+            while (i > 0 && IsAsciiAlphabetic(text[i - 1]))
+                i--;
+            return i < text.Length && text[i - 1] == "\\" && IsAsciiAlphabetic(new Text(after)[0]);
+        }
+
         private string Convert(string latex)
         {
-            var tex = new Text(EscapeOddBars(RewriteTeXOnly(Limits(latex))));
+            var tex = new Text(EscapeOddBars(RewriteTeXOnly(Limits(NewEnvironments(latex)))));
             var cwPrev = "";
             bool needMacroPass = false;
             var uniTeX = new StringBuilder();
@@ -1208,6 +1500,10 @@ namespace SharpEquations.Internal.LaTeX
                         else
                         {
                             symbol = UnicodeMathInput.ResolveControlWords("\\" + cw);
+                            // the symbols of LaTeX and amssymb that UnicodeMath has no control word for, or another one
+                            // (\succeq is ⪰, ≽ in UnicodeMath), as the writer writes them
+                            if (!IsFunctionName(cw) && LaTeXSymbols.TryGetCharacter(cw, out var character) && LaTeXSymbols.Math(symbol).TrimEnd() != "\\" + cw)
+                                symbol = character;
                             if (tex[i] == " " && !IsFunctionName(cw))
                                 i++;
                             // a function name with limits, as Word writes it (\lim _{x→0}): the space would end the name
@@ -1222,6 +1518,10 @@ namespace SharpEquations.Internal.LaTeX
                         }
                         if (symbol.Length > 0 && Js.Ch(symbol, 0) != "\"")
                             uniTeX.Append(symbol);
+                        // a control word not known ends where its letters do: a space ends it for UnicodeMath too, which
+                        // would otherwise read the letters or digits after it as part of it (\sgn r, \sgn2)
+                        else if (symbol.Length > 0)
+                            uniTeX.Append('\\').Append(cw).Append(tex[i] != null && tex[i].Length == 1 && IsAsciiLetterOrDigit(tex[i][0]) ? " " : "");
                         else if (cw.Length > 0)
                             uniTeX.Append('\\').Append(cw);
                         break;
@@ -1568,10 +1868,10 @@ namespace SharpEquations.Internal.LaTeX
                                 RemoveLast(uniTeX);
                                 uniTeX.Append(Quoted(argument));
                             }
-                            else if (style > 0 && style < MathStyles.Length && argument.Length > 0 && argument.All(IsAsciiLetterOrDigit))
+                            else if (style > 0 && style < MathStyles.Length && argument.Length > 0 && argument.All(char.IsLetterOrDigit))
                             {
                                 RemoveLast(uniTeX);
-                                uniTeX.Append(string.Concat(argument.Select(c => GetMathAlphanumeric(c.ToString(), MathStyles[style]))));
+                                uniTeX.Append(InFont(argument, style));
                             }
                             else if (argument.All(char.IsLetterOrDigit))
                             {
@@ -1582,10 +1882,7 @@ namespace SharpEquations.Internal.LaTeX
                                 // other mathematics in a font (\mathbf{b\times c}, \mathrm{x_1}): its ASCII letters and digits in
                                 // the font, the rest as it is
                                 RemoveLast(uniTeX);
-                                var styled = style > 0 && style < MathStyles.Length
-                                    ? string.Concat(Characters(argument).Select(c => c.Length == 1 && IsAsciiLetterOrDigit(c[0]) ? GetMathAlphanumeric(c, MathStyles[style]) : c))
-                                    : argument;
-                                uniTeX.Append(Pass2(styled));
+                                uniTeX.Append(Pass2(style >= 0 && style < MathStyles.Length ? InFont(argument, style) : argument));
                             }
                             i = j + 1;
                         }
@@ -1813,6 +2110,135 @@ namespace SharpEquations.Internal.LaTeX
             while (tex[i] == " ")
                 i++;
             return tex[i];
+        }
+
+        /// <summary>Whether the index is between a \begin and its \end, where \\ parts rows.</summary>
+        private static bool InEnvironment(Text tex, int i)
+        {
+            int depth = 0;
+            for (int k = 0; k < i; k++)
+            {
+                if (tex[k] == "\\")
+                {
+                    var cw = ControlWord(tex, k + 1);
+                    depth += cw switch { "begin" => 1, "end" => -1, _ => 0 };
+                    k += Math.Max(1, cw.Length);
+                }
+            }
+            return depth > 0;
+        }
+
+        /// <summary>Whether the result ends with \left and its delimiter, with nothing after them.</summary>
+        private static bool EndsWithOpening(StringBuilder result)
+        {
+            var text = result.ToString();
+            var at = text.LastIndexOf("\\left", StringComparison.Ordinal);
+            if (at < 0)
+                return false;
+            var delimiter = new Text(text.Substring(at + 5).Trim());
+            return delimiter.Length <= 1 || delimiter[0] == "\\" && (delimiter.Length == 2 || ControlWord(delimiter, 1).Length == delimiter.Length - 1);
+        }
+
+        // the commands of a space whose length follows them
+        private static readonly HashSet<string> LengthCommands = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "hspace", "hskip", "kern", "mkern", "mskip", "mspace",
+        };
+
+        // the spaces of plain TeX and amsmath that UnicodeMath has no control word for; the negative ones none, as \!
+        private static readonly Dictionary<string, string> SpaceCommands = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["thinspace"] = "\\,", ["negthinspace"] = "\\!", ["negmedspace"] = "\\!", ["negthickspace"] = "\\!", ["nobreakspace"] = "~",
+            ["space"] = "\\ ",
+        };
+
+        /// <summary>The space of UnicodeMath nearest to a length in mu (18 to the em), \! (none) for a negative one.</summary>
+        private static string Space(double mu) => mu switch
+        {
+            <= 0 => "\\!",
+            < 3.5 => "\\,",
+            < 4.5 => "\\:",
+            < 7 => "\\;",
+            < 13.5 => "\\enspace ",
+            < 27 => "\\quad ",
+            _ => "\\qquad ",
+        };
+
+        /// <summary>
+        /// The length after a space command, in mu, braced ({10ex}) or not (-1.5pt, 1em plus 2em), and the index after
+        /// it; null if it is no number with a unit (\hspace{\fill}).
+        /// </summary>
+        private static (double? Mu, int Next) LengthArgument(Text tex, int i)
+        {
+            while (tex[i] == " ")
+                i++;
+            if (tex[i] == "{")
+            {
+                var (braced, afterBraced) = BracedArgument(tex, i);
+                if (afterBraced < 0)
+                    return (null, i);
+                var inner = new Text(braced);
+                var (mu, afterLength) = Dimension(inner, 0);
+                return (NonBlank(inner, afterLength) == null ? mu : null, afterBraced);
+            }
+            var (length, next) = Dimension(tex, i);
+            if (length == null)
+                return (null, i);
+            // the stretch and the shrink of glue, \hskip 1em plus 1fil minus 2pt
+            while (true)
+            {
+                int word = next;
+                while (tex[word] == " ")
+                    word++;
+                var glue = tex.Sub(word, word + 4) == "plus" ? 4 : tex.Sub(word, word + 5) == "minus" ? 5 : 0;
+                if (glue == 0 || Dimension(tex, word + glue) is not (not null, var afterGlue))
+                    return (length, next);
+                next = afterGlue;
+            }
+        }
+
+        /// <summary>A number with its unit (-1.5pt, 10 mu, 1fil) in mu, and the index after it; null if none.</summary>
+        private static (double? Mu, int Next) Dimension(Text tex, int i)
+        {
+            while (tex[i] == " ")
+                i++;
+            int start = i;
+            if (tex[i] is "-" or "+")
+                i++;
+            int digits = i;
+            while (tex[i] is { Length: 1 } d && (d[0] is >= '0' and <= '9' or '.'))
+                i++;
+            if (i == digits || !double.TryParse(tex.Sub(start, i), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number))
+                return (null, start);
+            while (tex[i] == " ")
+                i++;
+            // a unit is two letters (1ptx is 1pt and x), but for the infinite ones of glue (fil, fill, filll)
+            int unit = i;
+            i += 2;
+            if (tex.Sub(unit, i) == "fi")
+            {
+                while (i < unit + 5 && tex[i] == "l")
+                    i++;
+            }
+            double? mu = tex.Sub(unit, i) switch
+            {
+                "em" => 18,
+                "ex" => 7.75,
+                "mu" => 1,
+                "pt" => 1.8,
+                "bp" => 1.81,
+                "dd" => 1.93,
+                "px" => 1.35,
+                "mm" => 5.12,
+                "pc" => 21.6,
+                "cc" => 23.1,
+                "cm" => 51.2,
+                "in" => 130.1,
+                "sp" => 1.8 / 65536,
+                "fil" or "fill" or "filll" => 0,
+                _ => null,
+            };
+            return mu == null ? (null, start) : (number * mu, i);
         }
     }
 }

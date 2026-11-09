@@ -76,7 +76,8 @@ namespace SharpEquations.Tests
         /// The equation as MathML, with what latex2mathml and SharpEquations write differently for the same equation
         /// made the same: attributes that say the default or set the style, spaces (formatting, which an equation does not
         /// keep), invisible function application and times, the middle dot of \cdot (· for latex2mathml, ⋅ for
-        /// SharpEquations), names of operators and primes (mo for latex2mathml, mi and mo for SharpEquations), spacing
+        /// SharpEquations), the bar of \middle (| for latex2mathml, the separator │ of UnicodeMath for SharpEquations),
+        /// names of operators and primes (mo for latex2mathml, mi and mo for SharpEquations), spacing
         /// accents (˙ for latex2mathml, the combining dot above for SharpEquations), bars (mover with ¯ for latex2mathml,
         /// menclose for SharpEquations), capital Greek letters (upright in TeX, which latex2mathml writes as mi without
         /// mathvariant), symbols that are neither letters nor digits (mi for latex2mathml, %, °, mo for SharpEquations,
@@ -114,6 +115,9 @@ namespace SharpEquations.Tests
                         break;
                     case "mo" when text == "·":
                         e.Value = "⋅";
+                        break;
+                    case "mo" when text == "│":
+                        e.Value = "|";
                         break;
                     case "mo" when text != null && Accents.TryGetValue(text, out var mark) && e.Parent!.Name.LocalName is "mover" && e.ElementsBeforeSelf().Any():
                         e.Value = mark;
@@ -180,9 +184,9 @@ namespace SharpEquations.Tests
 
         // commands of MathJax, KaTeX, plain TeX or packages that Word's LaTeX, which the reader follows, does not have:
         // links, classes, colors, boxes and moves, sizes, \hbox and \verb, \LaTeX, \skew, the primitives of plain TeX
-        // (\matrix{}, \cr, \eqalign, \displaylines, \above, \atop, \brace) and its font switches (\frak, \scr, and \rm over
-        // text), the classes of \mathord, \mathbin and \mathrel, the bra-kets of the physics package, \mathsfit, \argmax,
-        // \widecheck
+        // (\matrix{}, \cr, \eqalign, \displaylines, \above, \atop, \brace) and its font switches (\frak, \scr, and \rm or
+        // \tt over text), the classes of \mathord, \mathbin and \mathrel, the bra-kets of the physics package, \mathsfit,
+        // \argmax, \widecheck
         private static readonly HashSet<string> NotInWordLaTeX = new HashSet<string>
         {
             "href", "class", "style", "textcolor", "colorbox", "fcolorbox", "raise", "lower", "moveleft", "moveright",
@@ -190,19 +194,14 @@ namespace SharpEquations.Tests
             "mathchoice-inline", "unicode", "verb", "huge", "large", "normalsize-scriptsize", "small-tiny", "footnotesize",
             "LaTeX", "LaTeX-with-style", "TeX", "TeX-with-style", "hbox", "hbox-with-math-mode", "hbox-with-backslash-in-text",
             "fbox", "leftroot-uproot", "skew", "skew-with-braces", "displaylines", "eqalign", "matrix-without-begin-and-end",
-            "hfil", "above", "abovewithdelims", "atop-and-atopwithdelims", "brace", "brace-1", "oldstyle", "scr",
-            "fraktur", "global-fonts", "greatest-common-divisor", "math-commands-that-currently-does-nothing", "mathbin",
-            "mathord", "mathrel", "bra", "ket", "braket", "mathsfit", "argmax", "widecheck",
+            "hfil", "above", "abovewithdelims", "atop-and-atopwithdelims", "brace", "brace-1", "oldstyle", "scr", "tt",
+            "fraktur", "greatest-common-divisor",
+            "math-commands-that-currently-does-nothing", "mathbin", "mathord", "mathrel", "bra", "ket", "braket", "mathsfit",
+            "argmax", "widecheck",
         };
 
-        // LaTeX and amsmath that the reader does not read yet: both scripts of \overbrace and \underbrace; \middle between
-        // empty delimiters and bars with nothing between them (|\,|); a font over \text and escaped braces
-        // (\mathrm{\{b\}}, \mathsf{\text{}}, \boldsymbol{1}); \newenvironment and ## in a macro
-        private static readonly HashSet<string> NotReadYet = new HashSet<string>
-        {
-            "overbrace-c", "underbrace-c", "middle", "spaces", "mathrm", "mathsf", "boldsymbol",
-            "newenvironment-multi-node", "newcommand-escaped-hash",
-        };
+        // LaTeX and amsmath that the reader does not read yet: none left
+        private static readonly HashSet<string> NotReadYet = new HashSet<string>();
 
         // the same equation, which SharpEquations holds otherwise: an equation number as the label of its row (\tag),
         // and none for aligned equations, whose numbers latex2mathml writes as cells; the alignment of align, split and
@@ -217,17 +216,17 @@ namespace SharpEquations.Tests
             "textsf", "texttt", "emph",
         };
 
-        // what is no LaTeX: \e, which no package defines, and ntext, a mistyped \text
-        private static readonly HashSet<string> NotLaTeX = new HashSet<string> { "backslash-e", "issue-125-1-overset" };
+        // what is no LaTeX: \e, which no package defines, ntext, a mistyped \text, and a # in math mode (## in the body of
+        // a macro is # in its expansion, which TeX rejects there)
+        private static readonly HashSet<string> NotLaTeX = new HashSet<string> { "backslash-e", "issue-125-1-overset", "newcommand-escaped-hash" };
 
         private static readonly HashSet<string> ReadOtherwise = new HashSet<string>(NotInWordLaTeX.Concat(NotReadYet).Concat(HeldOtherwise).Concat(NotLaTeX));
 
         // the macros the reader does not expand as LaTeX does: \DeclareMathOperator, the default of an optional argument,
-        // an empty body (which leaves an empty group), \newenvironment
+        // and an empty body (which leaves an empty group)
         private static readonly HashSet<string> NotExpanded = new HashSet<string>
         {
-            "declare-math-operator", "newcommand-optional-default", "newcommand-empty-body", "newenvironment",
-            "newenvironment-with-args",
+            "declare-math-operator", "newcommand-optional-default", "newcommand-empty-body",
         };
 
         private static string? Check(Func<string?> check)

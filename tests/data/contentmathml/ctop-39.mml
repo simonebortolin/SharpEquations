@@ -1,0 +1,4 @@
+<math display="block">
+<reln><implies/>
+   <reln><implies/><ci>A</ci><ci>B</ci></reln><ci>C</ci></reln>
+</math>

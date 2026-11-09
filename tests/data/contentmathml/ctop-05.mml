@@ -1,0 +1,7 @@
+<math display="block">
+<apply><times/><cn>1</cn><cn>2</cn><cn>3</cn></apply>
+<mo>&#x27f6;</mo>
+<apply><times/><ci>x</ci><ci>y</ci><ci>z</ci></apply>
+<mo>&#x27f6;</mo>
+<apply><times/><cn>2</cn><ci>x</ci></apply>
+</math>

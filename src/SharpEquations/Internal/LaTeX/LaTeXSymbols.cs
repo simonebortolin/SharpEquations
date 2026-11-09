@@ -65,7 +65,25 @@ namespace SharpEquations.Internal.LaTeX
             ["↩"] = "hookleftarrow", ["↪"] = "hookrightarrow", ["⇌"] = "rightleftharpoons", ["↼"] = "leftharpoonup", ["⇀"] = "rightharpoonup",
             // delimiters
             ["⟨"] = "langle", ["⟩"] = "rangle", ["⌈"] = "lceil", ["⌉"] = "rceil", ["⌊"] = "lfloor", ["⌋"] = "rfloor", ["‖"] = "|",
-            ["{"] = "{", ["}"] = "}", ["〈"] = "langle", ["〉"] = "rangle",
+            ["{"] = "{", ["}"] = "}", ["〈"] = "langle", ["〉"] = "rangle", ["〈"] = "langle", ["〉"] = "rangle",
+            // the symbols of amssymb, from the table of entities.xsl of the XSLT MathML Library (Vasil Yaroshevich)
+            ["¥"] = "yen", ["®"] = "circledR", ["§"] = "S", ["¶"] = "P", ["℧"] = "mho", ["ℶ"] = "beth", ["ℷ"] = "gimel", ["ℸ"] = "daleth",
+            ["∁"] = "complement", ["∡"] = "measuredangle", ["∢"] = "sphericalangle", ["■"] = "blacksquare", ["√"] = "surd",
+            ["↚"] = "nleftarrow", ["↛"] = "nrightarrow", ["↮"] = "nleftrightarrow", ["⇍"] = "nLeftarrow", ["⇏"] = "nRightarrow",
+            ["⇎"] = "nLeftrightarrow", ["↝"] = "rightsquigarrow", ["↭"] = "leftrightsquigarrow", ["↞"] = "twoheadleftarrow",
+            ["↠"] = "twoheadrightarrow", ["↢"] = "leftarrowtail", ["↣"] = "rightarrowtail", ["↫"] = "looparrowleft", ["↬"] = "looparrowright",
+            ["↰"] = "Lsh", ["↱"] = "Rsh", ["↶"] = "curvearrowleft", ["↷"] = "curvearrowright", ["↺"] = "circlearrowleft",
+            ["↻"] = "circlearrowright", ["↽"] = "leftharpoondown", ["⇁"] = "rightharpoondown", ["↾"] = "upharpoonright",
+            ["↿"] = "upharpoonleft", ["⇂"] = "downharpoonright", ["⇃"] = "downharpoonleft", ["⇄"] = "rightleftarrows",
+            ["⇆"] = "leftrightarrows", ["⇇"] = "leftleftarrows", ["⇈"] = "upuparrows", ["⇉"] = "rightrightarrows",
+            ["⇊"] = "downdownarrows", ["⇋"] = "leftrightharpoons", ["⇕"] = "Updownarrow", ["⇚"] = "Lleftarrow", ["⇛"] = "Rrightarrow",
+            ["∔"] = "dotplus", ["⊟"] = "boxminus", ["⋇"] = "divideontimes", ["⋈"] = "bowtie",
+            ["∌"] = "not\\ni", ["≄"] = "not\\simeq", ["≭"] = "not\\asymp", ["⊅"] = "not\\supset", ["≸"] = "not\\lessgtr", ["≹"] = "not\\gtrless",
+            ["∽"] = "backsim", ["⋍"] = "backsimeq", ["≂"] = "eqsim", ["≊"] = "approxeq", ["≎"] = "Bumpeq", ["≏"] = "bumpeq",
+            ["≑"] = "doteqdot", ["≒"] = "fallingdotseq", ["≓"] = "risingdotseq", ["≖"] = "eqcirc", ["≗"] = "circeq", ["≜"] = "triangleq",
+            ["≦"] = "leqq", ["≧"] = "geqq", ["≨"] = "lneqq", ["≩"] = "gneqq", ["≬"] = "between", ["≶"] = "lessgtr", ["≷"] = "gtrless",
+            ["≼"] = "preccurlyeq", ["≽"] = "succcurlyeq", ["≾"] = "precsim", ["≿"] = "succsim", ["⊀"] = "nprec", ["⊁"] = "nsucc",
+            ["⊪"] = "Vvdash",
         };
 
         private static readonly Dictionary<string, string> FontCommands = new Dictionary<string, string>
@@ -107,6 +125,20 @@ namespace SharpEquations.Internal.LaTeX
             (style, plain) = found ? styled : (null, null);
             return found;
         }
+
+        // command → a character written as it, for the reader (several characters can share a command: ° and ∘ are \circ)
+        private static readonly Dictionary<string, string> Characters = Commands
+            .GroupBy(entry => entry.Value, entry => entry.Key)
+            .ToDictionary(group => group.Key, group => group.First());
+
+        /// <summary>The characters written as commands, with their commands (α: alpha, ≤: le).</summary>
+        public static IReadOnlyDictionary<string, string> CharacterCommands => Commands;
+
+        /// <summary>A character the command is written for (geqslant: ⩾).</summary>
+        public static bool TryGetCharacter(string command, out string ch) => Characters.TryGetValue(command, out ch);
+
+        /// <summary>Whether a character is written as a command (α as \alpha, □ as \square).</summary>
+        public static bool IsCommand(string ch) => Commands.ContainsKey(ch);
 
         /// <summary>The LaTeX of a run of text in math: each character as a letter, a command or itself.</summary>
         public static string Math(string text)

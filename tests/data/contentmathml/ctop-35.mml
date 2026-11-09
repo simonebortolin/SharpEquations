@@ -1,0 +1,14 @@
+<math display="block">
+<cn base="16">7FE0</cn>
+<mo>,</mo>
+<cn type="complex-cartesian">17<sep/>29</cn>
+<mo>,</mo>
+<cn type="complex-polar">17<sep/>29</cn>
+<mo>,</mo>
+<cn type="rational">17<sep/>29</cn>
+<mo>,</mo>
+<apply><csymbol cd="nums1">complex-cartesian</csymbol>
+  <cn type="integer" base="b">n</cn>
+  <cn type="integer" base="b">d</cn>
+</apply>
+</math>
