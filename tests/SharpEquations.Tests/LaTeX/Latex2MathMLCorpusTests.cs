@@ -220,12 +220,9 @@ namespace SharpEquations.Tests
 
         private static readonly HashSet<string> ReadOtherwise = new HashSet<string>(NotInWordLaTeX.Concat(HeldOtherwise).Concat(NotLaTeX));
 
-        // the macros the reader does not expand as LaTeX does: \DeclareMathOperator, the default of an optional argument,
-        // and an empty body (which leaves an empty group)
-        private static readonly HashSet<string> NotExpanded = new HashSet<string>
-        {
-            "declare-math-operator", "newcommand-optional-default", "newcommand-empty-body",
-        };
+        // the macros that latex2mathml expands otherwise than LaTeX: \greeting{world}, whose one argument is optional,
+        // which LaTeX gives its default (Hello), leaving {world} after it, where latex2mathml takes world as the argument
+        private static readonly HashSet<string> ExpandedOtherwise = new HashSet<string> { "newcommand-optional-default" };
 
         private static string? Check(Func<string?> check)
         {
@@ -290,7 +287,7 @@ namespace SharpEquations.Tests
         [Test]
         public async Task MacrosExpandToTheirEquivalent()
         {
-            var unexpected = Unexpected(Macros(), m => m.id, m => m.latex, NotExpanded, m =>
+            var unexpected = Unexpected(Macros(), m => m.id, m => m.latex, ExpandedOtherwise, m =>
             {
                 var expected = Equation.Parse(m.equivalent, EquationFormat.LaTeX, Options(m.display));
                 var actual = Equation.Parse(m.latex, EquationFormat.LaTeX, Options(m.display));

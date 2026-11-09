@@ -36,8 +36,8 @@ namespace SharpEquations.Internal.LaTeX
         }
 
         /// <summary>
-        /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def
-        /// or \newcommand, and environments defined with \newenvironment, go to <paramref name="macros"/>, where later conversions find them. In a display equation the
+        /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def,
+        /// \newcommand or \DeclareMathOperator, and environments defined with \newenvironment, go to <paramref name="macros"/>, where later conversions find them. In a display equation the
         /// scripts of a large operator other than an integral (\sum, \prod, \bigcup...) go under and over it, as TeX
         /// puts them. The \ce and \pu of mhchem are rewritten as plain LaTeX first (<see cref="Mhchem"/>).
         /// </summary>
@@ -603,6 +603,15 @@ namespace SharpEquations.Internal.LaTeX
                         end++;
                     result.Append("\\newcommand{").Append(tex.Sub(j, end)).Append('}');
                     i = end;
+                    continue;
+                }
+                if (cw == "DeclareMathOperator" && Argument(tex, tex[j] == "*" ? j + 1 : j) is var (operatorName, afterOperatorName) && afterOperatorName >= 0 &&
+                    BracedArgument(tex, afterOperatorName) is var (operatorBody, afterOperatorBody) && afterOperatorBody >= 0)
+                {
+                    // \DeclareMathOperator{\name}{text}: \name defined as \operatorname{text}, \operatorname*{text} when starred
+                    result.Append("\\newcommand{").Append(operatorName.Trim()).Append("}{")
+                        .Append(RewriteTeXOnly("\\operatorname" + (tex[j] == "*" ? "*" : "") + "{" + operatorBody + "}")).Append('}');
+                    i = afterOperatorBody;
                     continue;
                 }
                 if (cw == "renewcommand")
@@ -1394,6 +1403,9 @@ namespace SharpEquations.Internal.LaTeX
             var tex = new Text(EscapeOddBars(RewriteTeXOnly(Limits(NewEnvironments(latex)))));
             var cwPrev = "";
             bool needMacroPass = false;
+            // whether a macro was named and its body is next, and where that body starts: an empty body expands to nothing
+            bool macroNamed = false;
+            int macroBody = -1;
             var uniTeX = new StringBuilder();
 
             for (int i = 0; i < tex.Length;)
@@ -1440,6 +1452,7 @@ namespace SharpEquations.Internal.LaTeX
                                 i++;
                             needMacroPass = true;
                             macros[cw] = "";
+                            macroNamed = true;
                             continue;
                         }
                         cwPrev = cw;
@@ -1517,10 +1530,16 @@ namespace SharpEquations.Internal.LaTeX
                             i++;
                             continue;
                         }
+
+                        if (macroNamed)
+                        {
+                            macroNamed = false;
+                            macroBody = i;
+                        }
                         uniTeX.Append(tex[i++]);
                         break;
                     case "}":
-                        if (i > 0 && tex[i - 1] == "{")
+                        if (i > 0 && tex[i - 1] == "{" && i - 1 != macroBody)
                             uniTeX.Append('⬚');
                         uniTeX.Append(tex[i++]);
                         break;
@@ -1659,12 +1678,20 @@ namespace SharpEquations.Internal.LaTeX
         {
             int k;
             int cArg = 0;
+            string optional = null;
             if (tex[i] == "[")
             {
                 cArg = Js.CodeAt(tex[i + 1], 0) - '0';
                 if (tex[i + 2] != "]" || cArg < 0 || cArg > 9)
                     return ("", i);
                 k = i + 3;
+                // [n][default]: the first argument optional, with that default
+                if (tex[k] == "[" && cArg > 0)
+                {
+                    (optional, k) = OptionalArgument(tex, k);
+                    if (optional == null)
+                        return ("", i);
+                }
             }
             else
             {
@@ -1692,6 +1719,13 @@ namespace SharpEquations.Internal.LaTeX
                 var arg = "";
                 while (tex[i] == " ")
                     i++;
+                if (j == 0 && optional != null)
+                {
+                    var (given, afterGiven) = OptionalArgument(tex, i);
+                    args.Add(given ?? optional);
+                    i = afterGiven;
+                    continue;
+                }
                 if (tex[i] == "{")
                 {
                     k = FindClosingBrace(tex, i + 1);
@@ -1712,7 +1746,7 @@ namespace SharpEquations.Internal.LaTeX
                 args.Add(arg);
             }
             while (args.Count < cArg)
-                args.Add("");
+                args.Add(args.Count == 0 && optional != null ? optional : "");
 
             var val = new StringBuilder();
             // an accent passed as an argument (\hat, a combining mark) goes on the character after it, as in LaTeX
