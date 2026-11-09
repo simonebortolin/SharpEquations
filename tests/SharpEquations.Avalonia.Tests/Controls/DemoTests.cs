@@ -46,6 +46,28 @@ namespace SharpEquations.Avalonia.Tests.Controls
             await Assert.That(equation).IsEqualTo(Equation.Parse("x=(-b±√(b^2-4ac))/2a#(1)", EquationFormat.UnicodeMath, new EquationOptions { Display = true }));
             await Assert.That(outputs).IsGreaterThanOrEqualTo(1);
         }
+
+        [Test]
+        public async Task FontChangesTheLayout()
+        {
+            var (before, after, family) = await Headless.Run(() =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                window.UpdateLayout();
+                var editor = window.GetVisualDescendants().OfType<MathEditBox>().Single();
+                var width = editor.Layout!.Width;
+                var fonts = window.GetVisualDescendants().OfType<ComboBox>()
+                    .Single(c => c.ItemsSource is System.Collections.IEnumerable items && items.Cast<object>().Contains("STIX Two Math"));
+                fonts.SelectedItem = "STIX Two Math";
+                window.UpdateLayout();
+                var result = (width, editor.Layout!.Width, ((AvaloniaMathFont)MathFonts.Get(editor.MathFontFamily)).Typeface.FontFamily.Name);
+                window.Close();
+                return result;
+            });
+            await Assert.That(family).Contains("STIX Two Math");
+            await Assert.That(after).IsNotEqualTo(before);
+        }
     }
 }
 #endif

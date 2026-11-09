@@ -27,6 +27,8 @@
   <ItemGroup>
     <Compile Include="..\SharpEquations.Avalonia.Demo\DemoView.cs" Link="DemoView.cs" />
     <Compile Include="..\SharpEquations.Avalonia.Demo\DemoTheme.cs" Link="DemoTheme.cs" />
+    <Compile Include="..\SharpEquations.Avalonia.Demo\DemoFonts.cs" Link="DemoFonts.cs" />
+    <AvaloniaResource Include="..\SharpEquations.Avalonia.Demo\Assets\Fonts\*.ttf" Link="Assets\Fonts\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

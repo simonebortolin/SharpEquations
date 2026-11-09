@@ -42,6 +42,7 @@ namespace SharpEquations.Avalonia.Demo
 
         private readonly MathEditBox editor;
         private readonly MathView preview;
+        private readonly List<MathView> gallery = new List<MathView>();
         private readonly (string Name, Func<Equation, string> Write, TextBox Box)[] outputs;
         private readonly TabControl outputTabs = new TabControl();
         private readonly TextBlock status = new TextBlock { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
@@ -361,12 +362,7 @@ namespace SharpEquations.Avalonia.Demo
                         Children =
                         {
                             caption,
-                            new MathView
-                            {
-                                FontSize = 17,
-                                HorizontalAlignment = HorizontalAlignment.Left,
-                                Equation = Equation.Parse(unicodeMath, EquationFormat.UnicodeMath, new EquationOptions { Display = true }),
-                            },
+                            Gallery(unicodeMath),
                         },
                     },
                 };
@@ -380,6 +376,18 @@ namespace SharpEquations.Avalonia.Demo
                 list.Children.Add(button);
             }
             return Card("Examples", "Click one to edit it", list);
+        }
+
+        private MathView Gallery(string unicodeMath)
+        {
+            var view = new MathView
+            {
+                FontSize = 17,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Equation = Equation.Parse(unicodeMath, EquationFormat.UnicodeMath, new EquationOptions { Display = true }),
+            };
+            gallery.Add(view);
+            return view;
         }
 
         private void Arrange(double width)
@@ -406,11 +414,24 @@ namespace SharpEquations.Avalonia.Demo
             var quickBar = new ToggleSwitch { OnContent = "Quick bar", OffContent = "Quick bar", IsChecked = true };
             quickBar.IsCheckedChanged += (_, _) => editor.IsQuickBarEnabled = quickBar.IsChecked == true;
 
-            var fonts = new List<(string Name, FontFamily? Family)> { ("Default font", null), ("Libertinus Math", MathFonts.LibertinusMath) };
-            if (OperatingSystem.IsWindows())
-                fonts.Insert(1, ("Cambria Math", new FontFamily("Cambria Math")));
-            var font = new ComboBox { ItemsSource = fonts.Select(f => f.Name).ToList(), SelectedIndex = 0, MinWidth = 140 };
-            font.SelectionChanged += (_, _) => editor.MathFontFamily = preview.MathFontFamily = fonts[Math.Max(0, font.SelectedIndex)].Family;
+            // the default is Cambria Math on Windows and Libertinus Math elsewhere: STIX Two Math, embedded in the demo,
+            // shows the change of font everywhere
+            var fonts = new List<(string Name, FontFamily? Family)>
+            {
+                ($"Default ({MathFonts.Default.Typeface.FontFamily.FamilyNames[0].Split('#').Last()})", null),
+                ("Libertinus Math", MathFonts.LibertinusMath),
+                ("STIX Two Math", DemoFonts.StixTwoMath),
+            };
+            if (OperatingSystem.IsWindows() && MathFonts.TryGet(new FontFamily("Cambria Math"), out _))
+                fonts.Add(("Cambria Math", new FontFamily("Cambria Math")));
+            var font = new ComboBox { ItemsSource = fonts.Select(f => f.Name).ToList(), SelectedIndex = 0, MinWidth = 170 };
+            font.SelectionChanged += (_, _) =>
+            {
+                var family = fonts[Math.Max(0, font.SelectedIndex)].Family;
+                editor.MathFontFamily = preview.MathFontFamily = family;
+                foreach (var view in gallery)
+                    view.MathFontFamily = family;
+            };
             var size = new Slider { Minimum = 16, Maximum = 72, Value = 34, Width = 130, VerticalAlignment = VerticalAlignment.Center };
             size.PropertyChanged += (_, e) =>
             {
