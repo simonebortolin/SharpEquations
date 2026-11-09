@@ -416,6 +416,206 @@ namespace SharpEquations.Editing
             OnChanged(true);
         }
 
+        /// <summary>
+        /// The command being typed before the caret (<c>\al</c>), with its backslash, or null: what
+        /// <see cref="GetCompletions"/> completes.
+        /// </summary>
+        public string? CommandPrefix
+        {
+            get
+            {
+                if (Selection != null || Canonical(Caret) is not { } caret || MathTree.Get(Root, caret.Path) is not { IsRun: true } run)
+                    return null;
+                var before = CodePointText.Substring(run.Text, 0, caret.Offset);
+                var i = before.Length;
+                while (i > 0 && before[i - 1] < 0x80 && char.IsLetterOrDigit(before[i - 1]))
+                    i--;
+                return i > 0 && before[i - 1] == '\\' ? before.Substring(i - 1) : null;
+            }
+        }
+
+        /// <summary>The commands of the input format that complete <see cref="CommandPrefix"/>; empty when none is typed.</summary>
+        public IReadOnlyList<EquationCommand> GetCompletions(int max = 20) =>
+            CommandPrefix is { } prefix ? EquationCommands.Complete(prefix.Substring(1), InputFormat, max) : Array.Empty<EquationCommand>();
+
+        /// <summary>
+        /// Completes the command typed before the caret: a command with a symbol becomes the symbol, as Word's math
+        /// autocorrect does; a structure of LaTeX becomes its text with the caret in its first argument
+        /// (<c>\frac{|}{}</c>), and one of UnicodeMath its control word and a space.
+        /// </summary>
+        public void Complete(EquationCommand command)
+        {
+            if (command == null)
+                throw new ArgumentNullException(nameof(command));
+            if (CommandPrefix is not { } prefix)
+                return;
+
+            PushUndo();
+            var caret = Canonical(Caret);
+            var run = MathTree.Get(Root, caret.Path);
+            var start = caret.Offset - CodePointText.Length(prefix);
+            var text = command.Symbol.Length > 0 ? command.Symbol : command.Arguments > 0 ? command.Text : command.Text + " ";
+            var offset = command.Symbol.Length == 0 && command.Arguments > 0 ? CodePointText.Length("\\" + command.Name) + 1 : CodePointText.Length(text);
+            var rest = CodePointText.Remove(run.Text, start, caret.Offset - start);
+            Root = MathTree.Replace(Root, caret.Path, run.WithText(CodePointText.Insert(rest, start, text)));
+            Caret = Anchor = new MathPosition(caret.Path, start + offset);
+            if (!IsLinear && command.Symbol.Length == 0 && command.Arguments == 0)
+                TryBuildUpAtCaret(true);
+            OnChanged(true);
+        }
+
+        /// <summary>Whether the caret is in a cell of a table (a matrix, an equation array): the table commands apply.</summary>
+        public bool IsInTable => CellAtCaret() != null;
+
+        /// <summary>Inserts an empty row in the table of the caret, below its row (above, with <paramref name="above"/>), and puts the caret in it.</summary>
+        /// <returns>Whether the caret is in a table.</returns>
+        public bool InsertTableRow(bool above = false)
+        {
+            if (CellAtCaret() is not { } cell)
+                return false;
+            PushUndo();
+            var table = MathTree.Get(Root, cell.Table);
+            var rows = table.Children.ToList();
+            var current = rows[cell.Row];
+            var empty = MathNode.Row(Array.Empty<MathNode>());
+            var array = ArrayTable() != null && cell.Table.SequenceEqual(ArrayPath);
+            var cells = current.Children.Select(_ => MathNode.Element("mtd", new[] { array ? Line(Array.Empty<MathNode>()).Children[0].Children[0] : empty }));
+            var at = above ? cell.Row : cell.Row + 1;
+            rows.Insert(at, MathNode.Element(current.Name == "mlabeledtr" ? "mtr" : current.Name, current.Name == "mlabeledtr" ? cells.Skip(1) : cells, current.Name == "mlabeledtr" ? null : current.Attributes));
+            Root = MathTree.Replace(Root, cell.Table, table.WithChildren(rows));
+            SetCaret(MathTree.Append(cell.Table, at, Math.Min(cell.Column, rows[at].Children.Count - 1), 0), array ? 1 : 0);
+            OnChanged(true);
+            return true;
+        }
+
+        /// <summary>Inserts an empty column in the table of the caret, right of its column (left, with <paramref name="before"/>), and puts the caret in it.</summary>
+        /// <returns>Whether the caret is in a table.</returns>
+        public bool InsertTableColumn(bool before = false)
+        {
+            if (CellAtCaret() is not { } cell)
+                return false;
+            PushUndo();
+            var table = MathTree.Get(Root, cell.Table);
+            var at = before ? cell.Column : cell.Column + 1;
+            var rows = table.Children.Select(row =>
+            {
+                var cells = row.Children.ToList();
+                cells.Insert(Math.Min(at, cells.Count), MathNode.Element("mtd", new[] { MathNode.Row(Array.Empty<MathNode>()) }));
+                return row.WithChildren(cells);
+            });
+            Root = MathTree.Replace(Root, cell.Table, table.WithChildren(rows));
+            SetCaret(MathTree.Append(cell.Table, cell.Row, at, 0), 0);
+            OnChanged(true);
+            return true;
+        }
+
+        /// <summary>Deletes the row of the caret from its table; the table itself when it is its only row.</summary>
+        /// <returns>Whether the caret is in a table.</returns>
+        public bool DeleteTableRow()
+        {
+            if (CellAtCaret() is not { } cell)
+                return false;
+            PushUndo();
+            var table = MathTree.Get(Root, cell.Table);
+            if (table.Children.Count == 1)
+                return RemoveTable(cell.Table);
+            var rows = table.Children.ToList();
+            rows.RemoveAt(cell.Row);
+            Root = MathTree.Replace(Root, cell.Table, table.WithChildren(rows));
+            var row = Math.Min(cell.Row, rows.Count - 1);
+            SetCaret(MathTree.Append(cell.Table, row, Math.Min(cell.Column, rows[row].Children.Count - 1), 0), 0);
+            OnChanged(true);
+            return true;
+        }
+
+        /// <summary>Deletes the column of the caret from its table; the table itself when it is its only column.</summary>
+        /// <returns>Whether the caret is in a table.</returns>
+        public bool DeleteTableColumn()
+        {
+            if (CellAtCaret() is not { } cell)
+                return false;
+            PushUndo();
+            var table = MathTree.Get(Root, cell.Table);
+            if (table.Children.All(r => r.Children.Count <= 1))
+                return RemoveTable(cell.Table);
+            var rows = table.Children.Select(row =>
+            {
+                var cells = row.Children.ToList();
+                if (cell.Column < cells.Count && cells.Count > 1)
+                    cells.RemoveAt(cell.Column);
+                return row.WithChildren(cells);
+            }).ToList();
+            Root = MathTree.Replace(Root, cell.Table, table.WithChildren(rows));
+            SetCaret(MathTree.Append(cell.Table, cell.Row, Math.Min(cell.Column, rows[cell.Row].Children.Count - 1), 0), 0);
+            OnChanged(true);
+            return true;
+        }
+
+        private bool RemoveTable(int[] tablePath)
+        {
+            var parent = MathTree.Parent(tablePath);
+            var row = MathTree.Get(Root, parent);
+            var children = row.Children.ToList();
+            children.RemoveAt(tablePath[tablePath.Length - 1]);
+            ReplaceChildren(parent, children, tablePath[tablePath.Length - 1]);
+            OnChanged(true);
+            return true;
+        }
+
+        /// <summary>The innermost table cell of the caret: the path of the table, and the row and the column of the cell.</summary>
+        private (int[] Table, int Row, int Column)? CellAtCaret()
+        {
+            var (current, _) = RowPosition(Canonical(Caret));
+            while (MathTree.Owner(Root, current) is { } owner)
+            {
+                if (MathTree.Get(Root, owner.Item).Name == "mtable")
+                {
+                    var slot = owner.Slots[owner.Index];
+                    return (owner.Item, slot[owner.Item.Length], slot[owner.Item.Length + 1]);
+                }
+                current = MathTree.Parent(owner.Item);
+            }
+            return null;
+        }
+
+        /// <summary>The number of lines of the equation: those of its equation array, or 1.</summary>
+        public int LineCount => ArrayTable() is { } table ? table.Children.Count : 1;
+
+        /// <summary>
+        /// Breaks the line at the caret, as Shift+Enter in Word: the equation becomes an equation array (the
+        /// <c>█(...@...)</c> of UnicodeMath, <c>aligned</c> of LaTeX), or gets a line more, with what is after the caret
+        /// on the new line. The lines line up at their first <c>&amp;</c> (an alignment mark), and are centred without one.
+        /// </summary>
+        public void InsertLineBreak()
+        {
+            if (IsLinear)
+                return;
+            PushUndo();
+            if (Selection != null)
+                RemoveSelection();
+
+            var (lineRow, index) = LineAtCaret();
+            var row = MathTree.Get(Root, lineRow);
+            var before = row.Children.Take(index).ToList();
+            var after = row.Children.Skip(index).ToList();
+            if (ArrayTable() is { } table)
+            {
+                var line = lineRow[2];
+                var lines = table.Children.ToList();
+                lines[line] = Line(before);
+                lines.Insert(line + 1, Line(after));
+                Root = MathTree.Replace(Root, ArrayPath, table.WithChildren(lines));
+                SetCaret(LinePath(line + 1), 1);
+            }
+            else
+            {
+                var array = MathNode.Element("mtable", new[] { Line(before), Line(after) }, new[] { new KeyValuePair<string, string>("columnspacing", "0pt") });
+                Root = Root.WithChild(0, MathNode.Row(new[] { array }));
+                SetCaret(LinePath(1), 1);
+            }
+            OnChanged(true);
+        }
+
         /// <summary>Deletes the selection; returns whether something was selected.</summary>
         public bool DeleteSelection()
         {
@@ -520,6 +720,63 @@ namespace SharpEquations.Editing
             else
                 SetCaret(rowPath, index + 1);
             OnChanged(true);
+        }
+
+        private static readonly int[] ArrayPath = { 0, 0 };
+
+        private static int[] LinePath(int line) => new[] { 0, 0, line, 0, 0 };
+
+        /// <summary>A line of an equation array: a row in a cell, which starts with maligngroup.</summary>
+        private static MathNode Line(IEnumerable<MathNode> nodes)
+        {
+            var children = nodes.ToList();
+            if (children.Count == 0 || children[0].Name != "maligngroup")
+                children.Insert(0, MathNode.Element("maligngroup", Array.Empty<MathNode>()));
+            return MathNode.Element("mtr", new[] { MathNode.Element("mtd", new[] { MathNode.Row(children) }) });
+        }
+
+        /// <summary>The table of the equation when the equation is an equation array (its lines), or null.</summary>
+        private MathNode? ArrayTable()
+        {
+            if (RootRow.Children.Count != 1 || RootRow.Children[0] is not { Name: "mtable" } table || table.Children.Count == 0)
+                return null;
+            return table.Children.All(r => r.Name == "mtr" && r.Children.Count == 1 && r.Children[0].Children.Count == 1
+                && r.Children[0].Children[0] is { IsRow: true } row && row.Children.Count > 0 && row.Children[0].Name == "maligngroup")
+                ? table
+                : null;
+        }
+
+        /// <summary>The row of the line of the caret (the equation, or a line of its equation array) and the index in it where the caret is, or after the structure it is in.</summary>
+        private (int[] Row, int Index) LineAtCaret()
+        {
+            var (rowPath, index) = SplitRunAtCaret();
+            var line = ArrayTable() != null && rowPath.Length >= 5 ? rowPath.Take(5).ToArray() : MathTree.RootRow;
+            if (rowPath.SequenceEqual(line))
+                return (line, index);
+            return (line, rowPath[line.Length] + 1);
+        }
+
+        /// <summary>Merges a line of the equation array with the next one; an array of one line becomes the equation.</summary>
+        private void MergeLines(int line)
+        {
+            var table = ArrayTable()!;
+            var lines = table.Children.ToList();
+            var first = lines[line].Children[0].Children[0];
+            var second = lines[line + 1].Children[0].Children[0];
+            var junction = first.Children.Count;
+            var merged = first.Children.Concat(second.Children.Skip(1)).ToList();
+            lines[line] = Line(merged);
+            lines.RemoveAt(line + 1);
+            if (lines.Count == 1)
+            {
+                Root = Root.WithChild(0, MathNode.Row(merged.Skip(1)));
+                SetCaret(MathTree.RootRow, junction - 1);
+            }
+            else
+            {
+                Root = MathTree.Replace(Root, ArrayPath, table.WithChildren(lines));
+                SetCaret(LinePath(line), junction);
+            }
         }
 
         /// <summary>The labeled row of an equation that is one, or null.</summary>
@@ -678,6 +935,29 @@ namespace SharpEquations.Editing
 
             var (rowPath, index) = RowPosition(caret);
             var row = MathTree.Get(Root, rowPath);
+
+            // at the start (after its maligngroup) or the end of a line of an equation array: the lines merge
+            if (ArrayTable() is { } array && rowPath.Length == 5 && rowPath.Take(2).SequenceEqual(ArrayPath))
+            {
+                var line = rowPath[2];
+                if (direction < 0 && index <= 1 && line > 0)
+                {
+                    PushUndo();
+                    MergeLines(line - 1);
+                    OnChanged(true);
+                    return;
+                }
+                if (direction > 0 && index == row.Children.Count && line < array.Children.Count - 1)
+                {
+                    PushUndo();
+                    MergeLines(line);
+                    OnChanged(true);
+                    return;
+                }
+                if (direction < 0 && index <= 1)
+                    return;
+            }
+
             var target = direction < 0 ? index - 1 : index;
             if (target < 0 || target >= row.Children.Count)
             {
@@ -939,11 +1219,14 @@ namespace SharpEquations.Editing
             if (!node.IsRow)
                 return position;
             var i = position.Offset;
+            // never before the maligngroup that starts a line of an equation array
+            if (i == 0 && node.Children.Count > 0 && node.Children[0].Name == "maligngroup")
+                i = 1;
             if (i > 0 && node.Children[i - 1].IsRun)
                 return new MathPosition(MathTree.Append(position.Path, i - 1), CodePointText.Length(node.Children[i - 1].Text));
             if (i < node.Children.Count && node.Children[i].IsRun)
                 return new MathPosition(MathTree.Append(position.Path, i), 0);
-            return position;
+            return i == position.Offset ? position : new MathPosition(position.Path, i);
         }
 
         /// <summary>The row of a position and the index of the child after it; inside a run, the index of the run.</summary>

@@ -68,6 +68,9 @@ namespace SharpEquations.Internal.LaTeX
             ["{"] = "{", ["}"] = "}", ["〈"] = "langle", ["〉"] = "rangle",
         };
 
+        /// <summary>The symbols the writer writes as a command, and the command of each (without the backslash).</summary>
+        public static IEnumerable<KeyValuePair<string, string>> SymbolCommands => Commands;
+
         private static readonly Dictionary<string, string> FontCommands = new Dictionary<string, string>
         {
             ["mup"] = "mathrm", ["mbf"] = "mathbf", ["mbfit"] = "boldsymbol", ["mscr"] = "mathcal", ["mbfscr"] = "mathcal", ["mfrak"] = "mathfrak",

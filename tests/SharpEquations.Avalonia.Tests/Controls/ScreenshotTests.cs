@@ -28,6 +28,8 @@ namespace SharpEquations.Avalonia.Tests.Controls
             "L:\\sqrt[3]{x^3+y^3}+\\overbrace{a+b+c}^{n}",
             "L:\\binom{n}{k}=\\frac{n!}{k!(n-k)!}",
             "|x|+‖y‖+⌊z⌋+⟨ψ|φ⟩",
+            "█(f(x)&=(x+1)^2@&=x^2+2x+1)",
+            "E=mc^2#(1)",
         };
 
         [Test]

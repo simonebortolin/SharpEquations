@@ -12,7 +12,7 @@ namespace SharpEquations.Avalonia.Tests
     {
         public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<TestApp>()
             .UseSkia()
-            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false, OverlayPopups = true });
 
         public override void Initialize() => Styles.Add(new FluentTheme());
     }

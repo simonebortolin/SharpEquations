@@ -34,12 +34,17 @@ namespace SharpEquations.Avalonia
         public MathDrawing(MathLayout layout)
         {
             Layout = layout;
+            var typefaces = new Dictionary<AvaloniaMathFont, GlyphTypeface?>();
             foreach (var glyph in layout.Glyphs)
             {
                 if (glyph.Font is not AvaloniaMathFont font)
                     continue;
+                if (!typefaces.TryGetValue(font, out var typeface))
+                    typefaces[font] = typeface = font.GetGlyphTypeface();
+                if (typeface == null)
+                    continue;
                 var info = new[] { new GlyphInfo(glyph.Glyph, 0, font.GetAdvance(glyph.Glyph) * glyph.Size / font.UnitsPerEm) };
-                runs.Add((new GlyphRun(font.Typeface, glyph.Size, "￼".AsMemory(), info, new Point(glyph.X, glyph.Y)), glyph.Color));
+                runs.Add((new GlyphRun(typeface, glyph.Size, ReadOnlyMemory<char>.Empty, info, new Point(glyph.X, glyph.Y)), glyph.Color));
             }
         }
 

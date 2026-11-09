@@ -92,9 +92,12 @@ net10.0 with no package, as the core).
 - `Rendering`: `Layout/Engine.cs` lays out after MathML Core with the constants of the MATH table; the ink boxes of the
   glyphs come from the outlines of the font (`OpenType/GlyphOutlines.cs`: `glyf`, or the CFF charstrings), never from
   the rasterizer, and the tables from a copy of the font file (`OpenType/FontFile.cs`).
-- `Avalonia`: `AvaloniaMathFont` reads the font file once with `TryGetStream` (the memory of `TryGetTable` does not stay
-  valid); the tests that use the headless session are `[NotInParallel("headless")]`, since showing a window or typing
-  runs the jobs of the dispatcher.
+- `Avalonia`: `AvaloniaMathFont` reads the font file once with `TryGetStream` and asks Avalonia for its glyph typeface
+  only to draw, each time (`MathFonts.Register` registers the embedded font again with a new font manager: a headless
+  test session gives each test one, and a glyph typeface of the old one is released); the tests that use the headless
+  session are `[NotInParallel("headless")]`, since showing a window or typing runs the jobs of the dispatcher.
+- The core's `EquationCommands` (public) lists the control words of UnicodeMath and the commands of LaTeX with their
+  symbols, for the completion of the editor; `PublicApi/EquationCommandsTests` checks that the parsers read them.
 
 ## Building and Testing
 

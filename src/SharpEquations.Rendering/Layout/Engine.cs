@@ -536,6 +536,8 @@ namespace SharpEquations.Rendering.Layout
                     f = font;
                     glyph = 0;
                 }
+                if (style.Level > 0)
+                    glyph = f.GetScriptVariant(glyph, style.Level);
                 var scale = style.Size / f.UnitsPerEm;
                 var bounds = f.GetBounds(glyph);
                 box.Glyphs.Add(new GlyphItem(f, glyph, x, 0, style.Size));
@@ -1267,32 +1269,66 @@ namespace SharpEquations.Rendering.Layout
 
         private Box LayoutTable(MathNode table, int[]? path, Style style)
         {
-            var cellStyle = style.WithDisplay(table.GetAttribute("displaystyle") == "true");
+            // an equation array (the lines of █(...@...) or of aligned, which start with maligngroup) keeps the style of
+            // the equation; any other table is in text style, as MathML Core says
+            var isArray = table.Children.Count > 0 && table.Children.All(r => r.Children.Where(c => c.Name == "mtd").All(StartsWithAlignGroup));
+            var cellStyle = style.WithDisplay(table.GetAttribute("displaystyle") is { } displaystyle ? displaystyle == "true" : isArray && style.Display);
+            var marks = new List<List<double?>>();
             var rows = new List<(List<Box> Cells, Box? Label, MathNode Row)>();
             var columns = 0;
             for (var r = 0; r < table.Children.Count; r++)
             {
                 var row = table.Children[r];
                 var cells = new List<Box>();
+                var rowMarks = new List<double?>();
                 Box? label = null;
                 for (var c = 0; c < row.Children.Count; c++)
                 {
                     var cell = row.Children[c];
-                    var cellBox = Layout(cell.Name == "mtd" && cell.Children.Count == 1 ? cell.Children[0] : cell, cell.Name == "mtd" && cell.Children.Count == 1 ? Sub(path, r, c, 0) : null, cellStyle, Stretch.None);
+                    var content = cell.Name == "mtd" && cell.Children.Count == 1 ? cell.Children[0] : cell;
+                    var cellBox = Layout(content, cell.Name == "mtd" && cell.Children.Count == 1 ? Sub(path, r, c, 0) : null, cellStyle, Stretch.None);
                     if (row.Name == "mlabeledtr" && c == 0)
+                    {
                         label = cellBox;
+                    }
                     else
+                    {
                         cells.Add(cellBox);
+                        rowMarks.Add(AlignMark(content, cellBox));
+                    }
                 }
                 columns = Math.Max(columns, cells.Count);
                 rows.Add((cells, label, row));
+                marks.Add(rowMarks);
             }
 
+            // the cells of a column with alignment marks (malignmark, the & of UnicodeMath and of aligned) line up at
+            // the first mark; the others by columnalign
             var widths = new double[columns];
-            foreach (var (cells, _, _) in rows)
+            var markLefts = new double?[columns];
+            for (var c = 0; c < columns; c++)
             {
-                for (var c = 0; c < cells.Count; c++)
-                    widths[c] = Math.Max(widths[c], cells[c].Width);
+                double markLeft = 0, markRight = 0, other = 0;
+                var marked = false;
+                for (var r = 0; r < rows.Count; r++)
+                {
+                    if (c >= rows[r].Cells.Count)
+                        continue;
+                    var cell = rows[r].Cells[c];
+                    if (marks[r][c] is { } mark)
+                    {
+                        marked = true;
+                        markLeft = Math.Max(markLeft, mark);
+                        markRight = Math.Max(markRight, cell.Width - mark);
+                    }
+                    else
+                    {
+                        other = Math.Max(other, cell.Width);
+                    }
+                }
+                widths[c] = marked ? Math.Max(markLeft + markRight, other) : other;
+                if (marked)
+                    markLefts[c] = markLeft;
             }
 
             var columnSpacing = Lists(table.GetAttribute("columnspacing"), "0.8em", style, columns - 1);
@@ -1352,12 +1388,15 @@ namespace SharpEquations.Rendering.Layout
                 {
                     var cellNode = row.Children[c + cellOffset];
                     var align = cellNode.GetAttribute("columnalign") ?? Pick(rowAligns, c) ?? Pick(aligns, c) ?? "center";
-                    var cx = align switch
-                    {
-                        "left" => lefts[c],
-                        "right" => lefts[c] + widths[c] - cells[c].Width,
-                        _ => lefts[c] + (widths[c] - cells[c].Width) / 2,
-                    };
+                    var rowIndex = placedRows.FindIndex(p => ReferenceEquals(p.Row.Row, row));
+                    var cx = markLefts[c] is { } columnMark && marks[rowIndex][c] is { } mark
+                        ? lefts[c] + columnMark - mark
+                        : align switch
+                        {
+                            "left" => lefts[c],
+                            "right" => lefts[c] + widths[c] - cells[c].Width,
+                            _ => lefts[c] + (widths[c] - cells[c].Width) / 2,
+                        };
                     box.Add(cells[c], tableX + cx, baseline + shift);
                 }
                 if (label != null)
@@ -1367,6 +1406,22 @@ namespace SharpEquations.Rendering.Layout
             box.Height = shift;
             box.Depth = total - shift;
             return box;
+        }
+
+        private static bool StartsWithAlignGroup(MathNode cell) =>
+            cell.Children.Count == 1 && cell.Children[0] is { IsRow: true } row && row.Children.Count > 0 && row.Children[0].Name == "maligngroup";
+
+        /// <summary>The x of the first alignment mark of the content of a cell, from the caret positions of its row; null without one.</summary>
+        private static double? AlignMark(MathNode content, Box box)
+        {
+            if (!content.IsRow || box.CaretX == null)
+                return null;
+            for (var i = 0; i < content.Children.Count && i < box.CaretX.Length; i++)
+            {
+                if (content.Children[i].Name == "malignmark")
+                    return box.CaretX[i];
+            }
+            return null;
         }
 
         private static string? Pick(string[]? values, int index) =>

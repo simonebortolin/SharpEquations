@@ -166,5 +166,96 @@ namespace SharpEquations.Avalonia.Tests.Editing
             latex.Insert("E=mc^2\\tag{2} ");
             await Assert.That(latex.EquationNumber).IsEqualTo("(2)");
         }
+
+        private static Equation D(string unicodeMath) => Equation.Parse(unicodeMath, EquationFormat.UnicodeMath, new EquationOptions { Display = true });
+
+        [Test]
+        public async Task LinesOfAnEquationArray()
+        {
+            var editor = new MathEditor { IsDisplay = true };
+            editor.Insert("a&=b+c");
+            editor.InsertLineBreak();
+            await Assert.That(editor.LineCount).IsEqualTo(2);
+            editor.Insert("&=d ");
+            await Assert.That(editor.ToEquation()).IsEqualTo(D("█(a&=b+c@&=d)"));
+            editor.InsertLineBreak();
+            editor.Insert("&=e ");
+            await Assert.That(editor.ToEquation()).IsEqualTo(D("█(a&=b+c@&=d@&=e)"));
+
+            // Backspace at the start of a line joins it to the line before
+            editor.MoveHome();
+            editor.Backspace();
+            await Assert.That(editor.LineCount).IsEqualTo(2);
+            editor.Undo();
+            await Assert.That(editor.LineCount).IsEqualTo(3);
+        }
+
+        [Test]
+        public async Task LineBreakInTheMiddle()
+        {
+            var editor = new MathEditor(D("x+y=1"));
+            editor.SetCaret(new MathPosition(new[] { 0 }, 3));
+            editor.InsertLineBreak();
+            await Assert.That(editor.ToEquation()).IsEqualTo(D("█(x+y@=1)"));
+            editor.MoveUp();
+            editor.Delete();
+            await Assert.That(editor.LineCount).IsEqualTo(1);
+            await Assert.That(editor.ToEquation()).IsEqualTo(D("x+y=1"));
+        }
+
+        [Test]
+        public async Task LinesFromLaTeX()
+        {
+            var editor = new MathEditor(Equation.Parse("\\begin{aligned}a&=b\\\\&=c\\end{aligned}", EquationFormat.LaTeX, new EquationOptions { Display = true }));
+            await Assert.That(editor.LineCount).IsEqualTo(2);
+        }
+
+        [Test]
+        public async Task CompletionOfCommands()
+        {
+            var editor = new MathEditor();
+            editor.Insert("x+\\alp");
+            await Assert.That(editor.CommandPrefix).IsEqualTo("\\alp");
+            var alpha = editor.GetCompletions().First(c => c.Name == "alpha");
+            editor.Complete(alpha);
+            editor.Insert(" ");
+            await Assert.That(editor.ToEquation()).IsEqualTo(U("x+α"));
+
+            var latex = new MathEditor { InputFormat = EquationFormat.LaTeX };
+            latex.Insert("\\fra");
+            latex.Complete(latex.GetCompletions().First(c => c.Name == "frac"));
+            latex.Insert("1");
+            latex.MoveRight();
+            latex.MoveRight();
+            latex.Insert("2");
+            latex.BuildUpAll();
+            await Assert.That(latex.ToEquation()).IsEqualTo(U("1/2"));
+        }
+
+        [Test]
+        public async Task RowsAndColumnsOfAMatrix()
+        {
+            var editor = new MathEditor(U("(■(a&b@c&d))"));
+            await Assert.That(editor.IsInTable).IsFalse();
+            editor.SetCaret(new MathPosition(new[] { 0, 0, 1, 0, 0, 0 }, 1));
+            await Assert.That(editor.IsInTable).IsTrue();
+            editor.InsertTableRow();
+            editor.Insert("e");
+            editor.MoveToNextCell();
+            editor.Insert("f ");
+            await Assert.That(editor.ToEquation()).IsEqualTo(U("(■(a&b@e&f@c&d))"));
+            editor.InsertTableColumn();
+            editor.Insert("g ");
+            // an empty cell, which UnicodeMath reads as an empty operator
+            await Assert.That(U(editor.GetText(EquationFormat.UnicodeMath))).IsEqualTo(U("(■(a&b&@e&f&g@c&d&))"));
+            editor.DeleteTableColumn();
+            editor.DeleteTableRow();
+            await Assert.That(editor.ToEquation()).IsEqualTo(U("(■(a&b@c&d))"));
+            editor.DeleteTableRow();
+            editor.DeleteTableRow();
+            // the last row deleted, the table goes, and the brackets stay
+            await Assert.That(editor.Root.Children[0].Children[0].Children.Select(c => c.Text)).IsEquivalentTo(new[] { "(", ")" });
+            await Assert.That(editor.InsertTableRow()).IsFalse();
+        }
     }
 }

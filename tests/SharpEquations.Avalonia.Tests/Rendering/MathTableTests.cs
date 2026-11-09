@@ -2,6 +2,7 @@ namespace SharpEquations.Avalonia.Tests.Rendering
 {
     using System;
     using System.IO;
+    using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
     using SharpEquations.Rendering.OpenType;
@@ -35,6 +36,18 @@ namespace SharpEquations.Avalonia.Tests.Rendering
             await Assert.That(math[MathConstant.FractionRuleThickness]).IsBetween(20, 100);
             await Assert.That(math[MathConstant.RadicalDegreeBottomRaisePercent]).IsBetween(30, 80);
             await Assert.That(math.MinConnectorOverlap).IsGreaterThan(0);
+        }
+
+        /// <summary>The ssty variants: Libertinus Math has them for the primes, which scripts use.</summary>
+        [Test]
+        public async Task ScriptStyleVariants()
+        {
+            var styles = ScriptStyles.Parse(Table("GSUB"));
+            await Assert.That(styles).IsNotNull();
+            var varied = Enumerable.Range(1, 5000).Count(g => styles!.Variant((ushort)g, 1) != g);
+            await Assert.That(varied).IsGreaterThan(0);
+            await Assert.That(Enumerable.Range(1, 5000).All(g => styles!.Variant((ushort)g, 0) == g)).IsTrue();
+            await Assert.That(ScriptStyles.Parse(null)).IsNull();
         }
 
         [Test]

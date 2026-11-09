@@ -1,5 +1,4 @@
 #nullable enable
-override SharpEquations.Rendering.MathRect.ToString() -> string!
 SharpEquations.Rendering.GlyphBounds
 SharpEquations.Rendering.GlyphBounds.GlyphBounds() -> void
 SharpEquations.Rendering.GlyphBounds.GlyphBounds(double xMin, double yMin, double xMax, double yMax) -> void
@@ -11,6 +10,7 @@ SharpEquations.Rendering.IMathFont
 SharpEquations.Rendering.IMathFont.GetAdvance(ushort glyph) -> double
 SharpEquations.Rendering.IMathFont.GetBounds(ushort glyph) -> SharpEquations.Rendering.GlyphBounds
 SharpEquations.Rendering.IMathFont.GetFallback(int codePoint) -> SharpEquations.Rendering.IMathFont?
+SharpEquations.Rendering.IMathFont.GetScriptVariant(ushort glyph, int scriptLevel) -> ushort
 SharpEquations.Rendering.IMathFont.Math.get -> SharpEquations.Rendering.OpenType.MathTable?
 SharpEquations.Rendering.IMathFont.TryGetGlyph(int codePoint, out ushort glyph) -> bool
 SharpEquations.Rendering.IMathFont.UnitsPerEm.get -> double
@@ -76,7 +76,10 @@ SharpEquations.Rendering.MathShapeRole.Error = 3 -> SharpEquations.Rendering.Mat
 SharpEquations.Rendering.MathShapeRole.Ink = 0 -> SharpEquations.Rendering.MathShapeRole
 SharpEquations.Rendering.MathShapeRole.Placeholder = 2 -> SharpEquations.Rendering.MathShapeRole
 SharpEquations.Rendering.OpenType.FontFile
+SharpEquations.Rendering.OpenType.FontFile.Advance(ushort glyph) -> int
 SharpEquations.Rendering.OpenType.FontFile.Table(string! tag) -> byte[]?
+SharpEquations.Rendering.OpenType.FontFile.TryGetGlyph(int codePoint, out ushort glyph) -> bool
+SharpEquations.Rendering.OpenType.FontFile.UnitsPerEm.get -> int
 SharpEquations.Rendering.OpenType.GlyphConstruction
 SharpEquations.Rendering.OpenType.GlyphConstruction.Assembly.get -> System.Collections.Generic.IReadOnlyList<SharpEquations.Rendering.OpenType.GlyphPart>?
 SharpEquations.Rendering.OpenType.GlyphConstruction.AssemblyItalicCorrection.get -> int
@@ -133,10 +136,10 @@ SharpEquations.Rendering.OpenType.MathConstant.StretchStackBottomShiftDown = 29 
 SharpEquations.Rendering.OpenType.MathConstant.StretchStackGapAboveMin = 30 -> SharpEquations.Rendering.OpenType.MathConstant
 SharpEquations.Rendering.OpenType.MathConstant.StretchStackGapBelowMin = 31 -> SharpEquations.Rendering.OpenType.MathConstant
 SharpEquations.Rendering.OpenType.MathConstant.StretchStackTopShiftUp = 28 -> SharpEquations.Rendering.OpenType.MathConstant
+SharpEquations.Rendering.OpenType.MathConstant.SubSuperscriptGapMin = 15 -> SharpEquations.Rendering.OpenType.MathConstant
 SharpEquations.Rendering.OpenType.MathConstant.SubscriptBaselineDropMin = 10 -> SharpEquations.Rendering.OpenType.MathConstant
 SharpEquations.Rendering.OpenType.MathConstant.SubscriptShiftDown = 8 -> SharpEquations.Rendering.OpenType.MathConstant
 SharpEquations.Rendering.OpenType.MathConstant.SubscriptTopMax = 9 -> SharpEquations.Rendering.OpenType.MathConstant
-SharpEquations.Rendering.OpenType.MathConstant.SubSuperscriptGapMin = 15 -> SharpEquations.Rendering.OpenType.MathConstant
 SharpEquations.Rendering.OpenType.MathConstant.SuperscriptBaselineDropMax = 14 -> SharpEquations.Rendering.OpenType.MathConstant
 SharpEquations.Rendering.OpenType.MathConstant.SuperscriptBottomMaxWithSubscript = 16 -> SharpEquations.Rendering.OpenType.MathConstant
 SharpEquations.Rendering.OpenType.MathConstant.SuperscriptBottomMin = 13 -> SharpEquations.Rendering.OpenType.MathConstant
@@ -152,13 +155,17 @@ SharpEquations.Rendering.OpenType.MathTable.Horizontal(ushort glyph) -> SharpEqu
 SharpEquations.Rendering.OpenType.MathTable.IsExtendedShape(ushort glyph) -> bool
 SharpEquations.Rendering.OpenType.MathTable.ItalicCorrection(ushort glyph) -> int
 SharpEquations.Rendering.OpenType.MathTable.MinConnectorOverlap.get -> int
-SharpEquations.Rendering.OpenType.MathTable.this[SharpEquations.Rendering.OpenType.MathConstant constant].get -> int
 SharpEquations.Rendering.OpenType.MathTable.TopAccentAttachment(ushort glyph) -> int?
 SharpEquations.Rendering.OpenType.MathTable.Vertical(ushort glyph) -> SharpEquations.Rendering.OpenType.GlyphConstruction?
+SharpEquations.Rendering.OpenType.MathTable.this[SharpEquations.Rendering.OpenType.MathConstant constant].get -> int
+SharpEquations.Rendering.OpenType.ScriptStyles
+SharpEquations.Rendering.OpenType.ScriptStyles.Variant(ushort glyph, int level) -> ushort
+override SharpEquations.Rendering.MathRect.ToString() -> string!
 static SharpEquations.Rendering.MathLayoutEngine.Layout(SharpEquations.Editing.MathNode! root, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options) -> SharpEquations.Rendering.MathLayout!
 static SharpEquations.Rendering.MathLayoutEngine.Layout(SharpEquations.Equation! equation, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options) -> SharpEquations.Rendering.MathLayout!
 static SharpEquations.Rendering.MathLayoutEngine.Layout(System.Xml.Linq.XElement! math, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options) -> SharpEquations.Rendering.MathLayout!
 static SharpEquations.Rendering.OpenType.FontFile.Parse(byte[]! data, int glyphCount = -1) -> SharpEquations.Rendering.OpenType.FontFile!
 static SharpEquations.Rendering.OpenType.GlyphOutlines.Create(System.Func<string!, byte[]?>! table) -> SharpEquations.Rendering.OpenType.GlyphOutlines?
-static SharpEquations.Rendering.OpenType.MathTable.Parse(byte[]! data) -> SharpEquations.Rendering.OpenType.MathTable!
 static SharpEquations.Rendering.OpenType.MathTable.Parse(System.ReadOnlySpan<byte> data) -> SharpEquations.Rendering.OpenType.MathTable!
+static SharpEquations.Rendering.OpenType.MathTable.Parse(byte[]! data) -> SharpEquations.Rendering.OpenType.MathTable!
+static SharpEquations.Rendering.OpenType.ScriptStyles.Parse(byte[]? gsub) -> SharpEquations.Rendering.OpenType.ScriptStyles?

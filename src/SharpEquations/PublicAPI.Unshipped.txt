@@ -1,1 +1,10 @@
 #nullable enable
+SharpEquations.EquationCommand
+SharpEquations.EquationCommand.Arguments.get -> int
+SharpEquations.EquationCommand.Name.get -> string!
+SharpEquations.EquationCommand.Symbol.get -> string!
+SharpEquations.EquationCommand.Text.get -> string!
+SharpEquations.EquationCommands
+override SharpEquations.EquationCommand.ToString() -> string!
+static SharpEquations.EquationCommands.Complete(string! prefix, SharpEquations.EquationFormat format, int max = 20) -> System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>!
+static SharpEquations.EquationCommands.Get(SharpEquations.EquationFormat format) -> System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>!

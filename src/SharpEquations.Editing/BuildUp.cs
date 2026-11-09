@@ -144,12 +144,26 @@ namespace SharpEquations.Editing
                 sb.Append(' ');
             AppendSeparated(sb, text);
 
-            if (!Equation.TryParse(sb.ToString(), format, new EquationOptions { Display = display }, out var equation) || equation == null)
+            // a line of an equation array (its row starts with maligngroup), where & is an alignment mark, is read as the
+            // line of an array of its own
+            var line = before.Count > 0 && before[0].Name == "maligngroup";
+            var source = sb.ToString();
+            if (line)
+                source = format == EquationFormat.LaTeX ? "\\begin{aligned}" + source + "\\end{aligned}" : "█(" + source + ")";
+            if (!Equation.TryParse(source, format, new EquationOptions { Display = display }, out var equation) || equation == null)
                 return null;
+
+            var elements = equation.ToMathML().Elements().ToList();
+            if (line)
+            {
+                if (elements.Count != 1 || elements[0].Elements().ToList() is not { Count: 1 } rows || rows[0].Elements().ToList() is not { Count: 1 } cells)
+                    return null;
+                elements = cells[0].Elements().ToList();
+            }
 
             var used = new bool[placeholders.Count];
             var nodes = new List<MathNode>();
-            foreach (var element in equation.ToMathML().Elements())
+            foreach (var element in elements)
             {
                 var node = Substitute(MathNode.FromMathML(element), placeholders, used);
                 if (node == null)
@@ -213,6 +227,15 @@ namespace SharpEquations.Editing
             {
                 AppendSeparated(sb, node.Text);
                 return;
+            }
+
+            switch (node.Name)
+            {
+                case "maligngroup":
+                    return;
+                case "malignmark":
+                    sb.Append('&');
+                    return;
             }
 
             if (node.IsToken && node.Attributes.Count == 0 && IsLiteral(node, format))

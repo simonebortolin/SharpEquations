@@ -6,7 +6,7 @@ as it is typed, and the content is read and written as MathML (`GetMath`/`SetMat
 SharpEquations is the core under it: it reads what is typed, gives the MathML, and writes the linear form back when a
 part of the equation is built down. The editor edits one equation (math only), not math zones in a text document.
 
-Phases 1 to 3 of the plan below are done, and phase 4 in part; the three projects are published as NuGet packages with
+Phases 1 to 5 of the plan below are done; the three projects are published as NuGet packages with
 the version of the core.
 
 ## What the user sees
@@ -45,6 +45,22 @@ The behaviour is the one of the equations of Word and of `RichEditBox` in math m
 - **Equation numbers**: `#(1)` at the end in UnicodeMath, `\tag{1}` in LaTeX, or `EquationNumber = "(1)"`: the number
   goes to the right edge of the line (or the left, with `side="left"`), with the equation in the middle of what is
   left, as in Word; the layout knows the line from `MathLayoutOptions.LineWidth`, which the controls set to their width.
+- **Lines**: Shift+Enter breaks the line at the caret, as in Word: the equation becomes an equation array (the
+  `█(...@...)` of UnicodeMath, `aligned` of LaTeX: a table of one column whose lines start with `maligngroup`), or gets a
+  line more; the lines line up at their first `&` (`malignmark`), and keep the display style. Backspace at the start of
+  a line and Delete at its end join it to its neighbour; Up and Down move between lines. A line is built up as the line
+  of an array, where `&` is an alignment mark.
+- **Tables and matrices**: `InsertTableRow`, `InsertTableColumn` (above or below, left or right), `DeleteTableRow`,
+  `DeleteTableColumn` on the table of the caret (the last row or column deleted takes the table); Tab and Shift+Tab go
+  through the cells.
+- **Completion**: after `\` and the start of a command, `CommandPrefix`, `GetCompletions` and `Complete` complete it from
+  the commands of the core (`EquationCommands`: the control words of UnicodeMath, the commands of LaTeX, each with its
+  symbol); a command with a symbol becomes the symbol, as Word's math autocorrect does, a LaTeX structure its text with
+  the caret in its first argument (`\frac{|}{}`).
+- **Floating bar** (`MathQuickBar`, `IsQuickBarEnabled`): under the equation, at the caret, it offers the completions of
+  the command being typed (Up and Down choose, Tab or Enter take, Esc closes), the structures that take the selection
+  (fraction, root, scripts, brackets, bar, box, build down), the commands of the table of the caret, and quick symbols
+  (`QuickSymbols`) in an empty slot. Its buttons do not take the focus.
 - **Structures from code**: `InsertStructure("mfrac")`, `InsertFences`, `InsertMatrix(2, 2, "(", ")")`,
   `InsertTemplate(node)`, with the selection in the first slot and the caret in the first empty one, as the buttons of
   the equation tools of Word; Tab and Shift+Tab move through the cells of a table.
@@ -195,8 +211,12 @@ public class MathView : Control                             // read-only: Equati
 - **Fonts**: `MathFonts.Default` is Cambria Math on Windows, where it is a font of the system, and Libertinus Math
   (SIL Open Font License, embedded as an Avalonia resource) elsewhere or when Cambria Math is missing; `MathFontFamily`
   takes any family with a MATH table. Characters the font lacks come from a fallback font of the system.
-  `AvaloniaMathFont` reads the font file once (`TryGetStream`): the memory of `IFontMemory.TryGetTable` does not stay
-  valid after a garbage collection.
+  `AvaloniaMathFont` reads the font file once (`TryGetStream`) and takes from it the glyphs, advances, ink boxes, MATH
+  and GSUB tables; it asks Avalonia for its glyph typeface only to draw, each time, after registering the embedded font
+  with the current font manager: a glyph typeface held for long can be released with its font manager (a headless
+  test session gives each test a new one), and its memory given to another font.
+- **Script variants**: in scripts the glyphs are the `ssty` variants of the GSUB table of the font (`ScriptStyles`), drawn
+  for the sizes of scripts and of scripts of scripts.
 - **Text input** comes from `TextInput`, so that IMEs and dead keys work, and a `TextInputMethodClient` gives the IME the
   rectangle of the caret.
 - The `Equation` property is set on every change of the content, with the runs built up where they parse.
@@ -209,12 +229,13 @@ public class MathView : Control                             // read-only: Equati
 | 2 | `SharpEquations.Editing`: nodes ↔ MathML, caret, navigation, selection, build up and down, undo | done: 100% of the corpus loads and round-trips through linear text, 93% typed a character at a time |
 | 3 | `MathEditBox`: input, caret, hit testing, selection, linear view, clipboard, demo | done: headless tests of typing, keys, mouse, MathML in and out |
 | 4 | Accessibility (`MathEditBoxAutomationPeer`: an edit control whose value is the equation in UnicodeMath), Tab in tables, equation numbers, copy in any format, structures from code, NuGet packages | done |
-| 5 | Autocomplete of control words (with the public list of the core), new rows and columns of tables, the `ssty` variants of scripts, line breaks of long equations | to do |
+| 5 | The commands of the core in its public API (`EquationCommands`) and their completion, the floating bar, lines (equation arrays aligned at `&`), rows and columns of tables, the `ssty` variants of scripts | done |
+| 6 | Automatic line breaks of long equations (at the relations and the operators, as Word), templates of the floating bar chosen by the application | to do |
 
 ## Open points
 
-- **Public API of the core** (for its next major version): the list of the control words of UnicodeMath and of the
-  LaTeX commands with their symbols (`ControlWords`, `LaTeXSymbols`, internal today), for the autocomplete of phase 4.
+- **Public API of the core**: `EquationCommand` and `EquationCommands` are new public API of `SharpEquations` (in
+  `PublicAPI.Unshipped.txt`), which a minor version brings.
 - **Packages**: the CI packs the three projects with the core, with its version, and publishes them with it; their
   public API is tracked in `PublicAPI.Shipped.txt`/`PublicAPI.Unshipped.txt`, as that of the core.
 - **Reference images**: the rendering is tested by the geometry of the layout, not by pictures; the tests write

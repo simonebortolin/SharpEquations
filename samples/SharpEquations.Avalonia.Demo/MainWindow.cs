@@ -30,6 +30,7 @@ namespace SharpEquations.Avalonia.Demo
             ("Limit", "lim┬(x→0) sin⁡x/x=1"),
             ("Maxwell", "∇×𝐁=μ_0 (𝐉+ε_0 ∂𝐄/∂t)"),
             ("Numbered", "E=mc^2#(1)"),
+            ("Aligned lines", "█(f(x)&=(x+1)^2@&=x^2+2x+1)"),
         };
 
         private readonly MathEditBox editor;
@@ -76,7 +77,8 @@ namespace SharpEquations.Avalonia.Demo
                     {
                         Text = "Type UnicodeMath (a/b, x^2, \\sqrt(x), \\alpha, \\sum_(i=1)^n, (■(a&b@c&d))) or LaTeX (\\frac{a}{b}, \\sqrt{x}) and a space or an operator "
                             + "builds it up. Arrows move through the slots, Tab through the cells of a matrix; Backspace selects a structure, then deletes it; "
-                            + "Ctrl+Z undoes. #(1) at the end, or \\tag{1}, numbers the equation.",
+                            + "Ctrl+Z undoes. #(1) at the end, or \\tag{1}, numbers the equation; Shift+Enter starts a new line, & aligns the lines. "
+                            + "Type \\ and the start of a command: the floating bar completes it (Up, Down, Tab).",
                         TextWrapping = TextWrapping.Wrap,
                         Opacity = 0.7,
                     },
@@ -130,6 +132,9 @@ namespace SharpEquations.Avalonia.Demo
                     editor.FontSize = size.Value;
             };
 
+            var quickBar = new CheckBox { Content = "Quick bar", IsChecked = true };
+            quickBar.IsCheckedChanged += (_, _) => editor.IsQuickBarEnabled = quickBar.IsChecked == true;
+
             var examples = new ComboBox { PlaceholderText = "Examples", ItemsSource = Examples.Select(e => e.Name).ToList() };
             examples.SelectionChanged += (_, _) =>
             {
@@ -140,7 +145,7 @@ namespace SharpEquations.Avalonia.Demo
                 }
             };
 
-            return Row(Label("Input"), format, linear, display, Label("Font"), font, size, Label("Load"), examples);
+            return Row(Label("Input"), format, linear, display, quickBar, Label("Font"), font, size, Label("Load"), examples);
         }
 
         private StackPanel Structures()
@@ -180,7 +185,12 @@ namespace SharpEquations.Avalonia.Demo
                     }, new[] { new KeyValuePair<string, string>("columnalign", "left") }),
                     MathNode.Token("mo", string.Empty),
                 }))),
-                Tool("▭", "Box", () => editor.Editor.InsertStructure("menclose", new[] { new KeyValuePair<string, string>("notation", "box") })));
+                Tool("▭", "Box", () => editor.Editor.InsertStructure("menclose", new[] { new KeyValuePair<string, string>("notation", "box") })),
+                Tool("↵", "New line (Shift+Enter)", () => editor.Editor.InsertLineBreak()),
+                Tool("+row", "Insert a row in the table", () => editor.Editor.InsertTableRow(), 50),
+                Tool("+col", "Insert a column in the table", () => editor.Editor.InsertTableColumn(), 50),
+                Tool("−row", "Delete the row of the table", () => editor.Editor.DeleteTableRow(), 50),
+                Tool("−col", "Delete the column of the table", () => editor.Editor.DeleteTableColumn(), 50));
         }
 
         private StackPanel Symbols()

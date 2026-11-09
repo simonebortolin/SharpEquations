@@ -48,6 +48,12 @@ namespace SharpEquations.Rendering
         /// <summary>The ink box of a glyph, in design units.</summary>
         GlyphBounds GetBounds(ushort glyph);
 
+        /// <summary>
+        /// The variant of a glyph drawn for a script level (1 for scripts, 2 for scripts of scripts): the <c>ssty</c>
+        /// feature of a math font (<see cref="ScriptStyles"/>); the glyph itself without one.
+        /// </summary>
+        ushort GetScriptVariant(ushort glyph, int scriptLevel);
+
         /// <summary>A font for a code point that the font has no glyph for, or null.</summary>
         IMathFont? GetFallback(int codePoint);
     }

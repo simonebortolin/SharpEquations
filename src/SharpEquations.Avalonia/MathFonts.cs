@@ -13,7 +13,7 @@ namespace SharpEquations.Avalonia
     {
         private const string CollectionKey = "fonts:SharpEquations";
         private static readonly object Gate = new object();
-        private static bool registered;
+        private static FontManager? registeredOn;
         private static AvaloniaMathFont? defaultFont;
 
         /// <summary>The family of the embedded Libertinus Math.</summary>
@@ -50,9 +50,21 @@ namespace SharpEquations.Avalonia
         public static bool TryGet(FontFamily family, out AvaloniaMathFont? font)
         {
             font = null;
-            if (!FontManager.Current.TryGetGlyphTypeface(new Typeface(family), out var glyphs))
+            var typeface = new Typeface(family);
+            if (!FontManager.Current.TryGetGlyphTypeface(typeface, out var glyphs)
+                || !string.Equals(glyphs.FamilyName, family.FamilyNames[0], StringComparison.OrdinalIgnoreCase) && !family.Name.Contains('#'))
+            {
                 return false;
-            var candidate = new AvaloniaMathFont(glyphs);
+            }
+            AvaloniaMathFont candidate;
+            try
+            {
+                candidate = new AvaloniaMathFont(typeface);
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
             if (candidate.Math == null)
                 return false;
             font = candidate;
@@ -62,16 +74,21 @@ namespace SharpEquations.Avalonia
         /// <summary>The math font of a family, or the default one if the family is null or not a math font.</summary>
         public static AvaloniaMathFont Get(FontFamily? family) => family != null && TryGet(family, out var font) ? font! : Default;
 
-        private static void Register()
+        /// <summary>
+        /// Registers the embedded fonts with the font manager of Avalonia, again when it is another one (an application
+        /// that starts Avalonia again, a test session that isolates each test).
+        /// </summary>
+        internal static void Register()
         {
             lock (Gate)
             {
-                if (registered)
+                var manager = FontManager.Current;
+                if (ReferenceEquals(registeredOn, manager))
                     return;
-                FontManager.Current.AddFontCollection(new EmbeddedFontCollection(
+                manager.AddFontCollection(new EmbeddedFontCollection(
                     new Uri(CollectionKey, UriKind.Absolute),
                     new Uri("avares://SharpEquations.Avalonia/Assets/Fonts", UriKind.Absolute)));
-                registered = true;
+                registeredOn = manager;
             }
         }
     }

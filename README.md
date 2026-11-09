@@ -69,7 +69,13 @@ editor.ViewMode = MathViewMode.Linear;   // the equation as one line of UnicodeM
 editor.EquationNumber = "(1)";           // at the right of the line, as #(1) or \tag{1}
 string latex = editor.GetSelectedText(EquationFormat.LaTeX)!;
 editor.CopyTextFormat = EquationFormat.MathML;   // Ctrl+C pastes as an equation into Word
+editor.Editor.InsertLineBreak();         // Shift+Enter: lines aligned at &
+editor.Editor.InsertTableRow();          // and columns, in the matrix of the caret
 ```
+
+Typing `\` and the start of a command opens a floating bar at the caret with its completions
+(`EquationCommands.Complete("al", EquationFormat.UnicodeMath)` gives them from the core); the bar also offers structures
+for the selection, the commands of a table and quick symbols.
 
 The packages are `SharpEquations.Avalonia` (the controls), `SharpEquations.Rendering` and `SharpEquations.Editing`, with
 the version of `SharpEquations`.

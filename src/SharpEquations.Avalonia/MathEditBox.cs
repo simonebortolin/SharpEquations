@@ -1,12 +1,14 @@
 namespace SharpEquations.Avalonia
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Runtime.InteropServices;
     using System.Threading.Tasks;
     using global::Avalonia;
     using global::Avalonia.Automation.Peers;
     using global::Avalonia.Controls;
+    using global::Avalonia.Controls.Primitives;
     using global::Avalonia.Controls.Documents;
     using global::Avalonia.Data;
     using global::Avalonia.Input;
@@ -94,11 +96,17 @@ namespace SharpEquations.Avalonia
         public static readonly StyledProperty<EquationFormat?> CopyTextFormatProperty =
             AvaloniaProperty.Register<MathEditBox, EquationFormat?>(nameof(CopyTextFormat), validate: f => f != EquationFormat.Mtef);
 
+        /// <summary>Whether the floating bar shows completions, structures, table commands and symbols at the caret.</summary>
+        public static readonly StyledProperty<bool> IsQuickBarEnabledProperty =
+            AvaloniaProperty.Register<MathEditBox, bool>(nameof(IsQuickBarEnabled), true);
+
         /// <summary>The gesture that switches between the built up and the linear view.</summary>
         public static readonly StyledProperty<KeyGesture?> ToggleViewModeGestureProperty =
             AvaloniaProperty.Register<MathEditBox, KeyGesture?>(nameof(ToggleViewModeGesture), new KeyGesture(Key.L, KeyModifiers.Control | KeyModifiers.Shift));
 
         private readonly DispatcherTimer blink;
+        private readonly Popup popup;
+        private string? dismissedPrefix;
         private readonly InputClient inputClient;
         private MathDrawing? drawing;
         private bool caretVisible = true;
@@ -121,6 +129,17 @@ namespace SharpEquations.Avalonia
             Editor.ContentChanged += OnEditorContentChanged;
             inputClient = new InputClient(this);
             TextInputMethodClientRequested += (_, e) => e.Client = inputClient;
+            QuickBar = new MathQuickBar(this);
+            popup = new Popup
+            {
+                Child = QuickBar,
+                PlacementTarget = this,
+                Placement = PlacementMode.Bottom,
+                IsLightDismissEnabled = false,
+                Focusable = false,
+            };
+            LogicalChildren.Add(popup);
+            VisualChildren.Add(popup);
             blink = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(530) };
             blink.Tick += (_, _) =>
             {
@@ -253,6 +272,22 @@ namespace SharpEquations.Avalonia
             set => SetValue(ToggleViewModeGestureProperty, value);
         }
 
+        /// <summary>Whether the floating bar (<see cref="QuickBar"/>) shows at the caret.</summary>
+        public bool IsQuickBarEnabled
+        {
+            get => GetValue(IsQuickBarEnabledProperty);
+            set => SetValue(IsQuickBarEnabledProperty, value);
+        }
+
+        /// <summary>The floating bar at the caret: completions of commands, structures for the selection, table commands, symbols.</summary>
+        public MathQuickBar QuickBar { get; }
+
+        /// <summary>Whether the floating bar is open.</summary>
+        public bool IsQuickBarOpen => popup.IsOpen;
+
+        /// <summary>The symbols the floating bar offers in an empty slot.</summary>
+        public IList<string> QuickSymbols { get; } = new List<string> { "α", "β", "θ", "π", "∞", "±", "×", "≤", "≥", "≠", "≈", "→", "∈", "∂", "∑", "∫" };
+
         /// <summary>The format of the text copied to the clipboard; null for the input format.</summary>
         public EquationFormat? CopyTextFormat
         {
@@ -262,6 +297,14 @@ namespace SharpEquations.Avalonia
 
         /// <summary>The layout of the equation, after a measure.</summary>
         public MathLayout? Layout => drawing?.Layout;
+
+        /// <summary>Where the layout is drawn: inside the border and the padding, in the middle of the height.</summary>
+        private Point ContentOrigin()
+        {
+            var origin = Origin;
+            var height = drawing?.Layout.Height ?? 0;
+            return new Point(origin.X, origin.Y + Math.Max(0, (Bounds.Height - Padding.Top - Padding.Bottom - BorderThickness * 2 - height) / 2));
+        }
 
         private Point Origin
         {
@@ -390,6 +433,11 @@ namespace SharpEquations.Avalonia
                     blink.Stop();
                 }
                 InvalidateVisual();
+                UpdateQuickBar();
+            }
+            else if (change.Property == IsQuickBarEnabledProperty)
+            {
+                UpdateQuickBar();
             }
         }
 
@@ -416,10 +464,8 @@ namespace SharpEquations.Avalonia
             if (drawing == null)
                 return;
 
-            var origin = Origin;
+            var origin = ContentOrigin();
             var layout = drawing.Layout;
-            var offsetY = Math.Max(0, (Bounds.Height - Padding.Top - Padding.Bottom - BorderThickness * 2 - layout.Height) / 2);
-            origin = new Point(origin.X, origin.Y + offsetY);
 
             if (Editor.Selection is { } selection && SelectionBrush != null)
             {
@@ -466,6 +512,31 @@ namespace SharpEquations.Avalonia
                 return;
 
             var shift = (e.KeyModifiers & KeyModifiers.Shift) != 0;
+            if (popup.IsOpen && QuickBar.Mode == MathQuickBarMode.Completions && e.KeyModifiers == KeyModifiers.None)
+            {
+                switch (e.Key)
+                {
+                    case Key.Down:
+                        QuickBar.SelectedIndex++;
+                        e.Handled = true;
+                        return;
+                    case Key.Up:
+                        QuickBar.SelectedIndex--;
+                        e.Handled = true;
+                        return;
+                    case Key.Tab or Key.Enter:
+                        e.Handled = QuickBar.AcceptCompletion();
+                        if (e.Handled)
+                            return;
+                        break;
+                    case Key.Escape:
+                        dismissedPrefix = Editor.CommandPrefix;
+                        UpdateQuickBar();
+                        e.Handled = true;
+                        return;
+                }
+            }
+
             var hotkeys = Application.Current?.PlatformSettings?.HotkeyConfiguration;
             bool Matches(System.Collections.Generic.List<KeyGesture>? gestures, Key key) =>
                 gestures != null ? gestures.Any(g => g.Matches(e)) : e.Key == key && (e.KeyModifiers & KeyModifiers.Control) != 0;
@@ -515,6 +586,9 @@ namespace SharpEquations.Avalonia
                         break;
                     case Key.Tab when (e.KeyModifiers & ~KeyModifiers.Shift) == 0 && Editor.MoveToNextCell(shift):
                         break;
+                    case Key.Enter when !IsReadOnly && shift:
+                        Editor.InsertLineBreak();
+                        break;
                     case Key.Enter when !IsReadOnly:
                         Editor.BuildUpAll();
                         break;
@@ -562,9 +636,8 @@ namespace SharpEquations.Avalonia
         {
             if (drawing == null)
                 return null;
-            var origin = Origin;
-            var offsetY = Math.Max(0, (Bounds.Height - Padding.Top - Padding.Bottom - BorderThickness * 2 - drawing.Layout.Height) / 2);
-            return drawing.Layout.HitTest(point.X - origin.X, point.Y - origin.Y - offsetY);
+            var origin = ContentOrigin();
+            return drawing.Layout.HitTest(point.X - origin.X, point.Y - origin.Y);
         }
 
         private void OnEditorChanged(object? sender, EventArgs e)
@@ -573,6 +646,70 @@ namespace SharpEquations.Avalonia
             InvalidateMeasure();
             InvalidateVisual();
             inputClient.RaiseCursorChanged();
+            Dispatcher.UIThread.Post(UpdateQuickBar, DispatcherPriority.Background);
+        }
+
+        /// <summary>Opens the floating bar at the caret with what fits the place of the caret, or closes it.</summary>
+        private void UpdateQuickBar()
+        {
+            var mode = MathQuickBarMode.Hidden;
+            IReadOnlyList<EquationCommand> completions = Array.Empty<EquationCommand>();
+            if (IsQuickBarEnabled && IsFocused && !IsReadOnly && !Editor.IsLinear && drawing != null)
+            {
+                var prefix = Editor.CommandPrefix;
+                if (prefix != dismissedPrefix)
+                    dismissedPrefix = null;
+                if (prefix != null && prefix.Length > 1 && dismissedPrefix == null && Editor.GetCompletions(8) is { Count: > 0 } found)
+                {
+                    mode = MathQuickBarMode.Completions;
+                    completions = found;
+                }
+                else if (prefix == null && Editor.Selection != null)
+                {
+                    mode = MathQuickBarMode.Selection;
+                }
+                else if (prefix == null && Editor.IsInTable)
+                {
+                    mode = MathQuickBarMode.Table;
+                }
+                else if (prefix == null && IsInEmptySlot())
+                {
+                    mode = MathQuickBarMode.Symbols;
+                }
+            }
+
+            if (mode == MathQuickBarMode.Hidden)
+            {
+                popup.IsOpen = false;
+                QuickBar.Show(mode, completions);
+                return;
+            }
+
+            QuickBar.Show(mode, completions);
+            var layout = drawing!.Layout;
+            var rects = Editor.Selection is { } selection ? layout.GetSelectionRects(selection) : Array.Empty<MathRect>();
+            var anchor = rects.Count > 0 && rects[0].Width > 0 ? rects[0] : layout.GetCaretRect(Editor.Caret) ?? default;
+            var origin = ContentOrigin();
+            // under the whole equation, where the caret is, so that the bar covers nothing of it
+            popup.PlacementRect = new Rect(anchor.X + origin.X, origin.Y, Math.Max(1, anchor.Width), Math.Max(layout.Height, anchor.Y + anchor.Height) + Padding.Bottom);
+            popup.IsOpen = true;
+        }
+
+        private bool IsInEmptySlot()
+        {
+            var caret = Editor.Caret;
+            return caret.Path.Count > 1 && Editor.Root is { } root && Node(root, caret.Path) is { IsRow: true, Children.Count: 0 };
+
+            static MathNode? Node(MathNode node, IReadOnlyList<int> path)
+            {
+                foreach (var i in path)
+                {
+                    if (i >= node.Children.Count)
+                        return null;
+                    node = node.Children[i];
+                }
+                return node;
+            }
         }
 
         private void OnEditorContentChanged(object? sender, EventArgs e)
@@ -613,7 +750,7 @@ namespace SharpEquations.Avalonia
                 {
                     if (owner.Layout?.GetCaretRect(owner.Editor.Caret) is not { } caret)
                         return default;
-                    var origin = owner.Origin;
+                    var origin = owner.ContentOrigin();
                     return new Rect(caret.X + origin.X, caret.Y + origin.Y, 1, caret.Height);
                 }
             }

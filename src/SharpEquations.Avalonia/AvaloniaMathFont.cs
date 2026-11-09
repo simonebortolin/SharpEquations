@@ -4,53 +4,66 @@ namespace SharpEquations.Avalonia
     using System.Collections.Generic;
     using System.IO;
     using global::Avalonia.Media;
-    using global::Avalonia.Media.Fonts;
     using SharpEquations.Rendering;
     using SharpEquations.Rendering.OpenType;
 
-    /// <summary>A font of Avalonia for the layout of equations: its glyphs, metrics and OpenType MATH table.</summary>
+    /// <summary>
+    /// A font of Avalonia for the layout of equations. Its glyphs, advances, ink boxes, MATH table and script variants
+    /// are read from a copy of the font file, once; the glyph typeface of Avalonia is asked for only to draw, each time
+    /// (<see cref="GetGlyphTypeface"/>), since one held for long can be released by Avalonia, its memory given to another
+    /// font.
+    /// </summary>
     public sealed class AvaloniaMathFont : IMathFont
     {
-        private readonly Dictionary<ushort, double> advances = new Dictionary<ushort, double>();
         private readonly Dictionary<string, AvaloniaMathFont?> fallbacks = new Dictionary<string, AvaloniaMathFont?>(StringComparer.Ordinal);
+        private readonly FontFile file;
         private readonly Lazy<MathTable?> math;
         private readonly Lazy<GlyphOutlines?> outlines;
-        private readonly Lazy<FontFile?> file;
+        private readonly Lazy<ScriptStyles?> scriptStyles;
+        private readonly string familyName;
 
-        /// <summary>A font of a glyph typeface.</summary>
-        public AvaloniaMathFont(GlyphTypeface typeface)
+        /// <summary>The font of a typeface.</summary>
+        /// <exception cref="ArgumentException">The typeface is not installed, or its font file cannot be read.</exception>
+        public AvaloniaMathFont(Typeface typeface)
         {
-            Typeface = typeface ?? throw new ArgumentNullException(nameof(typeface));
-            file = new Lazy<FontFile?>(ReadFile);
-            math = new Lazy<MathTable?>(ReadMath);
-            outlines = new Lazy<GlyphOutlines?>(() => GlyphOutlines.Create(Table));
+            Typeface = typeface;
+            if (!FontManager.Current.TryGetGlyphTypeface(typeface, out var glyphs) || ReadFile(glyphs) is not { } read)
+                throw new ArgumentException("The font of the typeface cannot be read: " + typeface.FontFamily, nameof(typeface));
+            file = read;
+            familyName = glyphs.FamilyName;
+            UnitsPerEm = file.UnitsPerEm;
+            math = new Lazy<MathTable?>(() => file.Table("MATH") is { } table ? TryParse(table) : null);
+            scriptStyles = new Lazy<ScriptStyles?>(() => ScriptStyles.Parse(file.Table("GSUB")));
+            outlines = new Lazy<GlyphOutlines?>(() => GlyphOutlines.Create(file.Table));
         }
 
-        /// <summary>The glyph typeface.</summary>
-        public GlyphTypeface Typeface { get; }
+        /// <summary>The typeface.</summary>
+        public Typeface Typeface { get; }
 
         /// <inheritdoc/>
-        public double UnitsPerEm => Typeface.Metrics.DesignEmHeight;
+        public double UnitsPerEm { get; }
 
         /// <inheritdoc/>
         public MathTable? Math => math.Value;
 
-        /// <inheritdoc/>
-        public bool TryGetGlyph(int codePoint, out ushort glyph) => Typeface.CharacterToGlyphMap.TryGetGlyph(codePoint, out glyph) && glyph != 0;
-
-        /// <inheritdoc/>
-        public double GetAdvance(ushort glyph)
+        /// <summary>The glyph typeface of Avalonia to draw with, as Avalonia has it now; null if it no longer has the font.</summary>
+        public GlyphTypeface? GetGlyphTypeface()
         {
-            if (!advances.TryGetValue(glyph, out var advance))
-            {
-                advance = Typeface.TryGetHorizontalGlyphAdvance(glyph, out var a) ? a : 0;
-                advances[glyph] = advance;
-            }
-            return advance;
+            MathFonts.Register();
+            return FontManager.Current.TryGetGlyphTypeface(Typeface, out var glyphs) ? glyphs : null;
         }
 
         /// <inheritdoc/>
+        public bool TryGetGlyph(int codePoint, out ushort glyph) => file.TryGetGlyph(codePoint, out glyph);
+
+        /// <inheritdoc/>
+        public double GetAdvance(ushort glyph) => file.Advance(glyph);
+
+        /// <inheritdoc/>
         public GlyphBounds GetBounds(ushort glyph) => outlines.Value?.Bounds(glyph) ?? default;
+
+        /// <inheritdoc/>
+        public ushort GetScriptVariant(ushort glyph, int scriptLevel) => scriptStyles.Value?.Variant(glyph, scriptLevel) ?? glyph;
 
         /// <inheritdoc/>
         public IMathFont? GetFallback(int codePoint)
@@ -58,46 +71,28 @@ namespace SharpEquations.Avalonia
             if (!FontManager.Current.TryMatchCharacter(codePoint, FontStyle.Normal, FontWeight.Normal, FontStretch.Normal, null, null, out var typeface))
                 return null;
             var key = typeface.FontFamily.Name;
-            if (!fallbacks.TryGetValue(key, out var font))
+            lock (fallbacks)
             {
-                font = FontManager.Current.TryGetGlyphTypeface(typeface, out var glyphs) && glyphs.FamilyName != Typeface.FamilyName
-                    ? new AvaloniaMathFont(glyphs)
-                    : null;
-                fallbacks[key] = font;
-            }
-            return font;
-        }
-
-        /// <summary>
-        /// A table of the font, from a copy of the font file: the memory of the tables that Avalonia gives is not valid
-        /// for long. The ink boxes come from the outlines of the font rather than from the rasterizer, whose bounds of a
-        /// glyph run can be empty (and the metrics of Avalonia are, for CFF outlines).
-        /// </summary>
-        private byte[]? Table(string tag) => file.Value?.Table(tag);
-
-        private FontFile? ReadFile()
-        {
-            if (!Typeface.PlatformTypeface.TryGetStream(out var stream) || stream == null)
-                return null;
-            using (stream)
-            {
-                using var copy = new MemoryStream();
-                stream.CopyTo(copy);
-                try
+                if (!fallbacks.TryGetValue(key, out var font))
                 {
-                    return FontFile.Parse(copy.ToArray(), Typeface.GlyphCount);
+                    try
+                    {
+                        font = new AvaloniaMathFont(typeface);
+                        if (font.familyName == familyName)
+                            font = null;
+                    }
+                    catch (ArgumentException)
+                    {
+                        font = null;
+                    }
+                    fallbacks[key] = font;
                 }
-                catch (FormatException)
-                {
-                    return null;
-                }
+                return font;
             }
         }
 
-        private MathTable? ReadMath()
+        private static MathTable? TryParse(byte[] table)
         {
-            if (Table("MATH") is not { } table)
-                return null;
             try
             {
                 return MathTable.Parse(table);
@@ -105,6 +100,25 @@ namespace SharpEquations.Avalonia
             catch (FormatException)
             {
                 return null;
+            }
+        }
+
+        private static FontFile? ReadFile(GlyphTypeface glyphs)
+        {
+            if (!glyphs.PlatformTypeface.TryGetStream(out var stream) || stream == null)
+                return null;
+            using (stream)
+            {
+                using var copy = new MemoryStream();
+                stream.CopyTo(copy);
+                try
+                {
+                    return FontFile.Parse(copy.ToArray(), glyphs.GlyphCount);
+                }
+                catch (FormatException)
+                {
+                    return null;
+                }
             }
         }
     }
