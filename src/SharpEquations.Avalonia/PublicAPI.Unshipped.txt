@@ -13,6 +13,7 @@ SharpEquations.Avalonia.AvaloniaMathFont.UnitsPerEm.get -> double
 SharpEquations.Avalonia.EquationChangedEventArgs
 SharpEquations.Avalonia.EquationChangedEventArgs.Equation.get -> SharpEquations.Equation?
 SharpEquations.Avalonia.EquationChangedEventArgs.EquationChangedEventArgs(SharpEquations.Equation? equation) -> void
+SharpEquations.Avalonia.MathClipboard
 SharpEquations.Avalonia.MathCopyingEventArgs
 SharpEquations.Avalonia.MathCopyingEventArgs.Cancel.get -> bool
 SharpEquations.Avalonia.MathCopyingEventArgs.Cancel.set -> void
@@ -128,7 +129,9 @@ override SharpEquations.Avalonia.MathEditBoxAutomationPeer.GetNameCore() -> stri
 override SharpEquations.Avalonia.MathView.MeasureOverride(Avalonia.Size availableSize) -> Avalonia.Size
 override SharpEquations.Avalonia.MathView.OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs! e) -> void
 override SharpEquations.Avalonia.MathView.Render(Avalonia.Media.DrawingContext! context) -> void
-static SharpEquations.Avalonia.MathEditBox.MathMLClipboardFormat.get -> Avalonia.Input.DataFormat<string!>!
+static SharpEquations.Avalonia.MathClipboard.Decode(byte[]! data) -> string!
+static SharpEquations.Avalonia.MathClipboard.Encode(string! mathML) -> byte[]!
+static SharpEquations.Avalonia.MathEditBox.MathMLClipboardFormat.get -> Avalonia.Input.DataFormat<byte[]!>!
 static SharpEquations.Avalonia.MathFonts.Default.get -> SharpEquations.Avalonia.AvaloniaMathFont!
 static SharpEquations.Avalonia.MathFonts.Get(Avalonia.Media.FontFamily? family) -> SharpEquations.Avalonia.AvaloniaMathFont!
 static SharpEquations.Avalonia.MathFonts.LibertinusMath.get -> Avalonia.Media.FontFamily!

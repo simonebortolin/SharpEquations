@@ -244,8 +244,9 @@ namespace SharpEquations.Editing
         }
 
         /// <summary>
-        /// Pastes text: an equation in the format inserted as nodes, or the text as a run if it does not parse. Returns
-        /// whether the text was read as an equation.
+        /// Pastes text: an equation in the format inserted as nodes, or, for UnicodeMath and LaTeX, the text as a run if it
+        /// does not parse; MathML or OMML that does not parse inserts nothing. Returns whether the text was read as an
+        /// equation.
         /// </summary>
         public bool Paste(string text, EquationFormat format)
         {
@@ -256,6 +257,10 @@ namespace SharpEquations.Editing
                 InsertNodes(FromEquation(equation).Children[0].Children);
                 return true;
             }
+
+            // markup that does not read is not text to type
+            if (format is not (EquationFormat.UnicodeMath or EquationFormat.LaTeX))
+                return false;
 
             PushUndo();
             if (Selection != null)

@@ -35,10 +35,11 @@ The behaviour is the one of the equations of Word and of `RichEditBox` in math m
   paste, undo... are those of the platform (`PlatformHotkeyConfiguration`).
 - **Mouse**: a click places the caret at the nearest position of the deepest row under the pointer; a drag selects.
 - **Clipboard**: copy puts the selection as text in `CopyTextFormat` (the input format by default; MathML pastes as an
-  equation into Word) and as MathML (`MathML` on Windows, `application/mathml+xml` elsewhere); a handler of `Copying`
+  equation into Word) and as MathML (`MathML` on Windows, `application/mathml+xml` elsewhere), as UTF-8 bytes, as Word writes and reads
+  that format (`MathClipboard` decodes UTF-8, or UTF-16 with its byte order mark); a handler of `Copying`
   can add formats or cancel; `GetSelectedText(format)` gives the selection in any format (UnicodeMath, LaTeX, MathML,
   OMML) without the clipboard. Paste reads MathML, then the text in the input format or as MathML, and inserts plain
-  text as a run when it does not parse.
+  text as a run when it does not parse; MathML that does not parse inserts nothing.
 - **Input**: one format at a time, UnicodeMath or LaTeX, switched at any moment (what is built up stays). UnicodeMath
   already reads the TeX control words of Word (`\alpha`, `\sqrt`, `\sum`); a LaTeX control word followed by a space
   waits for its argument when it has one (`\mathring a`), and is built up when it is complete (`\alpha␣`).

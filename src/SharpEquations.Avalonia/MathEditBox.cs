@@ -355,7 +355,7 @@ namespace SharpEquations.Avalonia
             var item = new DataTransferItem();
             var format = CopyTextFormat ?? Editor.InputFormat;
             item.SetText(format is EquationFormat.UnicodeMath or EquationFormat.LaTeX ? Editor.GetSelectedText(format)! : equation.ToString(format));
-            item.Set(MathMLClipboardFormat, equation.ToString(EquationFormat.MathML));
+            item.Set(MathMLClipboardFormat, MathClipboard.Encode(equation.ToString(EquationFormat.MathML)));
             var args = new MathCopyingEventArgs(equation, item);
             Copying?.Invoke(this, args);
             if (args.Cancel)
@@ -380,8 +380,8 @@ namespace SharpEquations.Avalonia
             if (IsReadOnly || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
                 return;
             var formats = await clipboard.GetDataFormatsAsync().ConfigureAwait(true);
-            if (formats.Contains(MathMLClipboardFormat) && await clipboard.TryGetValueAsync(MathMLClipboardFormat).ConfigureAwait(true) is { Length: > 0 } mathML
-                && Editor.Paste(mathML, EquationFormat.MathML))
+            if (formats.Contains(MathMLClipboardFormat) && await clipboard.TryGetValueAsync(MathMLClipboardFormat).ConfigureAwait(true) is { Length: > 0 } bytes
+                && Editor.Paste(MathClipboard.Decode(bytes), EquationFormat.MathML))
             {
                 return;
             }
@@ -394,9 +394,12 @@ namespace SharpEquations.Avalonia
                 Editor.Paste(text, Editor.InputFormat);
         }
 
-        /// <summary>The format of MathML on the clipboard: <c>MathML</c> on Windows (which Word reads), <c>application/mathml+xml</c> elsewhere.</summary>
-        public static DataFormat<string> MathMLClipboardFormat { get; } =
-            DataFormat.CreateStringPlatformFormat(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "MathML" : "application/mathml+xml");
+        /// <summary>
+        /// The format of MathML on the clipboard, as bytes (<see cref="MathClipboard"/>): <c>MathML</c> on Windows, which
+        /// Word reads and writes as UTF-8, <c>application/mathml+xml</c> elsewhere.
+        /// </summary>
+        public static DataFormat<byte[]> MathMLClipboardFormat { get; } =
+            DataFormat.CreateBytesPlatformFormat(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "MathML" : "application/mathml+xml");
 
         /// <inheritdoc/>
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
