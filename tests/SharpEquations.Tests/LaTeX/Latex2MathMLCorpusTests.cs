@@ -198,12 +198,12 @@ namespace SharpEquations.Tests
 
         // LaTeX and amsmath that the reader does not read yet: an operator name with nothing after it (\lg, \liminf,
         // \injlim, \operatorname*{argmax}_x), which UnicodeMath reads as letters, and the names of amsmath that are two
-        // words (lim inf); \limits after \mathop; both scripts of \overbrace and \underbrace; \middle between empty
-        // delimiters and bars with nothing between them (|\,|); \newenvironment and ## in a macro
+        // words (lim inf); \middle between empty delimiters and bars with nothing between them (|\,|); \newenvironment
+        // and ## in a macro
         private static readonly HashSet<string> NotReadYet = new HashSet<string>
         {
             "lg", "liminf", "limsup", "injlim", "projlim", "varinjlim", "operatornamewithlimits", "operatorname-star",
-            "issue-125-4-limits", "overbrace-c", "underbrace-c", "middle", "spaces",
+            "middle", "spaces",
             "newenvironment-multi-node", "newcommand-escaped-hash",
         };
 
