@@ -126,6 +126,17 @@ namespace SharpEquations.Internal.LaTeX
             return found;
         }
 
+        // command → a character written as it, for the reader (several characters can share a command: ° and ∘ are \circ)
+        private static readonly Dictionary<string, string> Characters = Commands
+            .GroupBy(entry => entry.Value, entry => entry.Key)
+            .ToDictionary(group => group.Key, group => group.First());
+
+        /// <summary>The characters written as commands, with their commands (α: alpha, ≤: le).</summary>
+        public static IReadOnlyDictionary<string, string> CharacterCommands => Commands;
+
+        /// <summary>A character the command is written for (geqslant: ⩾).</summary>
+        public static bool TryGetCharacter(string command, out string ch) => Characters.TryGetValue(command, out ch);
+
         /// <summary>Whether a character is written as a command (α as \alpha, □ as \square).</summary>
         public static bool IsCommand(string ch) => Commands.ContainsKey(ch);
 
