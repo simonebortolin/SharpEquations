@@ -27,6 +27,7 @@ SharpEquations.Rendering.MathLayout.Baseline.get -> double
 SharpEquations.Rendering.MathLayout.GetCaretRect(SharpEquations.Editing.MathPosition! position) -> SharpEquations.Rendering.MathRect?
 SharpEquations.Rendering.MathLayout.GetCaretX(SharpEquations.Editing.MathPosition! position) -> double?
 SharpEquations.Rendering.MathLayout.GetNearestPosition(System.Collections.Generic.IReadOnlyList<int>! rowPath, double x) -> SharpEquations.Editing.MathPosition?
+SharpEquations.Rendering.MathLayout.GetPositionOnAdjacentLine(SharpEquations.Editing.MathPosition! position, int direction) -> SharpEquations.Editing.MathPosition?
 SharpEquations.Rendering.MathLayout.GetSelectionRects(SharpEquations.Editing.MathSelection! selection) -> System.Collections.Generic.IReadOnlyList<SharpEquations.Rendering.MathRect>!
 SharpEquations.Rendering.MathLayout.Glyphs.get -> System.Collections.Generic.IReadOnlyList<SharpEquations.Rendering.MathGlyph>!
 SharpEquations.Rendering.MathLayout.Height.get -> double
@@ -35,6 +36,8 @@ SharpEquations.Rendering.MathLayout.Shapes.get -> System.Collections.Generic.IRe
 SharpEquations.Rendering.MathLayout.Width.get -> double
 SharpEquations.Rendering.MathLayoutEngine
 SharpEquations.Rendering.MathLayoutOptions
+SharpEquations.Rendering.MathLayoutOptions.BreakLines.get -> bool
+SharpEquations.Rendering.MathLayoutOptions.BreakLines.set -> void
 SharpEquations.Rendering.MathLayoutOptions.Display.get -> bool
 SharpEquations.Rendering.MathLayoutOptions.Display.set -> void
 SharpEquations.Rendering.MathLayoutOptions.FontSize.get -> double

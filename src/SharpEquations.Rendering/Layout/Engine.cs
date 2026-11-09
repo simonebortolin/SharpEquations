@@ -271,6 +271,8 @@ namespace SharpEquations.Rendering.Layout
             box.Width = x;
             box.CaretX = caret;
             SetCaretExtent(box, style);
+            if (options.LineWidth is { } lineWidth && options.BreakLines && style.Display && x > lineWidth && path is { Length: 1 } && path[0] == 0 && n > 1)
+                BreakLines(row, box, boxes, lineWidth, style);
             if (n == 1)
             {
                 box.Italic = boxes[0].Italic;
@@ -284,6 +286,92 @@ namespace SharpEquations.Rendering.Layout
                 box.Italic = boxes[n - 1].Italic;
             }
             return box;
+        }
+
+        /// <summary>
+        /// Breaks the row of the equation into lines no wider than the line, as Word does: before a binary operator or a
+        /// relation, the last one that fits, with the lines after the first indented. A row with no such operator where
+        /// it should break stays too wide there.
+        /// </summary>
+        private void BreakLines(MathNode row, Box box, Box[] boxes, double lineWidth, Style style)
+        {
+            var n = boxes.Length;
+            var caret = box.CaretX!;
+            var placed = box.Children.ToList();
+            var indent = Math.Min(style.Size * 2, lineWidth / 3);
+
+            var starts = new List<int> { 0 };
+            var lastBreak = -1;
+            for (var i = 1; i < n; i++)
+            {
+                if (IsBreakPoint(row, i))
+                    lastBreak = i;
+                var start = starts[starts.Count - 1];
+                var available = starts.Count == 1 ? lineWidth : lineWidth - indent;
+                if (caret[i + 1] - caret[start] > available && lastBreak > start)
+                {
+                    starts.Add(lastBreak);
+                    lastBreak = -1;
+                }
+            }
+            if (starts.Count == 1)
+                return;
+
+            var lines = starts.Count;
+            var caretLine = new int[n + 1];
+            var height = new double[lines];
+            var depth = new double[lines];
+            var right = new double[lines];
+            var offset = new double[lines];
+            for (var k = 0; k < lines; k++)
+            {
+                var from = starts[k];
+                var to = k + 1 < lines ? starts[k + 1] : n;
+                offset[k] = (k == 0 ? 0 : indent) - caret[from];
+                for (var i = from; i < to; i++)
+                {
+                    caretLine[i] = k;
+                    height[k] = Math.Max(height[k], boxes[i].Height);
+                    depth[k] = Math.Max(depth[k], boxes[i].Depth);
+                }
+                right[k] = caret[to] + offset[k];
+                height[k] = Math.Max(height[k], style.Size * 0.75);
+                depth[k] = Math.Max(depth[k], style.Size * 0.22);
+            }
+            caretLine[n] = lines - 1;
+
+            var gap = Math.Max(C(MathConstant.MathLeading, style), style.Size * 0.25);
+            var shift = new double[lines];
+            for (var k = 1; k < lines; k++)
+                shift[k] = shift[k - 1] - depth[k - 1] - gap - height[k];
+
+            box.Children.Clear();
+            for (var i = 0; i < n; i++)
+            {
+                var k = caretLine[i];
+                box.Add(placed[i].Box, placed[i].X + offset[k], shift[k]);
+            }
+            var newCaret = new double[n + 1];
+            for (var i = 0; i <= n; i++)
+                newCaret[i] = caret[i] + offset[caretLine[i]];
+            box.CaretX = newCaret;
+            box.Width = right.Max();
+            box.Height = height[0];
+            box.Depth = depth[lines - 1] - shift[lines - 1];
+            box.CaretHeight = height[0];
+            box.CaretDepth = box.Depth;
+            box.Lines = new RowLines(caretLine, shift, height, depth, right);
+        }
+
+        /// <summary>A place to break the row: before a binary operator or a relation that is not the first of the row.</summary>
+        private static bool IsBreakPoint(MathNode row, int i)
+        {
+            if (i == 0 || CoreOperator(row.Children[i]) is not { } op || op.Text.Length == 0)
+                return false;
+            if (op.Text is "\u2061" or "\u2062" or "\u2063" or "\u2064")
+                return false;
+            var entry = OperatorDictionary.Lookup(op.Text, FormOf(row, i, op));
+            return entry.LSpace >= 4 && !entry.Has(OperatorFlags.Fence) && !entry.Has(OperatorFlags.LargeOp);
         }
 
         private static void SetCaretExtent(Box box, Style style)

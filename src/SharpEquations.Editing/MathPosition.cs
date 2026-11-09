@@ -96,5 +96,11 @@ namespace SharpEquations.Editing
 
         /// <summary>The position in the row (or in a run of it) nearest to the horizontal coordinate.</summary>
         MathPosition? GetNearestPosition(IReadOnlyList<int> rowPath, double x);
+
+        /// <summary>
+        /// The position on the line above (direction -1) or below (+1) in the row broken into lines that holds the
+        /// position, nearest to its horizontal coordinate; null when that row is on one line or has no such line.
+        /// </summary>
+        MathPosition? GetPositionOnAdjacentLine(MathPosition position, int direction);
     }
 }

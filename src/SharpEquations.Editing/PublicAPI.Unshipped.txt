@@ -2,6 +2,7 @@
 SharpEquations.Editing.IMathGeometry
 SharpEquations.Editing.IMathGeometry.GetCaretX(SharpEquations.Editing.MathPosition! position) -> double?
 SharpEquations.Editing.IMathGeometry.GetNearestPosition(System.Collections.Generic.IReadOnlyList<int>! rowPath, double x) -> SharpEquations.Editing.MathPosition?
+SharpEquations.Editing.IMathGeometry.GetPositionOnAdjacentLine(SharpEquations.Editing.MathPosition! position, int direction) -> SharpEquations.Editing.MathPosition?
 SharpEquations.Editing.MathEditor
 SharpEquations.Editing.MathEditor.Anchor.get -> SharpEquations.Editing.MathPosition!
 SharpEquations.Editing.MathEditor.Backspace() -> void

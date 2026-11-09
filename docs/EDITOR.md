@@ -6,7 +6,7 @@ as it is typed, and the content is read and written as MathML (`GetMath`/`SetMat
 SharpEquations is the core under it: it reads what is typed, gives the MathML, and writes the linear form back when a
 part of the equation is built down. The editor edits one equation (math only), not math zones in a text document.
 
-Phases 1 to 5 of the plan below are done; the three projects are published as NuGet packages with
+Phases 1 to 6 of the plan below are done; the three projects are published as NuGet packages with
 the version of the core.
 
 ## What the user sees
@@ -50,6 +50,11 @@ The behaviour is the one of the equations of Word and of `RichEditBox` in math m
   line more; the lines line up at their first `&` (`malignmark`), and keep the display style. Backspace at the start of
   a line and Delete at its end join it to its neighbour; Up and Down move between lines. A line is built up as the line
   of an array, where `&` is an alignment mark.
+- **Automatic line breaks**: a display equation wider than its line (`MathLayoutOptions.LineWidth`, the width of the
+  control) breaks before its binary operators and relations, the last one that fits each line, as Word does; the lines
+  after the first are indented by 2 em, and stay one row for the editor: the caret, the selection (a rectangle a line),
+  clicks and Up and Down (`IMathGeometry.GetPositionOnAdjacentLine`) follow the lines. `BreakLines = false` keeps one
+  line.
 - **Tables and matrices**: `InsertTableRow`, `InsertTableColumn` (above or below, left or right), `DeleteTableRow`,
   `DeleteTableColumn` on the table of the caret (the last row or column deleted takes the table); Tab and Shift+Tab go
   through the cells.
@@ -230,7 +235,8 @@ public class MathView : Control                             // read-only: Equati
 | 3 | `MathEditBox`: input, caret, hit testing, selection, linear view, clipboard, demo | done: headless tests of typing, keys, mouse, MathML in and out |
 | 4 | Accessibility (`MathEditBoxAutomationPeer`: an edit control whose value is the equation in UnicodeMath), Tab in tables, equation numbers, copy in any format, structures from code, NuGet packages | done |
 | 5 | The commands of the core in its public API (`EquationCommands`) and their completion, the floating bar, lines (equation arrays aligned at `&`), rows and columns of tables, the `ssty` variants of scripts | done |
-| 6 | Automatic line breaks of long equations (at the relations and the operators, as Word), templates of the floating bar chosen by the application | to do |
+| 6 | Automatic line breaks of long display equations, before the operators and relations, as Word | done |
+| 7 | Templates of the floating bar chosen by the application, breaks inside brackets and fractions too wide for a line | to do |
 
 ## Open points
 

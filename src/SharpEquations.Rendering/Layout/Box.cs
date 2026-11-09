@@ -52,6 +52,12 @@ namespace SharpEquations.Rendering.Layout
 
         public double CaretDepth { get; set; }
 
+        /// <summary>
+        /// The lines of a row broken to the width of the line, or null for a row on one line: for each caret position,
+        /// its line; for each line, the shift of its baseline (y up), its height, its depth and the x of its end.
+        /// </summary>
+        public RowLines? Lines { get; set; }
+
         public void Add(Box box, double x, double shift) => Children.Add((box, x, shift));
 
         /// <summary>A box of one child, shifted.</summary>
@@ -71,6 +77,28 @@ namespace SharpEquations.Rendering.Layout
             box.Add(child, x, shift);
             return box;
         }
+    }
+
+    internal sealed class RowLines
+    {
+        public RowLines(int[] caretLine, double[] shift, double[] height, double[] depth, double[] right)
+        {
+            CaretLine = caretLine;
+            Shift = shift;
+            Height = height;
+            Depth = depth;
+            Right = right;
+        }
+
+        public int[] CaretLine { get; }
+
+        public double[] Shift { get; }
+
+        public double[] Height { get; }
+
+        public double[] Depth { get; }
+
+        public double[] Right { get; }
     }
 
     internal readonly struct GlyphItem

@@ -1169,7 +1169,12 @@ namespace SharpEquations.Editing
             while (target == null)
             {
                 if (MathTree.Owner(Root, current) is not { } owner)
+                {
+                    // no slot above or below: the line above or below, in an equation broken into lines
+                    if (geometry?.GetPositionOnAdjacentLine(caret, direction) is { } onLine && IsValid(onLine))
+                        Move(Canonical(onLine), extend);
                     return;
+                }
                 var relative = current.Skip(owner.Item.Length).ToArray();
                 if (MathSchema.Vertical(MathTree.Get(Root, owner.Item), relative, direction) is { } slot)
                 {

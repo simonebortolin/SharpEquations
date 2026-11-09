@@ -2,6 +2,7 @@ namespace SharpEquations.Rendering
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Xml.Linq;
     using SharpEquations.Editing;
     using SharpEquations.Rendering.Layout;
@@ -20,6 +21,12 @@ namespace SharpEquations.Rendering
         /// <c>mlabeledtr</c>) go to its right edge, as in Word, with the equation in the middle of what is left.
         /// </summary>
         public double? LineWidth { get; set; }
+
+        /// <summary>
+        /// Breaks a display equation wider than <see cref="LineWidth"/> into lines, before its binary operators and
+        /// relations, as Word does; true by default.
+        /// </summary>
+        public bool BreakLines { get; set; } = true;
 
         /// <summary>Draws a box in the empty slots, for an editor.</summary>
         public bool ShowPlaceholders { get; set; }
@@ -85,10 +92,28 @@ namespace SharpEquations.Rendering
 
             if (box.Path != null && box.CaretX != null)
             {
-                var caret = new double[box.CaretX.Length];
-                for (var i = 0; i < caret.Length; i++)
+                var count = box.CaretX.Length;
+                var caret = new double[count];
+                var top = new double[count];
+                var bottom = new double[count];
+                var line = new int[count];
+                for (var i = 0; i < count; i++)
+                {
                     caret[i] = x + box.CaretX[i];
-                rows.Add(new RowGeometry(box.Path, box.IsRun, caret, baseline - box.CaretHeight, baseline + box.CaretDepth, x, x + Math.Max(box.Width, 1)));
+                    if (box.Lines is { } lines)
+                    {
+                        var k = line[i] = lines.CaretLine[i];
+                        top[i] = baseline - lines.Shift[k] - lines.Height[k];
+                        bottom[i] = baseline - lines.Shift[k] + lines.Depth[k];
+                    }
+                    else
+                    {
+                        top[i] = baseline - box.CaretHeight;
+                        bottom[i] = baseline + box.CaretDepth;
+                    }
+                }
+                var right = box.Lines?.Right.Select(r => x + r).ToArray() ?? new[] { x + Math.Max(box.Width, 1) };
+                rows.Add(new RowGeometry(box.Path, box.IsRun, caret, top, bottom, line, right, x, baseline - box.Height, baseline + box.Depth));
             }
 
             foreach (var (child, cx, shift) in box.Children)

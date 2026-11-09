@@ -30,6 +30,7 @@ namespace SharpEquations.Avalonia.Tests.Controls
             "|x|+‖y‖+⌊z⌋+⟨ψ|φ⟩",
             "█(f(x)&=(x+1)^2@&=x^2+2x+1)",
             "E=mc^2#(1)",
+            "f(x)=a_0+a_1 x+a_2 x^2+a_3 x^3+a_4 x^4+a_5 x^5+a_6 x^6+a_7 x^7+a_8 x^8+a_9 x^9+a_10 x^10+a_11 x^11+a_12 x^12",
         };
 
         [Test]

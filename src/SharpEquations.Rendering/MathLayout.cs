@@ -192,33 +192,44 @@ namespace SharpEquations.Rendering
         {
             if (!byPath.TryGetValue(Key(position.Path), out var row) || position.Offset >= row.CaretX.Length)
                 return null;
-            return new MathRect(row.CaretX[position.Offset], row.Top, 0, row.Bottom - row.Top);
+            var i = position.Offset;
+            return new MathRect(row.CaretX[i], row.CaretTop[i], 0, row.CaretBottom[i] - row.CaretTop[i]);
         }
 
-        /// <summary>The rectangles to highlight for a selection.</summary>
+        /// <summary>The rectangles to highlight for a selection: one for each line it is on.</summary>
         public IReadOnlyList<MathRect> GetSelectionRects(MathSelection selection)
         {
             if (!byPath.TryGetValue(Key(selection.Path), out var row) || selection.End >= row.CaretX.Length)
                 return Array.Empty<MathRect>();
-            var x0 = row.CaretX[selection.Start];
-            var x1 = row.CaretX[selection.End];
-            if (!row.IsRun)
+
+            var rects = new List<MathRect>();
+            var first = row.CaretLine[selection.Start];
+            var last = row.CaretLine[selection.End];
+            for (var line = first; line <= last; line++)
             {
-                // the extent of the children selected, which may stand out of the row's own box
-                var top = row.Top;
-                var bottom = row.Bottom;
-                foreach (var other in rows)
+                var from = line == first ? selection.Start : Array.IndexOf(row.CaretLine, line);
+                var x0 = row.CaretX[from];
+                var x1 = line == last ? row.CaretX[selection.End] : row.LineRight[line];
+                var top = row.CaretTop[from];
+                var bottom = row.CaretBottom[from];
+                if (!row.IsRun)
                 {
-                    if (other.Path.Length > row.Path.Length && other.Path.Take(row.Path.Length).SequenceEqual(row.Path)
-                        && other.Path[row.Path.Length] >= selection.Start && other.Path[row.Path.Length] < selection.End)
+                    // the extent of the children selected on the line, which may stand out of the line of the row
+                    var to = line == last ? selection.End : Array.LastIndexOf(row.CaretLine, line) + 1;
+                    foreach (var other in rows)
                     {
-                        top = Math.Min(top, other.Top);
-                        bottom = Math.Max(bottom, other.Bottom);
+                        if (other.Path.Length > row.Path.Length && other.Path.Take(row.Path.Length).SequenceEqual(row.Path)
+                            && other.Path[row.Path.Length] >= from && other.Path[row.Path.Length] < to)
+                        {
+                            top = Math.Min(top, other.Top);
+                            bottom = Math.Max(bottom, other.Bottom);
+                        }
                     }
                 }
-                return new[] { new MathRect(Math.Min(x0, x1), top, Math.Abs(x1 - x0), bottom - top) };
+                if (x1 > x0)
+                    rects.Add(new MathRect(x0, top, x1 - x0, bottom - top));
             }
-            return new[] { new MathRect(Math.Min(x0, x1), row.Top, Math.Abs(x1 - x0), row.Bottom - row.Top) };
+            return rects;
         }
 
         /// <summary>The position of the caret nearest to a point.</summary>
@@ -240,7 +251,10 @@ namespace SharpEquations.Rendering
             }
             if (best == null)
                 return null;
-            return best.IsRun ? new MathPosition(best.Path, Nearest(best.CaretX, x)) : GetNearestPosition(best.Path, x);
+            if (best.IsRun)
+                return new MathPosition(best.Path, best.Nearest(x, y));
+            var index = best.Nearest(x, y);
+            return RunAt(best, best.CaretLine[index], x) ?? new MathPosition(best.Path, index);
         }
 
         /// <inheritdoc/>
@@ -252,43 +266,62 @@ namespace SharpEquations.Rendering
         {
             if (!byPath.TryGetValue(Key(rowPath), out var row))
                 return null;
-            foreach (var run in rows)
-            {
-                if (run.IsRun && run.Path.Length == rowPath.Count + 1 && run.Path.Take(rowPath.Count).SequenceEqual(rowPath)
-                    && x > run.Left && x < run.Right)
-                {
-                    return new MathPosition(run.Path, Nearest(run.CaretX, x));
-                }
-            }
-            return new MathPosition(rowPath, Nearest(row.CaretX, x));
+            return RunAt(row, 0, x) ?? new MathPosition(rowPath, row.NearestOnLine(x, 0));
         }
 
-        private static int Nearest(double[] xs, double x)
+        /// <inheritdoc/>
+        public MathPosition? GetPositionOnAdjacentLine(MathPosition position, int direction)
         {
-            var best = 0;
-            for (var i = 1; i < xs.Length; i++)
+            // the innermost row broken into lines that holds the position, and the line of the position in it
+            for (var length = position.Path.Count; length >= 0; length--)
             {
-                if (Math.Abs(xs[i] - x) < Math.Abs(xs[best] - x))
-                    best = i;
+                var prefix = position.Path.Take(length).ToArray();
+                if (!byPath.TryGetValue(Key(prefix), out var row) || row.Lines < 2 || row.IsRun)
+                    continue;
+                var index = length == position.Path.Count ? position.Offset : position.Path[length];
+                if (index >= row.CaretX.Length || GetCaretX(position) is not { } x)
+                    return null;
+                var line = row.CaretLine[index] + direction;
+                if (line < 0 || line >= row.Lines)
+                    return null;
+                return RunAt(row, line, x) ?? new MathPosition(prefix, row.NearestOnLine(x, line));
             }
-            return best;
+            return null;
+        }
+
+        /// <summary>The position in a run of the row, on the line, under the x; null when no run is there.</summary>
+        private MathPosition? RunAt(RowGeometry row, int line, double x)
+        {
+            foreach (var run in rows)
+            {
+                if (run.IsRun && run.Path.Length == row.Path.Length + 1 && run.Path.Take(row.Path.Length).SequenceEqual(row.Path)
+                    && x > run.Left && x < run.Right && run.Path[row.Path.Length] < row.CaretLine.Length && row.CaretLine[run.Path[row.Path.Length]] == line)
+                {
+                    return new MathPosition(run.Path, run.NearestOnLine(x, 0));
+                }
+            }
+            return null;
         }
 
         private static string Key(IEnumerable<int> path) => string.Join("/", path);
     }
 
-    /// <summary>The geometry of a row or a run, in the coordinates of the layout.</summary>
+    /// <summary>The geometry of a row or a run, in the coordinates of the layout; a row broken into lines has several.</summary>
     internal sealed class RowGeometry
     {
-        public RowGeometry(int[] path, bool isRun, double[] caretX, double top, double bottom, double left, double right)
+        public RowGeometry(int[] path, bool isRun, double[] caretX, double[] caretTop, double[] caretBottom, int[] caretLine, double[] lineRight, double left, double top, double bottom)
         {
             Path = path;
             IsRun = isRun;
             CaretX = caretX;
-            Top = top;
-            Bottom = bottom;
+            CaretTop = caretTop;
+            CaretBottom = caretBottom;
+            CaretLine = caretLine;
+            LineRight = lineRight;
             Left = left;
-            Right = right;
+            Top = Math.Min(top, caretTop.DefaultIfEmpty(top).Min());
+            Bottom = Math.Max(bottom, caretBottom.DefaultIfEmpty(bottom).Max());
+            Right = Math.Max(left + 1, lineRight.Max());
         }
 
         public int[] Path { get; }
@@ -296,6 +329,18 @@ namespace SharpEquations.Rendering
         public bool IsRun { get; }
 
         public double[] CaretX { get; }
+
+        public double[] CaretTop { get; }
+
+        public double[] CaretBottom { get; }
+
+        /// <summary>The line of each caret position.</summary>
+        public int[] CaretLine { get; }
+
+        /// <summary>The x of the end of each line.</summary>
+        public double[] LineRight { get; }
+
+        public int Lines => LineRight.Length;
 
         public double Top { get; }
 
@@ -306,5 +351,33 @@ namespace SharpEquations.Rendering
         public double Right { get; }
 
         public double Area => (Right - Left) * (Bottom - Top);
+
+        /// <summary>The caret position nearest to a point: on the nearest line, the nearest x.</summary>
+        public int Nearest(double x, double y)
+        {
+            var bestLine = 0;
+            var bestDistance = double.MaxValue;
+            for (var i = 0; i < CaretX.Length; i++)
+            {
+                var d = y < CaretTop[i] ? CaretTop[i] - y : y > CaretBottom[i] ? y - CaretBottom[i] : 0;
+                if (d < bestDistance)
+                {
+                    bestDistance = d;
+                    bestLine = CaretLine[i];
+                }
+            }
+            return NearestOnLine(x, bestLine);
+        }
+
+        public int NearestOnLine(double x, int line)
+        {
+            var best = -1;
+            for (var i = 0; i < CaretX.Length; i++)
+            {
+                if (CaretLine[i] == line && (best < 0 || Math.Abs(CaretX[i] - x) < Math.Abs(CaretX[best] - x)))
+                    best = i;
+            }
+            return Math.Max(best, 0);
+        }
     }
 }
