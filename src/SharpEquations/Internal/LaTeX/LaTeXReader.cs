@@ -628,6 +628,16 @@ namespace SharpEquations.Internal.LaTeX
                         i++;
                     continue;
                 }
+                if (cw is "operatorname" or "operatornamewithlimits" && BracedArgument(tex, cw == "operatorname" && tex[j] == "*" ? j + 1 : j) is var (namedFunction, afterNamedFunction) &&
+                    afterNamedFunction >= 0 && IsFunctionName(namedFunction.Trim()))
+                {
+                    // \operatorname{lim}: the function name, as \lim
+                    result.Append('\\').Append(namedFunction.Trim());
+                    i = afterNamedFunction;
+                    if (i < tex.Length && IsAsciiAlphabetic(tex[i]))
+                        result.Append(' ');
+                    continue;
+                }
                 if (Renamed.TryGetValue(cw, out var renamed))
                 {
                     result.Append(renamed);
@@ -766,6 +776,13 @@ namespace SharpEquations.Internal.LaTeX
                     bool symbol = negatedText.Length == 1 || negatedText[0] == "\\" && ControlWord(negatedText, 1).Length == negatedText.Length - 1;
                     result.Append(symbol ? RewriteTeXOnly(negated) : "(" + RewriteTeXOnly(negated) + ")").Append(HoldMark("\u0338"));
                     i = afterNegated;
+                    continue;
+                }
+                if (LaTeXSymbols.TryGetNameOfTwoWords(cw, out var nameOfTwoWords))
+                {
+                    // \liminf: the name of two words, which UnicodeMath reads as one name when it is marked as a function
+                    result.Append("\\operatorname{").Append(nameOfTwoWords).Append('}');
+                    i = j;
                     continue;
                 }
                 if (cw == "operatorname" && tex[j] == "*")

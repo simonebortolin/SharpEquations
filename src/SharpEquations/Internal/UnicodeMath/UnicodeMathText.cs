@@ -33,7 +33,7 @@ namespace SharpEquations.Internal.UnicodeMath
         private static readonly string[] FunctionNames =
         {
             "Im", "Pr", "Re", "arg", "cos", "cot", "csc", "ctg", "deg", "det", "dim", "erf", "exp", "gcd", "hom",
-            "inf", "ker", "lim", "log", "ln", "max", "min", "mod", "sec", "sin", "sup", "tan", "tg",
+            "inf", "ker", "lg", "lim", "log", "ln", "max", "min", "mod", "sec", "sin", "sup", "tan", "tg",
         };
 
         /// <summary>inRange(ch0, ch, ch1): ch a single code point between those of ch0 and ch1.</summary>

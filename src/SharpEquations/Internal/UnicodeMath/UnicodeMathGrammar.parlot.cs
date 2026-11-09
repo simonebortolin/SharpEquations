@@ -413,15 +413,21 @@ namespace SharpEquations.Internal.UnicodeMath
                 L("∜").SkipAnd(operand).Then(o => (object)O("root", O(("degree", O("number", "4")), ("of", o)))),
                 opRoot.Then(o => (object)ColoredOperator(o)));
 
+            // the letters of a name marked as a function, its words parted by a six-per-em space (lim inf⁡, as MathML
+            // writes \liminf)
+            var markedName = OneOrMany(alphaN).And(ZeroOrMany(L("\u2006").And(OneOrMany(alphaN))))
+                .Then(t => (object)t.Item1.Concat(t.Item2.SelectMany(w => new[] { w.Item1 }.Concat(w.Item2))).ToList());
             var arctrigName = OneOf(L("arcsin"), L("arcsec"), L("arctan"), L("arccot"), L("arccos"), L("arccsc")).And(Opt(L("h")))
                 .Then(t => (object)A(t.Item1, t.Item2));
+            // a function name that UnicodeMath knows, not the first word of a name marked as a function (lim inf⁡)
+            var knownFunctionName = OneOf(trigName, arctrigName, limName,
+                L("arg"), L("def"), L("deg"), L("det"), L("dim"), L("erf"), L("exp"), L("gcd"), L("ker"), L("hom"),
+                L("Im"), L("inf"), L("ln"), L("max"), L("min"), L("mod"), L("Pr"), L("Re"), L("sup"), L("tg"),
+                L("lcm"), L("lub"), L("glb"), L("lim\u00A0inf"), L("lim\u00A0sup"))
+                .AndSkip(Not(alphaAscii)).AndSkip(Not(L("\u2006").And(alphaN)));
             functionName.Parser = OneOf(
-                OneOf(trigName, arctrigName, limName,
-                    L("arg"), L("def"), L("deg"), L("det"), L("dim"), L("erf"), L("exp"), L("gcd"), L("ker"), L("hom"),
-                    L("Im"), L("inf"), L("ln"), L("max"), L("min"), L("mod"), L("Pr"), L("Re"), L("sup"), L("tg"),
-                    L("lcm"), L("lub"), L("glb"), L("lim\u00A0inf"), L("lim\u00A0sup"))
-                    .AndSkip(Not(alphaAscii)),
-                OneOrMany(alphaN).AndSkip(L("\u2061")).Then(t => (object)t.ToList()));
+                knownFunctionName,
+                markedName.AndSkip(L("\u2061")));
             var function = OneOf(
                 functionName.AndSkip(Opt(__)).AndSkip(Opt(OneOf(L("\u2061"), opNaryand))).And(Opt(script)).AndSkip(Opt(__)).And(operand).AndSkip(Opt(_))
                     .Then(t =>
@@ -435,12 +441,22 @@ namespace SharpEquations.Internal.UnicodeMath
                         }
                         return (object)O("function", O(("f", O("atoms", c)), ("of", t.Item3)));
                     }),
+                // a name marked as a function with scripts but without an operand (argmax⁡_𝑥 alone) is the name with its
+                // scripts, and not its letters before a script of the function apply sign (but not a function name that
+                // UnicodeMath knows, lim⁡_(𝑎→∞), read as UnicodeMathML reads it)
+                Not(knownFunctionName).SkipAnd(markedName).AndSkip(L("\u2061")).And(script).AndSkip(Opt(_))
+                    .Then(t =>
+                    {
+                        var s = (JsObject)t.Item2;
+                        s["base"] = O("atoms", O(("chars", Join((List<object>)t.Item1)), ("funct", true)));
+                        return (object)O("script", s);
+                    }),
                 functionName.AndSkip(Opt(__)).And(operand).AndSkip(Opt(_))
                     .Then(t => (object)O("function", O(("f", O("atoms", O("chars", FunctionName(t.Item1, false)))), ("of", t.Item2)))),
                 // a name marked as a function without an operand (NaN⁡,) is one name, as a function name is (sin⁡,), and not
                 // its letters; the function apply sign is read after it (but not one with scripts after the sign, argmax⁡┬(𝑥∈𝑆))
-                OneOrMany(alphaN).AndSkip(Not(Not(L("⁡").And(Not(opScript)))))
-                    .Then(t => (object)O("atoms", O(("chars", Join(t.ToList())), ("funct", true)))));
+                markedName.AndSkip(Not(Not(L("⁡").And(Not(opScript)))))
+                    .Then(t => (object)O("atoms", O(("chars", Join((List<object>)t)), ("funct", true)))));
 
             // text, overrides, colors, comments, typewriter
             text.Parser = L("\"").SkipAnd(OneOrMany(OneOf(L("\\\"").Then(x => (object)"\""), Not(L("\"")).SkipAnd(anyChar)))).AndSkip(L("\""))

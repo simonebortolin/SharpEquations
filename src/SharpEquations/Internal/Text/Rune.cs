@@ -26,6 +26,8 @@ namespace System.Text
 
         public bool IsBmp => value <= 0xFFFF;
 
+        public static bool IsLetter(Rune value) => char.IsLetter(value.ToString(), 0);
+
         public override string ToString() => char.ConvertFromUtf32(value);
 
         public bool Equals(Rune other) => value == other.value;

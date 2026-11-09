@@ -652,6 +652,11 @@ namespace SharpEquations.Internal.LaTeX
                         ret = "\\" + Text(value) + " ";
                         break;
                     }
+                    else if (LaTeXSymbols.TryGetCommandOfTwoWords(Text(value), out var command))
+                    {
+                        ret = "\\" + command + " ";
+                        break;
+                    }
                     else if (Len(Text(value)) > 1 && SharpEquations.Internal.Text.AsciiPatterns.Letters().IsMatch(Text(value)))
                     {
                         ret = "\\operatorname{" + Text(value) + "}";
@@ -886,7 +891,7 @@ namespace SharpEquations.Internal.LaTeX
             if (Name(element) == "mo")
                 return IsLargeOperator(element) || IsFunctionName(Text(element));
             // a name that is not a function's, \operatorname{argmax}, takes its scripts at its side: \underset puts them under
-            return Name(element) == "mi" && IsFunctionName(Text(element));
+            return Name(element) == "mi" && (IsFunctionName(Text(element)) || LaTeXSymbols.TryGetCommandOfTwoWords(Text(element), out _));
         }
 
         /// <summary>Whether an operator is large (∑, ∫, ⋃…) or a horizontal brace, whose limits go under and over it.</summary>
@@ -917,6 +922,8 @@ namespace SharpEquations.Internal.LaTeX
                     return "{}";
                 if (IsFunctionName(text))
                     return "\\" + text + " ";
+                if (LaTeXSymbols.TryGetCommandOfTwoWords(text, out var command))
+                    return "\\" + command + " ";
                 var plain = string.Concat(Characters(text).Where(c => c.Length == 1 && (c[0] >= 'A' && c[0] <= 'Z' || c[0] >= 'a' && c[0] <= 'z')));
                 return plain.Length == text.Length ? "\\operatorname{" + text + "}" : LaTeXSymbols.Math(text);
             }

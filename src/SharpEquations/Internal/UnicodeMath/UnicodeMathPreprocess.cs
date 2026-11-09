@@ -35,7 +35,8 @@ namespace SharpEquations.Internal.UnicodeMath
             ["⒨"] = "()", ["⒩"] = "‖‖", ["ⓢ"] = "[]", ["Ⓢ"] = "{}", ["⒱"] = "||",
         };
 
-        private static readonly string[] EulerFunctions = { "det", "gcd", "inf", "lim", "lim inf", "lim sup", "max", "min", "Pr", "sup" };
+        // the functions whose subscript goes under them in a display equation
+        internal static readonly string[] EulerFunctions = { "det", "gcd", "inf", "lim", "lim\u2006inf", "lim\u2006sup", "inj\u2006lim", "proj\u2006lim", "max", "min", "Pr", "sup" };
 
         private object Preprocess(PreprocessStyle dsty, object uast, int? index = null, List<object> arr = null)
         {

@@ -192,6 +192,36 @@ namespace SharpEquations.Tests.LaTeX
             await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX)).IsEqualTo(Equation.Parse(latex, EquationFormat.LaTeX)).Because("the LaTeX written reads back");
         }
 
+        // operator names with nothing after them, and the names of amsmath that are two words, one name whose words a
+        // six-per-em space parts (as MathML writes them); the forms with a bar or an arrow (\varinjlim) are read as the names
+        [Test]
+        [Arguments(@"\lg x", false, @"\lg x", "lg⁡𝑥")]
+        [Arguments(@"\lg", false, @"\lg", "lg")]
+        [Arguments(@"\liminf_{n\to\infty} a_n", false, @"\liminf_{n\to\infty}a_n", "lim\u2006inf⁡_(𝑛→∞) 𝑎_𝑛")]
+        [Arguments(@"\liminf_{n\to\infty} a_n", true, @"\liminf_{n\to\infty}a_n", "lim\u2006inf⁡_(𝑛→∞) 𝑎_𝑛")]
+        [Arguments(@"\limsup x_n", false, @"\limsup x_n", "lim\u2006sup⁡𝑥_𝑛")]
+        [Arguments(@"\injlim A_i", false, @"\injlim A_i", "inj\u2006lim⁡𝐴_𝑖")]
+        [Arguments(@"\projlim_i A_i", true, @"\projlim_iA_i", "proj\u2006lim⁡_𝑖 𝐴_𝑖")]
+        [Arguments(@"\liminf", false, @"\liminf", "lim\u2006inf⁡")]
+        [Arguments(@"\varinjlim", false, @"\injlim", "inj\u2006lim⁡")]
+        [Arguments(@"\varprojlim A_i", false, @"\projlim A_i", "proj\u2006lim⁡𝐴_𝑖")]
+        [Arguments(@"\varliminf + \varlimsup", false, @"\liminf+\limsup", "lim\u2006inf⁡+lim\u2006sup⁡")]
+        [Arguments(@"\operatorname*{argmax}_{x}", true, @"\operatorname{argmax}_x", "argmax⁡_𝑥")]
+        [Arguments(@"\operatorname{argmax}_x + 1", false, @"\operatorname{argmax}_x+1", "argmax⁡_𝑥+1")]
+        [Arguments(@"\operatornamewithlimits{lim}_{x}", true, @"\lim_x", "lim_𝑥")]
+        [Arguments(@"\operatorname{lim}_{x} f + \operatorname*{max}x", true, @"\lim_xf+\max x", "lim_𝑥 ⁡𝑓+max⁡𝑥")]
+        public async Task ReadsOperatorNames(string latex, bool display, string expectedLaTeX, string expectedUnicodeMath)
+        {
+            var options = new EquationOptions { Display = display };
+            var equation = Equation.Parse(latex, EquationFormat.LaTeX, options);
+            await Assert.That(equation.ToString(EquationFormat.LaTeX)).IsEqualTo(expectedLaTeX);
+            await Assert.That(equation.ToString(EquationFormat.UnicodeMath)).IsEqualTo(expectedUnicodeMath);
+            var word = new EquationOptions { Display = display, LaTeXFlavor = LaTeXFlavor.Word };
+            await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX, options)).IsEqualTo(equation).Because("the standard LaTeX reads back");
+            await Assert.That(Equation.Parse(equation.ToString(EquationFormat.LaTeX, word), EquationFormat.LaTeX, word)).IsEqualTo(equation).Because("Word's LaTeX reads back");
+            await Assert.That(Equation.Parse(expectedUnicodeMath, EquationFormat.UnicodeMath, options)).IsEqualTo(equation).Because("the UnicodeMath reads back");
+        }
+
         // the demos of math.webc.site, whose LaTeX and UnicodeMath read back to the same equation
         [Test]
         [Arguments(@"\left. \frac{df}{dx} \right| _0", @"{\left.\frac{df}{dx}\right|}_0", @"├𝑑𝑓/𝑑𝑥 ┤|₀")]
@@ -372,8 +402,8 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\foo x", @"Unknown control word \foo in the LaTeX.")]
         [Arguments(@"a+\undefinedcommand", @"Unknown control word \undefinedcommand in the LaTeX.")]
         [Arguments(@"\sgn r", @"Unknown control word \sgn in the LaTeX.")]
-        [Arguments(@"\lg d", @"Unknown control word \lg in the LaTeX.")]
-        [Arguments(@"\liminf v", @"Unknown control word \liminf in the LaTeX.")]
+        [Arguments(@"\erfc d", @"Unknown control word \erfc in the LaTeX.")]
+        [Arguments(@"\cosec v", @"Unknown control word \cosec in the LaTeX.")]
         [Arguments(@"a \backslash b", @"Unknown control word \backslash in the LaTeX.")]
         [Arguments(@"\sgn2", @"Unknown control word \sgn in the LaTeX.")]
         public async Task RejectsUnknownControlWordsWhenStrict(string latex, string message)
@@ -384,8 +414,8 @@ namespace SharpEquations.Tests.LaTeX
 
         [Test]
         [Arguments(@"\sgn r", @"\sgn", "r")]
-        [Arguments(@"\lg d", @"\lg", "d")]
-        [Arguments(@"\liminf v", @"\liminf", "v")]
+        [Arguments(@"\erfc d", @"\erfc", "d")]
+        [Arguments(@"\cosec v", @"\cosec", "v")]
         [Arguments(@"a \backslash b", @"\backslash", "b")]
         [Arguments(@"\sgn  r", @"\sgn", "r")]
         [Arguments(@"\sgn{r}", @"\sgn", "r")]

@@ -692,6 +692,12 @@ namespace SharpEquations.Internal.UnicodeMath
             return "(" + text + ")";
         }
 
+        /// <summary>A name of several letters, not a function's, as the base of scripts: argmax in argmax_𝑥.</summary>
+        private static bool IsScriptedName(XElement mi) =>
+            !mi.HasElements && mi.Parent != null && Name(mi.Parent) is "msub" or "msup" or "msubsup" or "munder" or "mover" or "munderover" &&
+            First(mi.Parent) == mi && Len(Text(mi)) > 1 && !IsFunctionName(Text(mi)) && !HasAttr(mi, "mathvariant") &&
+            CodePoints.Of(Text(mi)).All(c => c.Value == 0x2006 || System.Text.Rune.IsLetter(c));
+
         /// <summary>The name of a function with scripts that is written with the function apply sign after it, or null.</summary>
         private static XElement FunctionName(XElement head)
         {
@@ -1030,8 +1036,9 @@ namespace SharpEquations.Internal.UnicodeMath
                         break;
                     }
                     op = HasAttr(value, "accentunder") || Attr(value, "accent") == "true" || IsCombining(Text(Last(value))) ? "" : "┬";
-                    // lim_ is under lim in a function of a display equation only
-                    if ((Text(First(value)) == "lim" && !First(value).HasElements || functionName != null && IsFunctionName(Text(functionName))) && display &&
+                    // lim_ is under lim (and lim inf, lim sup) in a function of a display equation only
+                    if ((Text(First(value)) == "lim" && !First(value).HasElements ||
+                         functionName != null && (IsFunctionName(Text(functionName)) || UnicodeMathTranslator.EulerFunctions.Contains(Text(functionName)))) && display &&
                         Role(parent) == ":function")
                         op = "_";
                     ret = Binary(value, op);
@@ -1196,7 +1203,9 @@ namespace SharpEquations.Internal.UnicodeMath
                     break;
 
                 case "mi":
-                    if (value == functionName)
+                    // a name as the base of its scripts is marked as a function, without which it would be read as its
+                    // letters (argmax⁡_𝑥)
+                    if (value == functionName || IsScriptedName(value))
                     {
                         ret = Text(value) + "\u2061";
                         break;
