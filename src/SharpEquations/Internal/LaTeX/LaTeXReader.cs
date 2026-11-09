@@ -291,6 +291,23 @@ namespace SharpEquations.Internal.LaTeX
                     i = afterScripts;
                     continue;
                 }
+                if (LimitName(tex, cw, next, display) is var (limitName, afterName) && limitName != null)
+                {
+                    // the scripts of an operator name with limits go under and over it in a display equation
+                    result.Append(limitName);
+                    i = afterName;
+                    if (display && NonBlank(tex, i) is "_" or "^")
+                    {
+                        var (under, over, afterScripts) = Scripts(tex, i);
+                        result.Append(UnderOver(under, over));
+                        i = afterScripts;
+                        // UnderOver ends the limits with a space
+                        while (tex[i] == " ")
+                            i++;
+                    }
+                    summation = -1;
+                    continue;
+                }
                 var token = tex.Sub(i, next);
                 var isSummation = Summations.Contains(cw.Length > 0 ? cw : tex[i]);
                 result.Append(token);
@@ -306,6 +323,37 @@ namespace SharpEquations.Internal.LaTeX
                 }
             }
             return result.ToString();
+        }
+
+        // the operator names of amsmath with limits: two words with a thin space between them, as UnicodeMath reads them,
+        // or lim with an arrow or a bar under or over it
+        private static readonly Dictionary<string, string> LimitNames = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["liminf"] = "lim\u2009inf\u2061", ["limsup"] = "lim\u2009sup\u2061", ["injlim"] = "inj\u2009lim\u2061",
+            ["projlim"] = "proj\u2009lim\u2061", ["varinjlim"] = "{\\underset{\\rightarrow}{\\lim}}",
+            ["varprojlim"] = "{\\underset{\\leftarrow}{\\lim}}", ["varliminf"] = "{\\underline{\\lim}}",
+            ["varlimsup"] = "{\\overline{\\lim}}",
+        };
+
+        /// <summary>
+        /// An operator name with limits at the index after the control word (\liminf, \operatorname*{argmax},
+        /// \operatornamewithlimits{argmax}), or \lim in a display equation, as the reader reads it, and the index after it;
+        /// null if none.
+        /// </summary>
+        private static (string Name, int Next) LimitName(Text tex, string cw, int next, bool display)
+        {
+            // lim, whose limit goes under it in a display equation also with nothing after it (lim┬𝑥)
+            if (cw == "lim" && display)
+                return (" lim", next);
+            if (LimitNames.TryGetValue(cw, out var name))
+                return (name, next);
+            if (!(cw == "operatornamewithlimits" || cw == "operatorname" && tex[next] == "*"))
+                return (null, next);
+            var (operatorName, afterName) = BracedArgument(tex, cw == "operatorname" ? next + 1 : next);
+            if (afterName < 0)
+                return (null, next);
+            // a name that UnicodeMath knows (lim) is read without the function apply sign, which would part it from its limits
+            return (UnicodeMathText.IsFunctionName(operatorName.Trim()) ? " " + operatorName.Trim() : "\\operatorname{" + operatorName + "}", afterName);
         }
 
         // the limits end at a space, which parts them from the operand: ∑┬𝑘 (−1)^𝑘, not ∑┬(𝑘(−1))
@@ -370,7 +418,7 @@ namespace SharpEquations.Internal.LaTeX
         {
             ["dfrac"] = "\\frac", ["tfrac"] = "\\frac", ["cfrac"] = "\\frac", ["dbinom"] = "\\binom", ["tbinom"] = "\\binom",
             ["overrightarrow"] = "\\vec", ["Vert"] = "‖", ["lVert"] = "‖", ["rVert"] = "‖", ["bmod"] = "\\operatorname{mod}",
-            ["bm"] = "\\boldsymbol",
+            ["bm"] = "\\boldsymbol", ["lg"] = "\\operatorname{lg}",
             // the symbols of LaTeX, amsmath, amssymb and plain TeX that UnicodeMath has no control word for (the others of
             // LaTeXSymbols are read from it), and \square, \Box, \blacksquare, \surd and \oslash, which are symbols in LaTeX
             // and build a box, a root or a fraction in UnicodeMath

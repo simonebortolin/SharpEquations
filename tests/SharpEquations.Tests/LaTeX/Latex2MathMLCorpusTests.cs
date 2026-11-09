@@ -200,13 +200,8 @@ namespace SharpEquations.Tests
             "argmax", "widecheck",
         };
 
-        // LaTeX and amsmath that the reader does not read yet: an operator name with nothing after it (\lg, \liminf,
-        // \injlim, \operatorname*{argmax}_x), which UnicodeMath reads as letters, and the names of amsmath that are two
-        // words (lim inf)
-        private static readonly HashSet<string> NotReadYet = new HashSet<string>
-        {
-            "lg", "liminf", "limsup", "injlim", "projlim", "varinjlim", "operatornamewithlimits", "operatorname-star",
-        };
+        // LaTeX and amsmath that the reader does not read yet: none left
+        private static readonly HashSet<string> NotReadYet = new HashSet<string>();
 
         // the same equation, which SharpEquations holds otherwise: an equation number as the label of its row (\tag),
         // and none for aligned equations, whose numbers latex2mathml writes as cells; the alignment of align, split and
