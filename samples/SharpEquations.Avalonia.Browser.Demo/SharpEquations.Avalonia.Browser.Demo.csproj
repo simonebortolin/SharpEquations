@@ -10,20 +10,13 @@
     <Nullable>enable</Nullable>
     <RootNamespace>SharpEquations.Avalonia.Demo</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- the stylesheets of OMML are compiled to IL by XslCompiledTransform: keep the interpreter, no AOT -->
-    <RunAOTCompilation>false</RunAOTCompilation>
+    <!-- the stylesheets are C# compiled at build time (SharpEquations.XsltGenerator): nothing generates code at run
+         time, so the release build compiles to WebAssembly ahead of time -->
+    <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
     <WasmEnableThreads>false</WasmEnableThreads>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <!-- XslCompiledTransform (OMML) reaches its runtime by reflection: System.Private.Xml is kept whole, and the trim
-         warnings it would give are not errors of this sample -->
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
   </PropertyGroup>
 
-  <ItemGroup>
-    <TrimmerRootAssembly Include="System.Private.Xml" />
-  </ItemGroup>
-
-  
   <ItemGroup>
     <Compile Include="..\SharpEquations.Avalonia.Demo\DemoView.cs" Link="DemoView.cs" />
     <Compile Include="..\SharpEquations.Avalonia.Demo\DemoTheme.cs" Link="DemoTheme.cs" />
