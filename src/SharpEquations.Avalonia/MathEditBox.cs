@@ -473,7 +473,7 @@ namespace SharpEquations.Avalonia
                     context.FillRectangle(SelectionBrush, new Rect(rect.X + origin.X, rect.Y + origin.Y, rect.Width, rect.Height));
             }
 
-            drawing.Draw(context, origin, new MathBrushes(Foreground, PlaceholderBrush, Brushes.MistyRose));
+            drawing.Draw(context, origin, new MathBrushes(Foreground, PlaceholderBrush, MathDrawing.ErrorBrush(ActualThemeVariant)));
 
             if (IsFocused && caretVisible && !IsReadOnly && layout.GetCaretRect(Editor.Caret) is { } caret)
             {

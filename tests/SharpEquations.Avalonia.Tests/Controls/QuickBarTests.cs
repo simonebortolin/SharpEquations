@@ -126,6 +126,55 @@ namespace SharpEquations.Avalonia.Tests.Controls
             await Assert.That(open).IsTrue();
         }
 
+        private static double Luminance(IBrush? brush) => brush is ISolidColorBrush { Color: var c } ? (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) / 255 : -1;
+
+        /// <summary>In the dark theme the bar is dark, with light text; in the light theme the other way.</summary>
+        [Test]
+        [Arguments("Dark")]
+        [Arguments("Light")]
+        public async Task FollowsTheTheme(string variant)
+        {
+            var (background, foreground) = await Headless.Run(() =>
+            {
+                var editor = new MathEditBox { FontSize = 28 };
+                var dark = variant == "Dark";
+                var window = new Window
+                {
+                    Content = new StackPanel { Children = { editor } },
+                    Width = 700,
+                    Height = 300,
+                    RequestedThemeVariant = dark ? global::Avalonia.Styling.ThemeVariant.Dark : global::Avalonia.Styling.ThemeVariant.Light,
+                };
+                window.Show();
+                editor.Focus();
+                try
+                {
+                    window.KeyTextInput("x+\\al");
+                    Settle(window);
+                    if (Environment.GetEnvironmentVariable("SHARPEQUATIONS_SCREENSHOTS") is { } directory && window.CaptureRenderedFrame() is { } frame)
+                    {
+                        Directory.CreateDirectory(directory);
+                        frame.Save(Path.Combine(directory, "quickbar-" + variant.ToLowerInvariant() + ".png"), global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+                    }
+                    return (Luminance(editor.QuickBar.Background), Luminance(global::Avalonia.Controls.Documents.TextElement.GetForeground(editor.QuickBar)));
+                }
+                finally
+                {
+                    window.Close();
+                }
+            });
+            if (variant == "Dark")
+            {
+                await Assert.That(background).IsBetween(0, 0.4);
+                await Assert.That(foreground).IsGreaterThan(0.6);
+            }
+            else
+            {
+                await Assert.That(background).IsGreaterThan(0.6);
+                await Assert.That(foreground).IsBetween(0, 0.4);
+            }
+        }
+
         [Test]
         public async Task DisabledBarStaysClosed()
         {

@@ -5,8 +5,10 @@ namespace SharpEquations.Avalonia
     using System.Linq;
     using global::Avalonia;
     using global::Avalonia.Controls;
+    using global::Avalonia.Controls.Documents;
     using global::Avalonia.Layout;
     using global::Avalonia.Media;
+    using global::Avalonia.Styling;
     using SharpEquations.Editing;
 
     /// <summary>What <see cref="MathQuickBar"/> shows.</summary>
@@ -47,9 +49,9 @@ namespace SharpEquations.Avalonia
             Padding = new Thickness(4);
             CornerRadius = new CornerRadius(6);
             BorderThickness = new Thickness(1);
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x60, 0x80, 0x80, 0x80));
-            Background = new SolidColorBrush(Color.FromArgb(0xF8, 0xFB, 0xFB, 0xFD));
             BoxShadow = new BoxShadows(new BoxShadow { OffsetY = 2, Blur = 8, Color = Color.FromArgb(0x40, 0, 0, 0) });
+            ActualThemeVariantChanged += (_, _) => ApplyTheme();
+            ApplyTheme();
         }
 
         /// <summary>What the bar shows.</summary>
@@ -148,12 +150,57 @@ namespace SharpEquations.Avalonia
             return button;
         }
 
+        private IBrush highlight = new SolidColorBrush(Color.FromArgb(0x40, 0x33, 0x99, 0xFF));
+
+        /// <inheritdoc/>
+        protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            base.OnAttachedToVisualTree(e);
+            ApplyTheme();
+        }
+
+        /// <summary>
+        /// The colours of the theme: those of the flyouts of the theme of the application (Fluent, Simple...), or a light or
+        /// a dark set by the variant of the theme.
+        /// </summary>
+        private void ApplyTheme()
+        {
+            var dark = ActualThemeVariant == ThemeVariant.Dark;
+            Background = Resource(dark ? Color.FromArgb(0xF8, 0x2B, 0x2B, 0x2B) : Color.FromArgb(0xF8, 0xFB, 0xFB, 0xFD),
+                "FlyoutPresenterBackground", "SystemControlBackgroundChromeMediumLowBrush", "ThemeBackgroundBrush");
+            BorderBrush = Resource(dark ? Color.FromArgb(0x80, 0x70, 0x70, 0x70) : Color.FromArgb(0x60, 0x80, 0x80, 0x80),
+                "FlyoutBorderThemeBrush", "SystemControlTransientBorderBrush", "ThemeBorderLowBrush");
+            TextElement.SetForeground(this, Resource(dark ? Colors.White : Colors.Black,
+                "SystemControlForegroundBaseHighBrush", "ThemeForegroundBrush"));
+            highlight = Resource(dark ? Color.FromArgb(0x60, 0x4C, 0xA6, 0xFF) : Color.FromArgb(0x40, 0x33, 0x99, 0xFF),
+                "SystemControlHighlightListAccentLowBrush");
+            Highlight();
+        }
+
+        private IBrush Resource(Color fallback, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (this.TryFindResource(key, ActualThemeVariant, out var value))
+                {
+                    switch (value)
+                    {
+                        case IBrush brush:
+                            return brush;
+                        case Color color:
+                            return new SolidColorBrush(color);
+                    }
+                }
+            }
+            return new SolidColorBrush(fallback);
+        }
+
         private void Highlight()
         {
             for (var i = 0; i < panel.Children.Count; i++)
             {
                 if (panel.Children[i] is Button button)
-                    button.Background = i == selectedIndex && Mode == MathQuickBarMode.Completions ? new SolidColorBrush(Color.FromArgb(0x40, 0x33, 0x99, 0xFF)) : Brushes.Transparent;
+                    button.Background = i == selectedIndex && Mode == MathQuickBarMode.Completions ? highlight : Brushes.Transparent;
             }
         }
     }

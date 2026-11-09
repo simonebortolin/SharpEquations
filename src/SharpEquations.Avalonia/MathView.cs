@@ -108,7 +108,7 @@ namespace SharpEquations.Avalonia
         /// <inheritdoc/>
         public override void Render(DrawingContext context)
         {
-            drawing?.Draw(context, default, new MathBrushes(Foreground, null, Brushes.MistyRose));
+            drawing?.Draw(context, default, new MathBrushes(Foreground, null, MathDrawing.ErrorBrush(ActualThemeVariant)));
         }
     }
 }

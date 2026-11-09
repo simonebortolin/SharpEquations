@@ -50,6 +50,12 @@ namespace SharpEquations.Avalonia
 
         public MathLayout Layout { get; }
 
+        private static readonly IBrush LightError = new ImmutableSolidColorBrush(Colors.MistyRose);
+        private static readonly IBrush DarkError = new ImmutableSolidColorBrush(Color.FromArgb(0xFF, 0x5C, 0x24, 0x24));
+
+        /// <summary>The background of merror, of text that does not parse: light or dark with the theme.</summary>
+        public static IBrush ErrorBrush(global::Avalonia.Styling.ThemeVariant? theme) => theme == global::Avalonia.Styling.ThemeVariant.Dark ? DarkError : LightError;
+
         public void Draw(DrawingContext context, Point origin, MathBrushes brushes)
         {
             using (context.PushTransform(Matrix.CreateTranslation(origin.X, origin.Y)))
