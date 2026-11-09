@@ -79,7 +79,7 @@ namespace SharpEquations.Internal.UnicodeMath
             unicodemath = unicodemath.Trim();
             var resolved = UnicodeMathInput.ResolveControlWords(unicodemath, strict
                 ? unknown => throw new FormatException("Unknown control word " + unknown + (tex ? " in the LaTeX." : "."))
-                : null);
+                : null, tex);
             // macros (\def, \newcommand: ⓜ) apply in the equation that defines them
             if (!tex && LaTeXReader.HasMacros(resolved))
                 resolved = LaTeXReader.ExpandMacros(resolved);

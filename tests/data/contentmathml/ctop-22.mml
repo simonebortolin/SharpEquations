@@ -1,0 +1,11 @@
+<math display="block">
+<interval><cn>0</cn><cn>1</cn></interval>
+<mo>&#x27f6;</mo>
+<interval closure="open"><cn>0</cn><cn>1</cn></interval>
+<mo>&#x27f6;</mo>
+<interval closure="closed"><cn>0</cn><cn>1</cn></interval>
+<mo>&#x27f6;</mo>
+<interval closure="open-closed"><cn>0</cn><cn>1</cn></interval>
+<mo>&#x27f6;</mo>
+<interval closure="closed-open"><cn>0</cn><cn>1</cn></interval>
+</math>

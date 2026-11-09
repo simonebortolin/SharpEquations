@@ -113,7 +113,6 @@ namespace SharpEquations.Tests.MathML
 
         [Test]
         [Arguments("<math><foo/></math>", "foo")]
-        [Arguments("<math><apply><plus/><ci>x</ci></apply></math>", "apply")]
         [Arguments("<math><mi>x</mi><svg xmlns=\"http://www.w3.org/2000/svg\"/></math>", "svg")]
         public async Task RejectsOtherElementsWhenStrict(string mathML, string element)
         {

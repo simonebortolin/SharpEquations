@@ -1,0 +1,5 @@
+<math display="block">
+<apply><tendsto type="above"/><ci>x</ci><ci>a</ci></apply>
+<mo>,</mo>
+<apply><csymbol>tendsto</csymbol><csymbol>above</csymbol><ci>x</ci><ci>a</ci></apply>
+</math>

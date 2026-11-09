@@ -1,0 +1,11 @@
+<math display="block">
+<apply><plus/>
+<apply><times/><ci>a</ci><ci>b</ci></apply>
+<apply><times/><ci>c</ci><ci>d</ci></apply>
+</apply>
+<mo>&#x27f6;</mo>
+<apply><times/>
+<apply><plus/><ci>a</ci><ci>b</ci></apply>
+<apply><plus/><ci>c</ci><ci>d</ci></apply>
+</apply>
+</math>
