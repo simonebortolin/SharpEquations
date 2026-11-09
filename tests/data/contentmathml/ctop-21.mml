@@ -1,0 +1,23 @@
+<math display="block">
+<apply><eq/>
+  <apply><int/><sin/></apply>
+  <cos/>
+</apply>
+<mo>&#x27f6;</mo>
+<apply><int/>
+  <interval><ci>a</ci><ci>b</ci></interval>
+  <cos/>
+</apply>
+<mo>&#x27f6;</mo>
+<apply><int/>
+  <bvar><ci>x</ci></bvar>
+  <lowlimit><cn>0</cn></lowlimit>
+  <uplimit><cn>1</cn></uplimit>
+  <apply><power/><ci>x</ci><cn>2</cn></apply>
+</apply>
+<mo>&#x27f6;</mo>
+<apply><int/>
+  <domainofapplication><ci>C</ci></domainofapplication>
+  <ci>f</ci>
+</apply>
+</math>

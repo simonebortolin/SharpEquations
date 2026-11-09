@@ -8,6 +8,7 @@ namespace SharpEquations.Internal.MathML
     using System.Linq;
     using System.Xml;
     using System.Xml.Linq;
+    using System.Xml.Xsl;
     using SharpEquations.Internal.Text;
     using SharpEquations.Internal.UnicodeMath;
 
@@ -72,6 +73,9 @@ namespace SharpEquations.Internal.MathML
             var math = new XElement(source);
             foreach (var element in math.DescendantsAndSelf().Where(e => e.Name.Namespace == XNamespace.None))
                 element.Name = Mml + element.Name.LocalName;
+            // Content MathML (apply, ci, cn...) is read as the presentation MathML it is written as
+            if (validate && HasContentMarkup(math))
+                math = ContentToPresentation(math);
             // the prefixes of the source (m:mi) are not part of the equation: the MathML namespace is the default one
             math.DescendantsAndSelf().Attributes().Where(a => a.IsNamespaceDeclaration).Remove();
             // a link of UnicodeMath (\href) is an mrow with href, as MathML has no a element
@@ -379,6 +383,61 @@ namespace SharpEquations.Internal.MathML
         }
 
         private static bool IsEmptyFence(XElement element) => element.Name == Mml + "mo" && !element.HasElements && element.Value.Length == 0;
+
+        /// <summary>
+        /// Whether an element of MathML outside the annotations is not presentation MathML: Content MathML, or an
+        /// unknown element, which ctop.xsl copies as it is.
+        /// </summary>
+        private static bool HasContentMarkup(XElement math) =>
+            math.Descendants().Any(e => e.Name.Namespace == Mml && !PresentationElements.Contains(e.Name.LocalName) &&
+                !e.Ancestors().Any(a => a.Name == Mml + "annotation-xml" || a.Name == Mml + "annotation"));
+
+        /// <summary>Content MathML rewritten as presentation MathML by ctop.xsl, with the presentation MathML around it kept.</summary>
+        private static XElement ContentToPresentation(XElement math)
+        {
+            var source = new XElement(math);
+            // the white space between elements, which ctop.xsl would copy into rows (from annotation-xml, say), and
+            // around the text of the identifiers and numbers (and of the parts of a number, 2<sep/>3), which it would
+            // copy into mi and mn
+            source.DescendantNodes().OfType<XText>().Where(t => t.Parent!.HasElements && string.IsNullOrWhiteSpace(t.Value)).Remove();
+            foreach (var text in source.Descendants().Where(e => e.Name == Mml + "ci" || e.Name == Mml + "cn").Nodes().OfType<XText>())
+                text.Value = text.Value.Trim();
+            XElement? presentation;
+            try
+            {
+                presentation = EquationStylesheets.Transform("ctop.xsl", source);
+            }
+            catch (Exception e) when (e is ArgumentException or XsltException)
+            {
+                throw new FormatException(e.Message, e);
+            }
+            if (presentation == null)
+                throw new FormatException("The Content MathML equation is empty.");
+            // a limit ctop.xsl has nothing for (an integral without bounds, a sum over a condition) is an empty row:
+            // no script at all
+            foreach (var scripts in presentation.Descendants().Where(e => e.Name == Mml + "msubsup" || e.Name == Mml + "munderover").Reverse().ToList())
+            {
+                var children = scripts.Elements().ToList();
+                if (children.Count != 3)
+                    continue;
+                var under = scripts.Name == Mml + "munderover";
+                switch (IsEmptyRow(children[1]), IsEmptyRow(children[2]))
+                {
+                    case (true, true):
+                        scripts.ReplaceWith(children[0]);
+                        break;
+                    case (true, false):
+                        scripts.ReplaceWith(new XElement(Mml + (under ? "mover" : "msup"), scripts.Attributes(), children[0], children[2]));
+                        break;
+                    case (false, true):
+                        scripts.ReplaceWith(new XElement(Mml + (under ? "munder" : "msub"), scripts.Attributes(), children[0], children[1]));
+                        break;
+                }
+            }
+            return presentation;
+        }
+
+        private static bool IsEmptyRow(XElement element) => element.Name == Mml + "mrow" && !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
 
         private static void Validate(XElement math)
         {

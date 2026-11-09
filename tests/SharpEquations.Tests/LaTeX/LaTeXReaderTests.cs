@@ -72,7 +72,7 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\{x\mid x>0\}", @"\{x\mid x>0\}", @"{𝑥∣𝑥>0}")]
         [Arguments(@"a\mid b", @"a\mid b", @"𝑎\∣𝑏")]
         [Arguments(@"\langle\psi\mid", @"\langle\psi\mid", @"⟨𝜓\∣")]
-        [Arguments(@"\mid\psi\rangle", @"|\psi\rangle", @"|𝜓⟩")]
+        [Arguments(@"\mid\psi\rangle", @"\mid\psi\rangle", @"\∣𝜓\⟩")]
         [Arguments(@"\overset{\to}{a}\overset{\to}{b}", @"\overset{\to}{a}\overset{\to}{b}", @"𝑎┴→ 𝑏┴→")]
         [Arguments(@"\mathring{a}\overleftarrow{b}", @"\mathring{a}\overleftarrow{b}", @"𝑎┴˚ 𝑏┴←")]
         [Arguments(@"\vphantom{\sum}_1^2\sum_3^4", @"\vphantom{\sum}_1^2\sum_3^4", @"⇳∑₁²∑₃⁴")]
@@ -81,6 +81,7 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\xrightarrow[y]{x} \xleftarrow x", @"\underset{y}{\overset{x}{\to}}\overset{x}{\leftarrow}", @"→┬𝑦┴𝑥 ←┴𝑥")]
         [Arguments(@"\underset ab+\underleftarrow{c}", @"\underset{a}{b}+\underset{\leftarrow}{c}", @"𝑏┬𝑎+𝑐┬←")]
         [Arguments(@"\sideset{_1^2}{_3^4}\sum", @"\vphantom{\sum}_1^2\sum_3^4", @"⇳∑₁²∑₃⁴")]
+        [Arguments(@"\prescript{14}{6}{C}+\prescript{}{2}{x}", @"{}_6^{14}C+{}_2x", @"_6^14 𝐶+(_2)𝑥")]
         [Arguments(@"\genfrac\{]{0pt}{}{a}{b}+\dbinom a b", @"\{\genfrac{}{}{0pt}{}{a}{b}]+\binom{a}{b}", @"{𝑎¦𝑏]+𝑎⒞𝑏")]
         [Arguments(@"a \pod{n}+\not a", @"a\quad(n)+\overset{̸}{a}", @"𝑎 (𝑛)+𝑎̸")]
         [Arguments(@"^3+{'x}", @"{}^3+{}'x", @"⬚³+⬚′𝑥")]
@@ -137,12 +138,24 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\langle a \vert b \rangle", @"\langle a|b\rangle", @"⟨𝑎│𝑏⟩")]
         [Arguments(@"\left. x \right. ", @"x", @"𝑥")]
         [Arguments(@"\mathop{\sum}_i", @"\sum_i", @"∑_𝑖")]
+        [Arguments(@"\mathop{x}\limits_0^1", @"\underset{0}{\overset{1}{x}}", @"𝑥┬0┴1")]
+        [Arguments(@"\underset{0}{\overset{1}{x}}", @"\underset{0}{\overset{1}{x}}", @"𝑥┬0┴1")]
+        [Arguments(@"\overbrace3^a_x", @"\underset{x}{\overset{a}{\overbrace{3}}}", @"⏞3┬𝑥┴𝑎")]
+        [Arguments(@"\underset{x}{\overset{a}{\overbrace{3}}}", @"\underset{x}{\overset{a}{\overbrace{3}}}", @"⏞3┬𝑥┴𝑎")]
+        [Arguments(@"\underbrace{a+b}_n^x+c", @"\underset{n}{\overset{x}{\underbrace{a+b}}}+c", @"⏟(𝑎+𝑏)┬𝑛┴𝑥+𝑐")]
+        [Arguments(@"\underset{n}{\overset{x}{\underbrace{a+b}}}+c", @"\underset{n}{\overset{x}{\underbrace{a+b}}}+c", @"⏟(𝑎+𝑏)┬𝑛┴𝑥+𝑐")]
         [Arguments(@"\xleftarrow{g}", @"\overset{g}{\leftarrow}", @"←┴𝑔")]
         [Arguments(@"\pmod n", @"(\mod\,n)", @"(mod⁡ 𝑛)")]
         [Arguments(@"\hspace*{2cm}x", @"x", @"𝑥")]
         [Arguments(@"a\;b\:c\,d\!e\ f", @"a\;b\:c\,de~f", @"𝑎 𝑏 𝑐 𝑑𝑒 𝑓")]
         [Arguments(@"\mathrm{d}\mathbf{d}\mathit{d}\mathsf{d}\mathtt{d}\mathcal{D}\mathfrak{d}\mathbb{D}", @"\mathrm{d}\mathbf{d}d\mathsf{d}\mathtt{d}\mathcal{D}\mathfrak{d}\mathbb{D}", @"""d""𝐝𝑑𝖽𝚍𝒟𝔡𝔻")]
-        [Arguments(@"\mathrm{x_1}", @"x_1", @"𝑥₁")]
+        [Arguments(@"\mathrm{x_1}", @"\mathrm{x}_1", @"""x""₁")]
+        [Arguments(@"\mathrm{A \{b\}}", @"\mathrm{A}\{\mathrm{b}\}", @"""A""{""b""}")]
+        [Arguments(@"\mathsf{\text{var} = 1+\{b\}}", @"\text{var}=\mathsf{1}+\{\mathsf{b}\}", @"""var""=𝟣+{𝖻}")]
+        [Arguments(@"\mathbf{\text{var}+x}", @"\text{var}+\mathbf{x}", @"""var""+𝐱")]
+        [Arguments(@"\boldsymbol{1}\boldsymbol{x1\alpha}", @"\mathbf{1}\boldsymbol{x}\mathbf{1}\boldsymbol{\alpha}", @"𝟏𝒙𝟏𝜶")]
+        [Arguments(@"\mathbf{\mathrm{x}y}", @"\mathrm{x}\mathbf{y}", @"""x""𝐲")]
+        [Arguments(@"\mathbf{\Gamma+\sin x}", @"\mathbf{\Gamma}+\sin\mathbf{x}", @"𝚪+sin⁡𝐱")]
         [Arguments(@"\mathbf{\alpha}", @"\mathbf{\alpha}", @"𝛂")]
         [Arguments(@"\tag*{A}", @"\tag{A}", @"#A")]
         [Arguments(@"{\color{blue} a \{ b} + c", @"a\{b+c", @"𝑎\{𝑏+𝑐")]
@@ -335,12 +348,54 @@ namespace SharpEquations.Tests.LaTeX
         }
 
         [Test]
-        [Arguments(@"\foo x", @"Unknown control word \foox in the LaTeX.")]
+        [Arguments(@"\newenvironment{wrapper}{a +}{+ c} \begin{wrapper} b \end{wrapper}", @"a+b+c")]
+        [Arguments(@"\newenvironment{paren}[1]{\left( #1 +}{\right)} \begin{paren}{x} y \end{paren}", @"\left(x+y\right)")]
+        [Arguments(@"\newenvironment{e}[2][1]{#1+#2}{} \begin{e}{a} b\end{e}", @"1+ab")]
+        [Arguments(@"\newenvironment{e}[2][1]{#1+#2}{} \begin{e}[2]{a}\end{e}", @"2+a")]
+        [Arguments(@"\newenvironment{g}{(}{)} \begin{g} a \begin{g} b \end{g} \end{g}", @"(a(b))")]
+        [Arguments(@"\newenvironment{al}{\alpha}{\beta}\begin{al}x\end{al}y", @"\alpha x\beta y")]
+        [Arguments(@"\newenvironment{e}{a}{} \renewenvironment{e}{b}{} \begin{e}\end{e}", @"b")]
+        [Arguments(@"\newenvironment{m}{\begin{pmatrix}}{\end{pmatrix}} \begin{m} 1 & 2 \end{m}", @"\begin{pmatrix}1&2\end{pmatrix}")]
+        [Arguments(@"\newenvironment{h}{\newcommand{\f}[1]{##1^2}}{} \begin{h}\f{x}\end{h}", @"x^2")]
+        public async Task ExpandsEnvironments(string latex, string equivalent)
+        {
+            await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX)).IsEqualTo(Equation.Parse(equivalent, EquationFormat.LaTeX));
+        }
+
+        [Test]
+        public async Task RejectsEnvironmentsThatExpandForever()
+        {
+            await Assert.That(Equation.TryParse(@"\newenvironment{r}{\begin{r}}{\end{r}} \begin{r} x \end{r}", EquationFormat.LaTeX, out _)).IsFalse();
+        }
+
+        [Test]
+        [Arguments(@"\foo x", @"Unknown control word \foo in the LaTeX.")]
         [Arguments(@"a+\undefinedcommand", @"Unknown control word \undefinedcommand in the LaTeX.")]
+        [Arguments(@"\sgn r", @"Unknown control word \sgn in the LaTeX.")]
+        [Arguments(@"\lg d", @"Unknown control word \lg in the LaTeX.")]
+        [Arguments(@"\liminf v", @"Unknown control word \liminf in the LaTeX.")]
+        [Arguments(@"a \backslash b", @"Unknown control word \backslash in the LaTeX.")]
+        [Arguments(@"\sgn2", @"Unknown control word \sgn in the LaTeX.")]
         public async Task RejectsUnknownControlWordsWhenStrict(string latex, string message)
         {
             await Assert.That(() => Equation.Parse(latex, EquationFormat.LaTeX, Strict)).Throws<FormatException>().WithMessage(message);
             await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX).ToMathML().Descendants(MathMLNamespaces.MathML + "mtext")).IsNotEmpty();
+        }
+
+        [Test]
+        [Arguments(@"\sgn r", @"\sgn", "r")]
+        [Arguments(@"\lg d", @"\lg", "d")]
+        [Arguments(@"\liminf v", @"\liminf", "v")]
+        [Arguments(@"a \backslash b", @"\backslash", "b")]
+        [Arguments(@"\sgn  r", @"\sgn", "r")]
+        [Arguments(@"\sgn{r}", @"\sgn", "r")]
+        [Arguments(@"\text{\sgn} r", @"\sgn", "r")]
+        [Arguments(@"\sgn2", @"\sgn", "2")]
+        public async Task EndsUnknownControlWordsAtTheirLetters(string latex, string text, string after)
+        {
+            var math = Equation.Parse(latex, EquationFormat.LaTeX).ToMathML();
+            await Assert.That(math.Descendants(MathMLNamespaces.MathML + "mtext").Select(e => e.Value).ToList()).IsEquivalentTo(new[] { text });
+            await Assert.That(math.Descendants().Where(e => e.Name.LocalName is "mi" or "mn").Select(e => e.Value).Last()).IsEqualTo(after);
         }
 
         [Test]
@@ -356,6 +411,56 @@ namespace SharpEquations.Tests.LaTeX
         public async Task RejectsLaTeXThatIsNotAnEquation(string latex)
         {
             await Assert.That(() => Equation.Parse(latex, EquationFormat.LaTeX)).ThrowsExactly<FormatException>();
+        }
+
+        [Test]
+        [Arguments(@"a\square b", "□")]
+        [Arguments(@"a\blacksquare b", "■")]
+        [Arguments(@"a\surd b", "√")]
+        [Arguments(@"a\triangleq b", "≜")]
+        [Arguments(@"a\eqsim b", "≂")]
+        [Arguments(@"a\doteqdot b", "≑")]
+        [Arguments(@"a\rightsquigarrow b", "↝")]
+        [Arguments(@"a\leftrightsquigarrow b", "↭")]
+        [Arguments(@"a\measuredangle b", "∡")]
+        [Arguments(@"a\sphericalangle b", "∢")]
+        [Arguments(@"a\mho b", "℧")]
+        [Arguments(@"a\yen b", "¥")]
+        [Arguments(@"a\circledR b", "®")]
+        [Arguments(@"a\S b", "§")]
+        [Arguments(@"a\P b", "¶")]
+        [Arguments(@"a\geqslant b", "⩾")]
+        [Arguments(@"a\leqslant b", "⩽")]
+        [Arguments(@"a\therefore b", "∴")]
+        [Arguments(@"a\coloneqq b", "≔")]
+        [Arguments(@"a\dblcolon b", "∷")]
+        [Arguments(@"a\ngtr b", "≯")]
+        [Arguments(@"a\lozenge b", "◊")]
+        [Arguments(@"a\oslash b", "⊘")]
+        [Arguments(@"a\succeq b", "⪰")]
+        [Arguments(@"a\mid b", "∣")]
+        public async Task ReadsSymbolsThatUnicodeMathHasNoControlWordFor(string latex, string symbol)
+        {
+            var math = Equation.Parse(latex, EquationFormat.LaTeX, Strict).ToMathML();
+            await Assert.That(math.Elements().Select(e => e.Value).ToList()).IsEquivalentTo(new[] { "a", symbol, "b" });
+        }
+
+        [Test]
+        [Arguments("□", @"a\square b")]
+        [Arguments("√", @"a{\surd}b")]
+        [Arguments("≦", @"a\leqq b")]
+        [Arguments("↠", @"a\twoheadrightarrow b")]
+        [Arguments("⇄", @"a\rightleftarrows b")]
+        [Arguments("≼", @"a\preccurlyeq b")]
+        [Arguments("∌", @"a\not\ni b")]
+        [Arguments("〈", @"a\langle b")]
+        public async Task WritesTheSymbolsOfAmssymbAsCommands(string symbol, string latex)
+        {
+            var equation = Equation.Parse("<math><mi>a</mi><mo>" + symbol + "</mo><mi>b</mi></math>", EquationFormat.MathML);
+            var written = equation.ToString(EquationFormat.LaTeX);
+            await Assert.That(written).IsEqualTo(latex);
+            var back = Equation.Parse(written, EquationFormat.LaTeX, Strict);
+            await Assert.That(Equation.Parse(back.ToString(EquationFormat.LaTeX), EquationFormat.LaTeX)).IsEqualTo(back);
         }
     }
 }

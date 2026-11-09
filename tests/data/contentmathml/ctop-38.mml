@@ -1,0 +1,4 @@
+<math display="block">
+<apply><implies/>
+   <apply><implies/><ci>A</ci><ci>B</ci></apply><ci>C</ci></apply>
+</math>
