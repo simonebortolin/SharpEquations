@@ -180,8 +180,9 @@ namespace SharpEquations.Tests
 
         // commands of MathJax, KaTeX, plain TeX or packages that Word's LaTeX, which the reader follows, does not have:
         // links, classes, colors, boxes and moves, sizes, \hbox and \verb, \LaTeX, \skew, the primitives of plain TeX
-        // (\matrix{}, \cr, \eqalign, \displaylines, \above, \atop, \brace) and its font switches (\frak, \scr, \rm over text),
-        // the classes of \mathord, \mathbin and \mathrel, the bra-kets of the physics package, \mathsfit, \argmax, \widecheck
+        // (\matrix{}, \cr, \eqalign, \displaylines, \above, \atop, \brace) and its font switches (\frak, \scr, and \rm or
+        // \tt over text), the classes of \mathord, \mathbin and \mathrel, the bra-kets of the physics package, \mathsfit,
+        // \argmax, \widecheck
         private static readonly HashSet<string> NotInWordLaTeX = new HashSet<string>
         {
             "href", "class", "style", "textcolor", "colorbox", "fcolorbox", "raise", "lower", "moveleft", "moveright",
@@ -189,21 +190,20 @@ namespace SharpEquations.Tests
             "mathchoice-inline", "unicode", "verb", "huge", "large", "normalsize-scriptsize", "small-tiny", "footnotesize",
             "LaTeX", "LaTeX-with-style", "TeX", "TeX-with-style", "hbox", "hbox-with-math-mode", "hbox-with-backslash-in-text",
             "fbox", "leftroot-uproot", "skew", "skew-with-braces", "displaylines", "eqalign", "matrix-without-begin-and-end",
-            "hfil", "above", "abovewithdelims", "atop-and-atopwithdelims", "brace", "brace-1", "oldstyle", "scr",
-            "fraktur", "global-fonts", "greatest-common-divisor",
+            "hfil", "above", "abovewithdelims", "atop-and-atopwithdelims", "brace", "brace-1", "oldstyle", "scr", "tt",
+            "fraktur", "greatest-common-divisor",
             "math-commands-that-currently-does-nothing", "mathbin", "mathord", "mathrel", "bra", "ket", "braket", "mathsfit",
             "argmax", "widecheck",
         };
 
         // LaTeX and amsmath that the reader does not read yet: an operator name with nothing after it (\lg, \liminf,
         // \injlim, \operatorname*{argmax}_x), which UnicodeMath reads as letters, and the names of amsmath that are two
-        // words (lim inf); \middle between empty
-        // delimiters and bars with nothing between them (|\,|); a font over \text and escaped braces (\mathrm{\{b\}},
-        // \mathsf{\text{}}, \boldsymbol{1}); \newenvironment and ## in a macro
+        // words (lim inf); \middle between empty delimiters and bars with nothing between them (|\,|); \newenvironment
+        // and ## in a macro
         private static readonly HashSet<string> NotReadYet = new HashSet<string>
         {
             "lg", "liminf", "limsup", "injlim", "projlim", "varinjlim", "operatornamewithlimits", "operatorname-star",
-            "middle", "spaces", "mathrm", "mathsf", "boldsymbol",
+            "middle", "spaces",
             "newenvironment-multi-node", "newcommand-escaped-hash",
         };
 
