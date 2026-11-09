@@ -21,7 +21,12 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
   SOLUTION: SharpEquations.slnx
-  LIBRARY_PROJECT: src/SharpEquations/SharpEquations.csproj
+  # the packages, all with the version of BuildVersion.props: the converter, and the equation editor on top of it
+  LIBRARY_PROJECTS: >-
+    src/SharpEquations/SharpEquations.csproj
+    src/SharpEquations.Editing/SharpEquations.Editing.csproj
+    src/SharpEquations.Rendering/SharpEquations.Rendering.csproj
+    src/SharpEquations.Avalonia/SharpEquations.Avalonia.csproj
   TEST_PROJECT: tests/SharpEquations.Tests/SharpEquations.Tests.csproj
   EDITOR_TEST_PROJECT: tests/SharpEquations.Avalonia.Tests/SharpEquations.Avalonia.Tests.csproj
   FEED_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
@@ -216,11 +221,13 @@ jobs:
       # The .snupkg symbol package is written next to the .nupkg.
       - name: Pack
         run: |
-          dotnet pack "$LIBRARY_PROJECT" \
-            -c Release \
-            -o artifacts \
-            -p:VersionSuffix="$VERSION_SUFFIX" \
-            -p:ContinuousIntegrationBuild=true
+          for PROJECT in $LIBRARY_PROJECTS; do
+            dotnet pack "$PROJECT" \
+              -c Release \
+              -o artifacts \
+              -p:VersionSuffix="$VERSION_SUFFIX" \
+              -p:ContinuousIntegrationBuild=true
+          done
           ls -lh artifacts
 
       # nuget.org shows the README of the package: fail if it is missing or not declared.

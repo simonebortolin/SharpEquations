@@ -6,7 +6,8 @@ as it is typed, and the content is read and written as MathML (`GetMath`/`SetMat
 SharpEquations is the core under it: it reads what is typed, gives the MathML, and writes the linear form back when a
 part of the equation is built down. The editor edits one equation (math only), not math zones in a text document.
 
-Phases 1 to 3 of the plan below are done; phase 4 is what remains.
+Phases 1 to 3 of the plan below are done, and phase 4 in part; the three projects are published as NuGet packages with
+the version of the core.
 
 ## What the user sees
 
@@ -27,13 +28,26 @@ The behaviour is the one of the equations of Word and of `RichEditBox` in math m
   denominator, superscript and subscript, limits, the rows of a table), to the position nearest to the caret; Home and
   End go to the ends of the row, then of the equation; Shift extends the selection, which covers a whole structure when
   it leaves a slot. Backspace and Delete remove a code point of a run or of a token (a token becomes a run then), and
-  select a structure first and delete it the second time, as in Word. Ctrl+Z and Ctrl+Y undo and redo (an undo after a
-  build up gives back the text as it was typed); Ctrl+A selects all; Enter builds up all the runs. The shortcuts of copy,
+  select a structure first and delete it the second time, as in Word. Ctrl+Z and Ctrl+Y undo and redo: the history is a
+  stack of the immutable trees (1000 at most, `UndoLimit`), which share what an edit did not change; the characters
+  typed in a row are one step, and a build up another, so that an undo after a build up gives back the text as it was
+  typed; Ctrl+A selects all; Enter builds up all the runs. The shortcuts of copy,
   paste, undo... are those of the platform (`PlatformHotkeyConfiguration`).
 - **Mouse**: a click places the caret at the nearest position of the deepest row under the pointer; a drag selects.
-- **Clipboard**: copy puts the selection as linear text in the input format and as MathML (`MathML` on Windows,
-  `application/mathml+xml` elsewhere); paste reads MathML, then the text in the input format or as MathML, and inserts
-  plain text as a run when it does not parse.
+- **Clipboard**: copy puts the selection as text in `CopyTextFormat` (the input format by default; MathML pastes as an
+  equation into Word) and as MathML (`MathML` on Windows, `application/mathml+xml` elsewhere); a handler of `Copying`
+  can add formats or cancel; `GetSelectedText(format)` gives the selection in any format (UnicodeMath, LaTeX, MathML,
+  OMML) without the clipboard. Paste reads MathML, then the text in the input format or as MathML, and inserts plain
+  text as a run when it does not parse.
+- **Input**: one format at a time, UnicodeMath or LaTeX, switched at any moment (what is built up stays). UnicodeMath
+  already reads the TeX control words of Word (`\alpha`, `\sqrt`, `\sum`); a LaTeX control word followed by a space
+  waits for its argument when it has one (`\mathring a`), and is built up when it is complete (`\alpha␣`).
+- **Equation numbers**: `#(1)` at the end in UnicodeMath, `\tag{1}` in LaTeX, or `EquationNumber = "(1)"`: the number
+  goes to the right edge of the line (or the left, with `side="left"`), with the equation in the middle of what is
+  left, as in Word; the layout knows the line from `MathLayoutOptions.LineWidth`, which the controls set to their width.
+- **Structures from code**: `InsertStructure("mfrac")`, `InsertFences`, `InsertMatrix(2, 2, "(", ")")`,
+  `InsertTemplate(node)`, with the selection in the first slot and the caret in the first empty one, as the buttons of
+  the equation tools of Word; Tab and Shift+Tab move through the cells of a table.
 - **Empty slots** are drawn as a dashed box, as the placeholder `⬚` of Word.
 
 ## Layers
@@ -70,7 +84,10 @@ flowchart TB
     F --> M
 ```
 
-The core is unchanged and the editor is built on its public API only. Editing and Rendering have no dependency on a
+The core is unchanged and the editor is built on its public API only. The demo (`samples/SharpEquations.Avalonia.Demo`)
+has the tools of the equations of Word: the structures and symbols to insert, the input format, the views, the font,
+the number of the equation, undo, copy in every format, examples, and the equation as MathML, UnicodeMath, LaTeX and
+OMML as it is typed; a test opens it. Editing and Rendering have no dependency on a
 user interface (they target netstandard2.0 and net10.0, with no package, as the core), so that they are tested without
 a toolkit and could serve another one; only `SharpEquations.Avalonia` depends on Avalonia (12.1). Each is a project of
 its own in this repository; `samples/SharpEquations.Avalonia.Demo` is a window with the editor and the equation in every
@@ -116,7 +133,10 @@ the editor, or built down to linear text and up again, is the same equation, for
 (`Editing/CorpusTests`). Typed one character at a time, building up as it goes, an equation of the corpus is the
 equation of its whole text for 93% of the corpus: the others are text that UnicodeMath reads otherwise when it is read a
 piece at a time (prescripts typed before their base, `^+-` that becomes `^±`, spaces that end an operand), where what
-builds up at an operator stays built up, as in Word.
+builds up at an operator stays built up, as in Word. The other corpora of the repository test the editor too
+(`Editing/RepositoryCorporaTests`): the LaTeX of latex2mathml and the OMML of Word documents load unchanged, and round
+trip through linear UnicodeMath and the LaTeX of Word; typed one character at a time, 90% of the LaTeX gives the
+equation of its text; all of them, with the MathML of mml2tex and the MTEF of the fixtures, lay out.
 
 `MathEditor.ToEquation()` builds up a copy of the tree, with the runs that do not parse as `merror`, and reads it as
 MathML, so that the equation an editor gives is normalized like any other and compares with `==`.
@@ -188,13 +208,14 @@ public class MathView : Control                             // read-only: Equati
 | 1 | `SharpEquations.Rendering` and `MathView`: MATH table, outlines, layout of MathML Core | done: the corpus lays out (`Rendering/LayoutTests`) |
 | 2 | `SharpEquations.Editing`: nodes ↔ MathML, caret, navigation, selection, build up and down, undo | done: 100% of the corpus loads and round-trips through linear text, 93% typed a character at a time |
 | 3 | `MathEditBox`: input, caret, hit testing, selection, linear view, clipboard, demo | done: headless tests of typing, keys, mouse, MathML in and out |
-| 4 | Autocomplete of control words, accessibility (an `AutomationPeer` that reads the equation as UnicodeMath), keyboard navigation in tables (Tab, new rows), the `ssty` variants of scripts, cut lines of long equations, NuGet packages of the three projects | to do |
+| 4 | Accessibility (`MathEditBoxAutomationPeer`: an edit control whose value is the equation in UnicodeMath), Tab in tables, equation numbers, copy in any format, structures from code, NuGet packages | done |
+| 5 | Autocomplete of control words (with the public list of the core), new rows and columns of tables, the `ssty` variants of scripts, line breaks of long equations | to do |
 
 ## Open points
 
 - **Public API of the core** (for its next major version): the list of the control words of UnicodeMath and of the
   LaTeX commands with their symbols (`ControlWords`, `LaTeXSymbols`, internal today), for the autocomplete of phase 4.
-- **Packages**: the three projects are packable, but the CI packs and publishes only `SharpEquations`; publishing the
-  editor (with its own version or that of the core) is to be decided.
+- **Packages**: the CI packs the three projects with the core, with its version, and publishes them with it; their
+  public API is tracked in `PublicAPI.Shipped.txt`/`PublicAPI.Unshipped.txt`, as that of the core.
 - **Reference images**: the rendering is tested by the geometry of the layout, not by pictures; the tests write
   pictures of a set of equations when `SHARPEQUATIONS_SCREENSHOTS` names a directory, for a look.

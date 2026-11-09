@@ -110,12 +110,15 @@ for the equations of Word documents (`tests/data/omml/`), that an equation writt
 OMML) reads back to the same equation, and that one written in another format (standard LaTeX, Word's LaTeX, OMML)
 loses only the first time what that format cannot hold. Keep these at 100%. For the editor, an equation of the corpus
 loaded in the editor, or built down to linear text and up again, is the same equation (100%); typed one character at a
-time it is the equation of the whole text for 93% of the corpus (`Editing/CorpusTests`), which a change must not lower.
+time it is the equation of the whole text for 93% of the corpus (`Editing/CorpusTests`) and for 90% of the LaTeX of
+latex2mathml (`Editing/RepositoryCorporaTests`), which a change must not lower. The public API of the editor's
+packages is tracked in their `PublicAPI.*.txt`, as that of the core.
 
 ## Releases
 
 `.github/workflows/ci.yml`, the same pipeline as SharpMediaInfo and Letra200bSharp: it tests on Linux (net10.0, net8.0),
-Windows (net10.0, net481) and macOS (net10.0), packs, publishes a `pr-<N>-…` pre-release for each pull request (deleted on close by
+Windows (net10.0, net481) and macOS (net10.0), packs the four packages (`SharpEquations` and the editor's `SharpEquations.Editing`, `.Rendering`, `.Avalonia`, with
+one version), publishes a `pr-<N>-…` pre-release for each pull request (deleted on close by
 `prerelease-cleanup.yml`) and, on `main`, tags `v<VersionPrefix>` of `BuildVersion.props`, creates the GitHub release
 and pushes the package to GitHub Packages and nuget.org (Trusted Publishing, repository variable `NUGET_USER`). A change
 that should release bumps `VersionPrefix`; one that should not says `[no-new-version]` in its commit message.

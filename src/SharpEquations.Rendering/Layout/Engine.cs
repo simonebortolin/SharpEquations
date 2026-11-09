@@ -1267,7 +1267,7 @@ namespace SharpEquations.Rendering.Layout
 
         private Box LayoutTable(MathNode table, int[]? path, Style style)
         {
-            var cellStyle = style.WithDisplay(false);
+            var cellStyle = style.WithDisplay(table.GetAttribute("displaystyle") == "true");
             var rows = new List<(List<Box> Cells, Box? Label, MathNode Row)>();
             var columns = 0;
             for (var r = 0; r < table.Children.Count; r++)
@@ -1329,8 +1329,21 @@ namespace SharpEquations.Rendering.Layout
             }
             var total = -y;
             var shift = total / 2 + Axis(style);
-            var labelX = tableWidth + style.Size;
-            var hasLabels = false;
+            // the labels of the rows (the numbers of the equations) on the right, or on the left with side="left": at the
+            // edge of the line when its width is known, with the table in the middle of what is left
+            var labelWidth = placedRows.Select(p => p.Row.Label?.Width ?? 0).DefaultIfEmpty(0).Max();
+            var hasLabels = placedRows.Any(p => p.Row.Label != null);
+            var left = table.GetAttribute("side") is "left" or "leftoverlap";
+            var gap = style.Size;
+            var width = hasLabels ? tableWidth + gap + labelWidth : tableWidth;
+            var tableX = hasLabels && left ? labelWidth + gap : 0;
+            if (hasLabels && options.LineWidth is { } line && line > width)
+            {
+                width = line;
+                var centered = (line - tableWidth) / 2;
+                tableX = left ? Math.Max(centered, labelWidth + gap) : Math.Min(centered, line - labelWidth - gap - tableWidth);
+            }
+
             foreach (var (baseline, (cells, label, row)) in placedRows)
             {
                 var rowAligns = row.GetAttribute("columnalign")?.Split(Spaces, StringSplitOptions.RemoveEmptyEntries);
@@ -1345,15 +1358,12 @@ namespace SharpEquations.Rendering.Layout
                         "right" => lefts[c] + widths[c] - cells[c].Width,
                         _ => lefts[c] + (widths[c] - cells[c].Width) / 2,
                     };
-                    box.Add(cells[c], cx, baseline + shift);
+                    box.Add(cells[c], tableX + cx, baseline + shift);
                 }
                 if (label != null)
-                {
-                    box.Add(label, labelX, baseline + shift);
-                    hasLabels = true;
-                }
+                    box.Add(label, left ? 0 : width - label.Width, baseline + shift);
             }
-            box.Width = hasLabels ? labelX + placedRows.Select(p => p.Row.Label?.Width ?? 0).Max() : tableWidth;
+            box.Width = width;
             box.Height = shift;
             box.Depth = total - shift;
             return box;

@@ -19,8 +19,8 @@ namespace SharpEquations.Editing
     /// </remarks>
     public sealed class MathEditor
     {
-        private readonly Stack<State> undo = new Stack<State>();
-        private readonly Stack<State> redo = new Stack<State>();
+        private readonly History undo = new History();
+        private readonly History redo = new History();
         private EquationFormat inputFormat = EquationFormat.UnicodeMath;
         private MathPosition? typingAt;
 
@@ -86,6 +86,22 @@ namespace SharpEquations.Editing
 
         /// <summary>Whether <see cref="Redo"/> has something to redo.</summary>
         public bool CanRedo => redo.Count > 0;
+
+        /// <summary>
+        /// How many edits <see cref="Undo"/> can undo at most (1000 by default); the oldest are forgotten. The states are
+        /// immutable trees that share what an edit did not change, so that each costs only the path it changed.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">A negative limit.</exception>
+        public int UndoLimit
+        {
+            get => undo.Limit;
+            set
+            {
+                if (value < 0)
+                    throw new ArgumentOutOfRangeException(nameof(value));
+                undo.Limit = redo.Limit = value;
+            }
+        }
 
         /// <summary>The equation is empty.</summary>
         public bool IsEmpty => RootRow.Children.Count == 0;
@@ -272,6 +288,134 @@ namespace SharpEquations.Editing
             return BuildUp.ToEquation(row.Children, IsDisplay);
         }
 
+        /// <summary>
+        /// The selection in a format, or null when nothing is selected: UnicodeMath, LaTeX (as Word writes it unless the
+        /// options say otherwise), MathML or OMML.
+        /// </summary>
+        /// <exception cref="ArgumentException">MTEF, which cannot be written.</exception>
+        public string? GetSelectedText(EquationFormat format, EquationOptions? options = null)
+        {
+            if (!EquationConverter.CanWrite(format))
+                throw new ArgumentException("The format cannot be written.", nameof(format));
+            var equation = GetSelectedEquation();
+            if (equation == null)
+                return null;
+            if (options == null && format is EquationFormat.UnicodeMath or EquationFormat.LaTeX)
+                return BuildUp.ToLinear(equation, format);
+            return equation.ToString(format, options);
+        }
+
+        /// <summary>
+        /// Inserts a structure with empty slots (<c>mfrac</c>, <c>msqrt</c>, <c>mroot</c>, <c>msub</c>, <c>msup</c>,
+        /// <c>msubsup</c>, <c>munder</c>, <c>mover</c>, <c>munderover</c>, <c>menclose</c>...), as the buttons of the
+        /// equation tools of Word: the selection goes into its first slot, and the caret into the first empty slot.
+        /// </summary>
+        /// <exception cref="ArgumentException">An element that is not a structure with slots.</exception>
+        public void InsertStructure(string name, IReadOnlyList<KeyValuePair<string, string>>? attributes = null)
+        {
+            var slots = name switch
+            {
+                "msqrt" or "menclose" or "mstyle" or "mphantom" or "mpadded" or "merror" => 1,
+                "mfrac" or "mroot" or "msub" or "msup" or "munder" or "mover" => 2,
+                "msubsup" or "munderover" => 3,
+                _ => throw new ArgumentException("Not a structure with slots: " + name, nameof(name)),
+            };
+            var first = GetSelectedNodes().ToList();
+            var rows = Enumerable.Range(0, slots).Select(i => MathNode.Row(i == 0 ? first : new List<MathNode>())).ToList();
+            InsertWithSlots(MathNode.Element(name, rows, attributes));
+        }
+
+        /// <summary>
+        /// Inserts a template: a node whose empty rows are slots to fill (an n-ary operator with its limits, an accent
+        /// over an empty base...). The caret goes into its first empty slot, or after it.
+        /// </summary>
+        public void InsertTemplate(MathNode node) => InsertWithSlots(node ?? throw new ArgumentNullException(nameof(node)));
+
+        /// <summary>Inserts a pair of fences, <c>(</c> and <c>)</c> by default, around the selection or an empty slot.</summary>
+        public void InsertFences(string open = "(", string close = ")")
+        {
+            var children = new List<MathNode> { MathNode.Token("mo", open) };
+            children.AddRange(GetSelectedNodes());
+            children.Add(MathNode.Token("mo", close));
+            InsertWithSlots(MathNode.Row(children));
+        }
+
+        /// <summary>Inserts a table of empty cells: a matrix, alone or between fences (such as <c>(</c> and <c>)</c>).</summary>
+        /// <exception cref="ArgumentOutOfRangeException">Fewer than one row or column.</exception>
+        public void InsertMatrix(int rows, int columns, string? open = null, string? close = null)
+        {
+            if (rows < 1)
+                throw new ArgumentOutOfRangeException(nameof(rows));
+            if (columns < 1)
+                throw new ArgumentOutOfRangeException(nameof(columns));
+            var empty = MathNode.Row(Array.Empty<MathNode>());
+            var table = MathNode.Element("mtable", Enumerable.Range(0, rows).Select(_ =>
+                MathNode.Element("mtr", Enumerable.Range(0, columns).Select(_ => MathNode.Element("mtd", new[] { empty })))));
+            InsertWithSlots(open == null && close == null
+                ? table
+                : MathNode.Row(new[] { MathNode.Token("mo", open ?? string.Empty), table, MathNode.Token("mo", close ?? string.Empty) }));
+        }
+
+        /// <summary>
+        /// Moves the caret to the next cell of the table it is in (the previous one, backward), selecting nothing;
+        /// returns false when the caret is not in a table or is in its last cell (its first, backward).
+        /// </summary>
+        public bool MoveToNextCell(bool backward = false)
+        {
+            var (rowPath, _) = RowPosition(Canonical(Caret));
+            var current = rowPath;
+            while (MathTree.Owner(Root, current) is { } owner)
+            {
+                if (MathTree.Get(Root, owner.Item).Name == "mtable")
+                {
+                    var next = owner.Index + (backward ? -1 : 1);
+                    if (next < 0 || next >= owner.Slots.Length)
+                        return false;
+                    var cell = owner.Slots[next];
+                    Move(Canonical(new MathPosition(cell, backward ? MathTree.Get(Root, cell).Children.Count : 0)), false);
+                    return true;
+                }
+                current = MathTree.Parent(owner.Item);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// The number of the equation, as UnicodeMath writes it after <c>#</c> and LaTeX in <c>\tag</c>: the label of an
+        /// equation that is one labeled row (<c>mtable</c> with one <c>mlabeledtr</c>); null without one.
+        /// </summary>
+        public string? EquationNumber => NumberedRow() is { } row ? string.Concat(Text(row.Children[0])) : null;
+
+        /// <summary>Numbers the equation, shown at the right of its line; null removes the number.</summary>
+        public void SetEquationNumber(string? number)
+        {
+            var labeled = NumberedRow();
+            if (labeled == null && number == null)
+                return;
+            PushUndo();
+            var label = MathNode.Element("mtd", new[] { MathNode.Row(new[] { MathNode.Token("mtext", number ?? string.Empty) }) });
+            var content = labeled == null ? RootRow : labeled.Children[1].Children[0];
+            MathNode row;
+            if (number == null)
+            {
+                row = MathNode.Row(content.Children);
+            }
+            else
+            {
+                // the id of the label as UnicodeMath gives it: its text without the brackets, between hyphens
+                var id = "-" + number.Trim().Trim('(', ')', '[', ']', '{', '}') + "-";
+                var labeledRow = MathNode.Element("mlabeledtr", new[] { label, MathNode.Element("mtd", new[] { content }) }, new[] { new KeyValuePair<string, string>("id", id) });
+                row = MathNode.Row(new[]
+                {
+                    MathNode.Element("mtable", new[] { labeledRow }, new[] { new KeyValuePair<string, string>("displaystyle", "true") }),
+                });
+            }
+            Root = Root.WithChild(0, row);
+            var contentPath = number == null ? MathTree.RootRow : new[] { 0, 0, 0, 1, 0 };
+            SetCaret(contentPath, MathTree.Get(Root, contentPath).Children.Count);
+            OnChanged(true);
+        }
+
         /// <summary>Deletes the selection; returns whether something was selected.</summary>
         public bool DeleteSelection()
         {
@@ -357,6 +501,56 @@ namespace SharpEquations.Editing
             Restore(redo.Pop());
         }
 
+        /// <summary>Inserts a node with slots, and puts the caret in its first empty slot (or after it).</summary>
+        private void InsertWithSlots(MathNode node)
+        {
+            PushUndo();
+            if (Selection != null)
+                RemoveSelection();
+            var (rowPath, index) = SplitRunAtCaret();
+            var row = MathTree.Get(Root, rowPath);
+            var children = row.Children.ToList();
+            children.Insert(index, node);
+            Root = MathTree.Replace(Root, rowPath, row.WithChildren(children));
+            var item = MathTree.Append(rowPath, index);
+            if (FirstEmptySlot(item) is { } empty)
+                SetCaret(empty, 0);
+            else if (node.IsRow)
+                SetCaret(item, node.Children.Count - 1);
+            else
+                SetCaret(rowPath, index + 1);
+            OnChanged(true);
+        }
+
+        /// <summary>The labeled row of an equation that is one, or null.</summary>
+        private MathNode? NumberedRow()
+        {
+            if (RootRow.Children.Count != 1 || RootRow.Children[0] is not { Name: "mtable" } table || table.Children.Count != 1)
+                return null;
+            var row = table.Children[0];
+            return row.Name == "mlabeledtr" && row.Children.Count == 2 && row.Children.All(c => c.Children.Count == 1 && c.Children[0].IsRow) ? row : null;
+        }
+
+        private static IEnumerable<string> Text(MathNode node) =>
+            node.IsToken || node.IsRun ? new[] { node.Text } : node.Children.SelectMany(Text);
+
+        private int[]? FirstEmptySlot(int[] item)
+        {
+            foreach (var slot in MathSchema.Slots(MathTree.Get(Root, item)))
+            {
+                var path = MathTree.Append(item, slot);
+                var row = MathTree.Get(Root, path);
+                if (row.Children.Count == 0)
+                    return path;
+                for (var i = 0; i < row.Children.Count; i++)
+                {
+                    if (FirstEmptySlot(MathTree.Append(path, i)) is { } inner)
+                        return inner;
+                }
+            }
+            return null;
+        }
+
         private static MathNode Empty(bool display) => MathNode.Element(
             "math",
             new[] { MathNode.Row(Array.Empty<MathNode>()) },
@@ -430,7 +624,7 @@ namespace SharpEquations.Editing
                 return false;
 
             var nodes = BuildUp.Parse(row.Children.Take(j).ToList(), text, InputFormat, IsDisplay);
-            if (nodes == null)
+            if (nodes == null || space && BuildUp.EndsWithPendingCommand(text, nodes))
                 return false;
 
             undo.Push(Snapshot());
@@ -841,6 +1035,32 @@ namespace SharpEquations.Editing
             if (content)
                 ContentChanged?.Invoke(this, EventArgs.Empty);
             Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>A stack of states that forgets the oldest beyond its limit.</summary>
+        private sealed class History
+        {
+            private readonly LinkedList<State> states = new LinkedList<State>();
+
+            public int Limit { get; set; } = 1000;
+
+            public int Count => states.Count;
+
+            public void Push(State state)
+            {
+                states.AddLast(state);
+                while (states.Count > Limit)
+                    states.RemoveFirst();
+            }
+
+            public State Pop()
+            {
+                var state = states.Last!.Value;
+                states.RemoveLast();
+                return state;
+            }
+
+            public void Clear() => states.Clear();
         }
 
         private sealed class State

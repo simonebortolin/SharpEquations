@@ -21,4 +21,24 @@ namespace SharpEquations.Avalonia
         /// <summary>The equation, or null when the editor is empty.</summary>
         public Equation? Equation { get; }
     }
+
+    /// <summary>The arguments of <see cref="MathEditBox.Copying"/>.</summary>
+    public sealed class MathCopyingEventArgs : EventArgs
+    {
+        /// <summary>Arguments with the equation copied and the item of the clipboard.</summary>
+        public MathCopyingEventArgs(Equation equation, global::Avalonia.Input.DataTransferItem item)
+        {
+            Equation = equation;
+            Item = item;
+        }
+
+        /// <summary>The selection copied.</summary>
+        public Equation Equation { get; }
+
+        /// <summary>The item that goes to the clipboard, with the text and the MathML; a handler can add formats.</summary>
+        public global::Avalonia.Input.DataTransferItem Item { get; }
+
+        /// <summary>Set to true to copy nothing.</summary>
+        public bool Cancel { get; set; }
+    }
 }

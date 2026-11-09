@@ -57,6 +57,24 @@ namespace SharpEquations.Editing
                 or 0x2061 or 0x2044 or 0x2215 or 0x2298;
         }
 
+        /// <summary>
+        /// Whether the text ends with a control word (<c>\mathring</c>) that the nodes built from it leave as text
+        /// (<c>mtext</c>), or as the empty box of a style command (<c>\rm</c>): its arguments are still to come.
+        /// </summary>
+        public static bool EndsWithPendingCommand(string text, IReadOnlyList<MathNode> nodes)
+        {
+            var i = text.Length;
+            while (i > 0 && text[i - 1] < 0x80 && char.IsLetter(text[i - 1]))
+                i--;
+            if (i == text.Length || i == 0 || text[i - 1] != '\\')
+                return false;
+            var command = text.Substring(i - 1);
+            return nodes.Any(n => Pending(n, command));
+
+            static bool Pending(MathNode node, string command) =>
+                node.Name == "mtext" && node.Text.Contains(command) || node.Name == "mi" && node.Text == "\u2B1A" || node.Children.Any(c => Pending(c, command));
+        }
+
         /// <summary>Whether the brackets (UnicodeMath) or the groups and environments (LaTeX) of the text are closed.</summary>
         public static bool IsBalanced(string text, EquationFormat format)
         {
@@ -200,6 +218,13 @@ namespace SharpEquations.Editing
             if (node.IsToken && node.Attributes.Count == 0 && IsLiteral(node, format))
             {
                 AppendSeparated(sb, node.Text);
+                return;
+            }
+
+            // a word of LaTeX (a function: tan, max, or \operatorname{sn}) is one identifier
+            if (format == EquationFormat.LaTeX && node.Name == "mi" && node.Attributes.Count == 0 && node.Text.Length > 1 && node.Text.All(c => c < 0x80 && char.IsLetter(c)))
+            {
+                sb.Append("\\operatorname{").Append(node.Text).Append('}');
                 return;
             }
 

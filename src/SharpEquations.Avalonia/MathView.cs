@@ -92,7 +92,7 @@ namespace SharpEquations.Avalonia
             drawing = null;
             if (Equation is not { } equation)
                 return default;
-            var layout = MathLayoutEngine.Layout(equation, MathFonts.Get(MathFontFamily), new MathLayoutOptions { FontSize = FontSize, Display = IsDisplay });
+            var layout = MathLayoutEngine.Layout(equation, MathFonts.Get(MathFontFamily), new MathLayoutOptions { FontSize = FontSize, Display = IsDisplay, LineWidth = double.IsInfinity(availableSize.Width) ? null : availableSize.Width });
             drawing = new MathDrawing(layout);
             return new Size(layout.Width, layout.Height);
         }

@@ -173,8 +173,10 @@ namespace SharpEquations.Editing
             var result = new XElement(ns + Name, Attributes.Select(a => new XAttribute(XName.Get(a.Key), a.Value)));
             switch (MathSchema.KindOf(Name))
             {
-                case ElementKind.Token:
+                case ElementKind.Token when Text.Length > 0:
                     result.Add(Text);
+                    break;
+                case ElementKind.Token:
                     break;
                 case ElementKind.Leaf:
                     break;

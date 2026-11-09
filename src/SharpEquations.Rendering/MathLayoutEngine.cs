@@ -15,6 +15,12 @@ namespace SharpEquations.Rendering
         /// <summary>Lays out in display style even if the <c>math</c> element is inline.</summary>
         public bool Display { get; set; }
 
+        /// <summary>
+        /// The width of the line the equation is in, if it is known: the numbers of equations (the labels of
+        /// <c>mlabeledtr</c>) go to its right edge, as in Word, with the equation in the middle of what is left.
+        /// </summary>
+        public double? LineWidth { get; set; }
+
         /// <summary>Draws a box in the empty slots, for an editor.</summary>
         public bool ShowPlaceholders { get; set; }
     }
@@ -25,7 +31,7 @@ namespace SharpEquations.Rendering
     public static class MathLayoutEngine
     {
         /// <summary>Lays out an equation.</summary>
-        public static MathLayout Layout(Equation equation, IMathFont font, MathLayoutOptions? options = null)
+        public static MathLayout Layout(Equation equation, IMathFont font, MathLayoutOptions? options)
         {
             if (equation == null)
                 throw new ArgumentNullException(nameof(equation));
@@ -33,7 +39,7 @@ namespace SharpEquations.Rendering
         }
 
         /// <summary>Lays out a <c>math</c> element of MathML.</summary>
-        public static MathLayout Layout(XElement math, IMathFont font, MathLayoutOptions? options = null)
+        public static MathLayout Layout(XElement math, IMathFont font, MathLayoutOptions? options)
         {
             if (math == null)
                 throw new ArgumentNullException(nameof(math));
@@ -44,7 +50,7 @@ namespace SharpEquations.Rendering
         /// Lays out the <c>math</c> node of an editor (<see cref="MathEditor.Root"/>), with the geometry of the caret
         /// in every row and run.
         /// </summary>
-        public static MathLayout Layout(MathNode root, IMathFont font, MathLayoutOptions? options = null)
+        public static MathLayout Layout(MathNode root, IMathFont font, MathLayoutOptions? options)
         {
             if (root == null)
                 throw new ArgumentNullException(nameof(root));

@@ -5,6 +5,7 @@ namespace SharpEquations.Avalonia.Tests.Controls
     using global::Avalonia.Controls;
     using global::Avalonia.Headless;
     using global::Avalonia.Input;
+    using global::Avalonia.Input.Platform;
     using SharpEquations;
 
     /// <summary>The control in a window of the headless session: typing, keys, MathML in and out.</summary>
@@ -105,6 +106,62 @@ namespace SharpEquations.Avalonia.Tests.Controls
             }));
             await Assert.That(linear).IsTrue();
             await Assert.That(back).IsEqualTo(Display("a/b"));
+        }
+
+        [Test]
+        public async Task TabMovesThroughTheCells()
+        {
+            var equation = await Headless.Run(() => WithEditor((window, editor) =>
+            {
+                editor.Editor.InsertMatrix(1, 2);
+                window.KeyTextInput("a");
+                window.KeyPress(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, null);
+                window.KeyTextInput("b");
+                return editor.Equation;
+            }));
+            await Assert.That(equation).IsEqualTo(Display("■(a&b)"));
+        }
+
+        [Test]
+        public async Task AccessibleValueIsUnicodeMath()
+        {
+            var value = await Headless.Run(() => WithEditor((window, editor) =>
+            {
+                window.KeyTextInput("a/b ");
+                var peer = (MathEditBoxAutomationPeer)global::Avalonia.Automation.Peers.ControlAutomationPeer.CreatePeerForElement(editor);
+                var before = peer.Value;
+                peer.SetValue("x^2");
+                return (before, editor.Equation);
+            }));
+            await Assert.That(Equation.Parse(value.before, EquationFormat.UnicodeMath)).IsEqualTo(Equation.Parse("a/b", EquationFormat.UnicodeMath));
+            await Assert.That(value.Equation).IsEqualTo(Display("x^2"));
+        }
+
+        [Test]
+        public async Task CopyAndPaste()
+        {
+            var result = await Headless.RunAsync(async () =>
+            {
+                var editor = new MathEditBox { FontSize = 20, CopyTextFormat = EquationFormat.LaTeX };
+                var window = new Window { Content = editor, Width = 600, Height = 200 };
+                window.Show();
+                editor.Focus();
+                string? copied = null;
+                editor.Copying += (_, e) => copied = e.Equation.ToString(EquationFormat.UnicodeMath);
+                window.KeyTextInput("a/b ");
+                editor.Editor.SelectAll();
+                await editor.CopyAsync();
+                var text = await window.Clipboard!.TryGetTextAsync();
+                editor.Editor.MoveEnd();
+                window.KeyTextInput("+");
+                await editor.PasteAsync();
+                var equation = editor.Equation;
+                window.Close();
+                return (copied, text, equation);
+            });
+            await Assert.That(result.copied).IsNotNull();
+            await Assert.That(result.text).StartsWith("\\frac");
+            await Assert.That(result.equation).IsEqualTo(Display("a/b+a/b"));
         }
 
         [Test]

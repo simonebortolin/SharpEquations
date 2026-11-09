@@ -66,7 +66,13 @@ editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(Equat
 string mathML = editor.GetMath();        // as RichEditTextDocument.GetMath
 editor.SetMath(mathML);                  // as RichEditTextDocument.SetMath
 editor.ViewMode = MathViewMode.Linear;   // the equation as one line of UnicodeMath (Ctrl+Shift+L)
+editor.EquationNumber = "(1)";           // at the right of the line, as #(1) or \tag{1}
+string latex = editor.GetSelectedText(EquationFormat.LaTeX)!;
+editor.CopyTextFormat = EquationFormat.MathML;   // Ctrl+C pastes as an equation into Word
 ```
+
+The packages are `SharpEquations.Avalonia` (the controls), `SharpEquations.Rendering` and `SharpEquations.Editing`, with
+the version of `SharpEquations`.
 
 `MathView` shows an equation without editing it. Both lay out MathML after MathML Core with the OpenType MATH table of
 a math font: Cambria Math on Windows, and Libertinus Math (SIL Open Font License), embedded, elsewhere. The editor is
@@ -93,7 +99,7 @@ its README).
 ## Releases
 
 CI (`.github/workflows/ci.yml`) tests every push and pull request on Linux (.NET 10 and .NET 8), Windows (.NET 10 and
-.NET Framework 4.8.1) and macOS (.NET 10), and packs the NuGet package. The release version is `VersionPrefix` in `BuildVersion.props`: bump it, and merging to
+.NET Framework 4.8.1) and macOS (.NET 10), and packs the NuGet packages (the converter and the three of the editor, with one version). The release version is `VersionPrefix` in `BuildVersion.props`: bump it, and merging to
 `main` tags `vX.Y.Z`, creates the GitHub release with the package attached, and publishes it to GitHub Packages and to
 nuget.org (with [Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing): the repository
 variable `NUGET_USER` names the nuget.org account; without it nuget.org is skipped). A push that keeps the version on

@@ -30,5 +30,7 @@ namespace SharpEquations.Avalonia.Tests
         public static Task Run(Action action) => Session.Value.Dispatch(action, CancellationToken.None);
 
         public static Task<T> Run<T>(Func<T> function) => Session.Value.Dispatch(function, CancellationToken.None);
+
+        public static Task<T> RunAsync<T>(Func<Task<T>> function) => Session.Value.Dispatch(function, CancellationToken.None);
     }
 }

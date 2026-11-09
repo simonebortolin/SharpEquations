@@ -5,6 +5,7 @@ namespace SharpEquations.Avalonia
     using System.Runtime.InteropServices;
     using System.Threading.Tasks;
     using global::Avalonia;
+    using global::Avalonia.Automation.Peers;
     using global::Avalonia.Controls;
     using global::Avalonia.Controls.Documents;
     using global::Avalonia.Data;
@@ -86,6 +87,13 @@ namespace SharpEquations.Avalonia
         public static readonly StyledProperty<FontFamily?> MathFontFamilyProperty =
             AvaloniaProperty.Register<MathEditBox, FontFamily?>(nameof(MathFontFamily));
 
+        /// <summary>
+        /// The format of the text that <see cref="CopyAsync"/> puts on the clipboard; null (the default) for the input
+        /// format. MathML pastes as an equation into Word.
+        /// </summary>
+        public static readonly StyledProperty<EquationFormat?> CopyTextFormatProperty =
+            AvaloniaProperty.Register<MathEditBox, EquationFormat?>(nameof(CopyTextFormat), validate: f => f != EquationFormat.Mtef);
+
         /// <summary>The gesture that switches between the built up and the linear view.</summary>
         public static readonly StyledProperty<KeyGesture?> ToggleViewModeGestureProperty =
             AvaloniaProperty.Register<MathEditBox, KeyGesture?>(nameof(ToggleViewModeGesture), new KeyGesture(Key.L, KeyModifiers.Control | KeyModifiers.Shift));
@@ -120,6 +128,12 @@ namespace SharpEquations.Avalonia
                 InvalidateVisual();
             };
         }
+
+        /// <summary>
+        /// Raised when the selection is copied, before it goes to the clipboard: a handler can add formats to the item
+        /// (OMML, a picture...) or cancel the copy.
+        /// </summary>
+        public event EventHandler<MathCopyingEventArgs>? Copying;
 
         /// <summary>Raised when the equation changes, by an edit or by <see cref="Equation"/>.</summary>
         public event EventHandler<EquationChangedEventArgs>? EquationChanged;
@@ -239,6 +253,13 @@ namespace SharpEquations.Avalonia
             set => SetValue(ToggleViewModeGestureProperty, value);
         }
 
+        /// <summary>The format of the text copied to the clipboard; null for the input format.</summary>
+        public EquationFormat? CopyTextFormat
+        {
+            get => GetValue(CopyTextFormatProperty);
+            set => SetValue(CopyTextFormatProperty, value);
+        }
+
         /// <summary>The layout of the equation, after a measure.</summary>
         public MathLayout? Layout => drawing?.Layout;
 
@@ -261,22 +282,41 @@ namespace SharpEquations.Avalonia
         /// <summary>The equation in a format; for LaTeX, the LaTeX of Word.</summary>
         public string GetText(EquationFormat format) => Editor.GetText(format);
 
+        /// <summary>The number of the equation, shown at the right of its line; null without one (<see cref="MathEditor.EquationNumber"/>).</summary>
+        public string? EquationNumber
+        {
+            get => Editor.EquationNumber;
+            set => Editor.SetEquationNumber(value);
+        }
+
         /// <summary>Builds up all that is typed and not built up yet.</summary>
         public void BuildUp() => Editor.BuildUpAll();
 
         /// <summary>Builds down the selection, or the whole equation, into linear text.</summary>
         public void BuildDown() => Editor.BuildDown();
 
-        /// <summary>Copies the selection to the clipboard: as linear text in the input format, and as MathML.</summary>
+        /// <summary>
+        /// The selection in a format, or null when nothing is selected: UnicodeMath, LaTeX (as Word writes it unless the
+        /// options say otherwise), MathML or OMML.
+        /// </summary>
+        public string? GetSelectedText(EquationFormat format, EquationOptions? options = null) => Editor.GetSelectedText(format, options);
+
+        /// <summary>
+        /// Copies the selection to the clipboard: as text in <see cref="CopyTextFormat"/> (the input format by default)
+        /// and as MathML (<see cref="MathMLClipboardFormat"/>), with the formats a handler of <see cref="Copying"/> adds.
+        /// </summary>
         public async Task CopyAsync()
         {
             if (TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard || Editor.GetSelectedEquation() is not { } equation)
                 return;
             var item = new DataTransferItem();
-            item.SetText(Editor.InputFormat == EquationFormat.LaTeX
-                ? equation.ToString(EquationFormat.LaTeX, new EquationOptions { LaTeXFlavor = LaTeXFlavor.Word })
-                : equation.ToString(EquationFormat.UnicodeMath));
-            item.Set(MathMLFormat, equation.ToString(EquationFormat.MathML));
+            var format = CopyTextFormat ?? Editor.InputFormat;
+            item.SetText(format is EquationFormat.UnicodeMath or EquationFormat.LaTeX ? Editor.GetSelectedText(format)! : equation.ToString(format));
+            item.Set(MathMLClipboardFormat, equation.ToString(EquationFormat.MathML));
+            var args = new MathCopyingEventArgs(equation, item);
+            Copying?.Invoke(this, args);
+            if (args.Cancel)
+                return;
             var data = new DataTransfer();
             data.Add(item);
             await clipboard.SetDataAsync(data).ConfigureAwait(true);
@@ -297,7 +337,7 @@ namespace SharpEquations.Avalonia
             if (IsReadOnly || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
                 return;
             var formats = await clipboard.GetDataFormatsAsync().ConfigureAwait(true);
-            if (formats.Contains(MathMLFormat) && await clipboard.TryGetValueAsync(MathMLFormat).ConfigureAwait(true) is { Length: > 0 } mathML
+            if (formats.Contains(MathMLClipboardFormat) && await clipboard.TryGetValueAsync(MathMLClipboardFormat).ConfigureAwait(true) is { Length: > 0 } mathML
                 && Editor.Paste(mathML, EquationFormat.MathML))
             {
                 return;
@@ -311,7 +351,8 @@ namespace SharpEquations.Avalonia
                 Editor.Paste(text, Editor.InputFormat);
         }
 
-        private static DataFormat<string> MathMLFormat { get; } =
+        /// <summary>The format of MathML on the clipboard: <c>MathML</c> on Windows (which Word reads), <c>application/mathml+xml</c> elsewhere.</summary>
+        public static DataFormat<string> MathMLClipboardFormat { get; } =
             DataFormat.CreateStringPlatformFormat(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "MathML" : "application/mathml+xml");
 
         /// <inheritdoc/>
@@ -356,7 +397,9 @@ namespace SharpEquations.Avalonia
         protected override Size MeasureOverride(Size availableSize)
         {
             drawing?.Dispose();
-            var layout = MathLayoutEngine.Layout(Editor.Root, MathFonts.Get(MathFontFamily), new MathLayoutOptions { FontSize = FontSize, ShowPlaceholders = true });
+            var line = availableSize.Width - Padding.Left - Padding.Right - BorderThickness * 2;
+            var options = new MathLayoutOptions { FontSize = FontSize, ShowPlaceholders = true, LineWidth = double.IsInfinity(line) ? null : line };
+            var layout = MathLayoutEngine.Layout(Editor.Root, MathFonts.Get(MathFontFamily), options);
             drawing = new MathDrawing(layout);
             var b = BorderThickness * 2;
             var width = Math.Max(layout.Width, FontSize * 0.6);
@@ -392,6 +435,9 @@ namespace SharpEquations.Avalonia
                 context.FillRectangle(brush, new Rect(caret.X + origin.X - 0.5, caret.Y + origin.Y, 1.2, caret.Height));
             }
         }
+
+        /// <inheritdoc/>
+        protected override AutomationPeer OnCreateAutomationPeer() => new MathEditBoxAutomationPeer(this);
 
         /// <inheritdoc/>
         protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -466,6 +512,8 @@ namespace SharpEquations.Avalonia
                         break;
                     case Key.Delete when !IsReadOnly:
                         Editor.Delete();
+                        break;
+                    case Key.Tab when (e.KeyModifiers & ~KeyModifiers.Shift) == 0 && Editor.MoveToNextCell(shift):
                         break;
                     case Key.Enter when !IsReadOnly:
                         Editor.BuildUpAll();
