@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The layout of MathML Core over the OpenType MATH table of a math font, for the equation editor and viewer,
+       with no dependency on a user interface: a toolkit gives the font (IMathFont) and draws the result. -->
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <AssemblyName>SharpEquations.Rendering</AssemblyName>
+    <RootNamespace>SharpEquations.Rendering</RootNamespace>
+    <PackageId>SharpEquations.Rendering</PackageId>
+    <Description>The layout of presentation MathML (MathML Core) over the OpenType MATH table of a math font, with the geometry of the caret and the selection of an equation editor. No dependency on a user interface.</Description>
+    <PackageTags>equation math mathml layout opentype math-table renderer</PackageTags>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\SharpEquations\Internal\Text\Rune.cs" Link="Text\Rune.cs" />
+    <InternalsVisibleTo Include="SharpEquations.Avalonia.Tests" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpEquations.Editing\SharpEquations.Editing.csproj" />
+  </ItemGroup>
+
+</Project>

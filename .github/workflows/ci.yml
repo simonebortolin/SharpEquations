@@ -23,6 +23,7 @@ env:
   SOLUTION: SharpEquations.slnx
   LIBRARY_PROJECT: src/SharpEquations/SharpEquations.csproj
   TEST_PROJECT: tests/SharpEquations.Tests/SharpEquations.Tests.csproj
+  EDITOR_TEST_PROJECT: tests/SharpEquations.Avalonia.Tests/SharpEquations.Avalonia.Tests.csproj
   FEED_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
 
 # Stages: Resolve Version -> Test (Linux, Windows, macOS) -> Pack NuGet
@@ -103,6 +104,7 @@ jobs:
             label: Linux x64
             os: ubuntu-latest
             tfms: net10.0 net8.0
+            editor_tfms: net10.0 net8.0
             dotnet: |
               8.0.x
               10.0.x
@@ -110,11 +112,13 @@ jobs:
             label: Windows x64
             os: windows-latest
             tfms: net10.0 net481
+            editor_tfms: net10.0
             dotnet: 10.0.x
           - rid: osx-arm64
             label: macOS arm64
             os: macos-latest
             tfms: net10.0
+            editor_tfms: net10.0
             dotnet: 10.0.x
 
     steps:
@@ -146,6 +150,19 @@ jobs:
             echo "::group::$TFM"
             dotnet run --project "$TEST_PROJECT" -c Release -f "$TFM" --no-build -- \
               --report-trx --report-trx-filename "${{ matrix.rid }}.$TFM.trx" \
+              --results-directory "$GITHUB_WORKSPACE/TestResults"
+            echo "::endgroup::"
+          done
+
+      # the equation editor (Avalonia 12 has no .NET Framework build: net10.0, and net8.0 where it is installed)
+      - name: Run editor tests
+        shell: bash
+        run: |
+          set -e
+          for TFM in ${{ matrix.editor_tfms }}; do
+            echo "::group::editor $TFM"
+            dotnet run --project "$EDITOR_TEST_PROJECT" -c Release -f "$TFM" --no-build -- \
+              --report-trx --report-trx-filename "${{ matrix.rid }}.editor.$TFM.trx" \
               --results-directory "$GITHUB_WORKSPACE/TestResults"
             echo "::endgroup::"
           done

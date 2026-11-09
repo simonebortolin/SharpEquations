@@ -238,3 +238,13 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+----------------------------------------------------------------------------
+src/SharpEquations.Avalonia/Assets/Fonts/LibertinusMath-Regular.otf
+
+Libertinus Math 7.040, from the Libertinus fonts, https://github.com/alerque/libertinus,
+the math font that SharpEquations.Avalonia embeds for the systems without Cambria Math.
+Copyright © 2012-2021 The Libertinus Project Authors, with Reserved Font Name
+"Linux Libertine", "Biolinum", "STIX Fonts". Licensed under the SIL Open Font License,
+Version 1.1: src/SharpEquations.Avalonia/Assets/Fonts/OFL.txt (LibertinusMath-OFL.txt in
+the package).

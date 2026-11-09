@@ -11,11 +11,18 @@
   <Folder Name="/src/">
     <Project Path="src/SharpEquations/SharpEquations.csproj" />
     <Project Path="src/SharpEquations.RegexPolyfill/SharpEquations.RegexPolyfill.csproj" />
+    <Project Path="src/SharpEquations.Editing/SharpEquations.Editing.csproj" />
+    <Project Path="src/SharpEquations.Rendering/SharpEquations.Rendering.csproj" />
+    <Project Path="src/SharpEquations.Avalonia/SharpEquations.Avalonia.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/SharpEquations.Avalonia.Demo/SharpEquations.Avalonia.Demo.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/SharpEquations.Benchmarks/SharpEquations.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SharpEquations.Tests/SharpEquations.Tests.csproj" />
+    <Project Path="tests/SharpEquations.Avalonia.Tests/SharpEquations.Avalonia.Tests.csproj" />
   </Folder>
 </Solution>

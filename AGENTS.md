@@ -13,7 +13,12 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 |---|---|
 | `src/SharpEquations/` | The library: `Public/` (the public API), `Internal/` (one folder per format), `Resources/` (XSLT stylesheets) |
 | `src/SharpEquations.RegexPolyfill/` | Build time only: the `[GeneratedRegex]` source generator of the netstandard2.0 build |
+| `src/SharpEquations.Editing/` | The equation editor's model, no user interface: `MathNode` tree, caret, selection, undo, build up and build down |
+| `src/SharpEquations.Rendering/` | The layout of MathML Core over the OpenType MATH table, no user interface: `MathLayoutEngine`, `MathLayout` |
+| `src/SharpEquations.Avalonia/` | The controls for Avalonia: `MathEditBox` (the editor), `MathView`; embeds Libertinus Math |
+| `samples/SharpEquations.Avalonia.Demo/` | A window with the editor |
 | `tests/SharpEquations.Tests/` | TUnit tests, in folders by subject (PublicApi, MathML, Omml, Mtef, UnicodeMath, LaTeX, Property, Regression) |
+| `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia) |
 | `tests/data/` | Test data and its provenance (`tests/data/README.md`) |
 
 ## Code Style
@@ -73,6 +78,24 @@ init-only record: `Display`, `Strict`, `PreserveFormatting`, `LaTeXFlavor` stand
   UnicodeMath: a slash is a slash, not a fraction, and a bar without its pair is a bar, not an absolute value), and
   written as standard LaTeX or as the LaTeX Word writes (`LaTeXSerializer`).
 
+## The equation editor
+
+`docs/EDITOR.md` is its design. The core does not depend on it: the editor is built on the public API of the core only,
+and Avalonia is a dependency of `SharpEquations.Avalonia` alone (Editing and Rendering target netstandard2.0 and
+net10.0 with no package, as the core).
+
+- `Editing`: an equation being edited is a tree of `MathNode`s (the normalized MathML with a row, `mrow`, in every
+  slot) whose only text not built up is in runs. A run builds up with the nodes before it in its row: tokens are written
+  back as they were typed, structures as placeholders (Yi syllables, which the parsers read as identifiers) put back in
+  the result; this works because UnicodeMath round-trips exactly. Positions are paths of child indexes; offsets in runs
+  are code points.
+- `Rendering`: `Layout/Engine.cs` lays out after MathML Core with the constants of the MATH table; the ink boxes of the
+  glyphs come from the outlines of the font (`OpenType/GlyphOutlines.cs`: `glyf`, or the CFF charstrings), never from
+  the rasterizer, and the tables from a copy of the font file (`OpenType/FontFile.cs`).
+- `Avalonia`: `AvaloniaMathFont` reads the font file once with `TryGetStream` (the memory of `TryGetTable` does not stay
+  valid); the tests that use the headless session are `[NotInParallel("headless")]`, since showing a window or typing
+  runs the jobs of the dispatcher.
+
 ## Building and Testing
 
 ```bash
@@ -85,7 +108,9 @@ net481 (Windows, where the test project targets net10.0 and net481). The 738 exa
 `tests/data/unicodemath/` test the UnicodeMath port, and `Property/RoundTripPropertyTests` checks, for all of them and
 for the equations of Word documents (`tests/data/omml/`), that an equation written in its own format (UnicodeMath,
 OMML) reads back to the same equation, and that one written in another format (standard LaTeX, Word's LaTeX, OMML)
-loses only the first time what that format cannot hold. Keep these at 100%.
+loses only the first time what that format cannot hold. Keep these at 100%. For the editor, an equation of the corpus
+loaded in the editor, or built down to linear text and up again, is the same equation (100%); typed one character at a
+time it is the equation of the whole text for 93% of the corpus (`Editing/CorpusTests`), which a change must not lower.
 
 ## Releases
 

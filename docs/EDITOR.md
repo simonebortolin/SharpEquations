@@ -1,225 +1,200 @@
-# Equation editor for Avalonia (design)
+# Equation editor for Avalonia
 
-A design for `MathEditBox`, a real-time equation editor for Avalonia in the manner of the `RichEditBox` of WinUI in
+`MathEditBox` is a real-time equation editor for Avalonia in the manner of the `RichEditBox` of WinUI in
 `RichEditMathMode.MathOnly`: the user types UnicodeMath or LaTeX, the equation builds up into its two-dimensional form
-as it is typed, and the content is read and written as MathML (`GetMath`/`SetMath` in WinUI). SharpEquations is the
-core under it: it reads what is typed, gives the MathML, and writes the linear form back when a part of the equation
-is built down. This document is a proposal: nothing of it exists yet.
+as it is typed, and the content is read and written as MathML (`GetMath`/`SetMath`, as in WinUI) or as an `Equation`.
+SharpEquations is the core under it: it reads what is typed, gives the MathML, and writes the linear form back when a
+part of the equation is built down. The editor edits one equation (math only), not math zones in a text document.
+
+Phases 1 to 3 of the plan below are done; phase 4 is what remains.
 
 ## What the user sees
 
-The behaviour is the one of the math zones of Word and of `RichEditBox` in math mode.
+The behaviour is the one of the equations of Word and of `RichEditBox` in math mode.
 
-- **Professional** (built up): the equation is shown in two dimensions. Typing goes into the *linear run* at the caret,
-  a piece of plain text; when a character that ends an argument is typed (space, an operator, `)`, `]`, Enter, Tab) the
-  run is *built up*: `a/b␣` becomes a fraction, `x^2␣` a superscript, `\alpha␣` becomes `α`, `\sqrt(x)` a radical.
-  Text that does not parse yet (`a/`) stays linear, drawn as typed, until it does.
-- **Linear**: the whole equation (or the selection) is shown as one line of UnicodeMath or LaTeX and edited as text.
-  The switch (Ctrl+Shift+=, as Word has it, or a property) builds down to linear and up to professional.
-- **Input format**: UnicodeMath or LaTeX (`InputFormat`); LaTeX is read as Word reads it, which is what SharpEquations
-  already does (`LaTeXReader`), and written back, when built down, in the LaTeX of Word (`LaTeXFlavor.Word`).
-- **Navigation** in two dimensions: the arrows move through the slots of the structures (numerator → denominator,
-  base → script, the cells of a matrix), Home/End to the ends of the current row, Backspace into a structure *selects*
-  it first and deletes it the second time (as Word), Ctrl+Z/Ctrl+Y undo and redo.
-- **Clipboard**: copy puts MathML (`application/mathml+xml`), UnicodeMath or LaTeX (as plain text, in the input format)
-  and OMML on the clipboard; paste reads any of them through `Equation.Parse`.
-- **Autocomplete**: after `\` a list of control words (`\alpha`, `\int`, `\matrix`...) with their symbols.
+- **Professional** (built up): the equation is shown in two dimensions. Typing goes into the *run* at the caret, a
+  piece of linear text; when a character that ends an argument is typed (a space, or an operator: `+ - = < > , ; :`,
+  `± × · ÷`, the relations and arrows) the run is *built up*: `a/b␣` becomes a fraction, `x^2+` a superscript and a
+  plus, `\alpha␣` becomes `α`, `\sqrt(x)␣` a radical. The space that builds up is not kept. Text that does not parse
+  yet, or that is not finished (an open bracket or quote, an operator right after `^ _ / \ (`, as in `e^-x`), stays
+  linear, drawn as typed, until it does.
+- **Linear**: the whole equation is shown as one run of UnicodeMath or LaTeX and edited as text
+  (`ViewMode = MathViewMode.Linear`, or Ctrl+Shift+L, `ToggleViewModeGesture`). Switching back builds it up.
+- **Input format**: `InputFormat` is UnicodeMath or LaTeX; LaTeX is read as Word reads it (`LaTeXReader`) and written,
+  when built down, as the LaTeX of Word (`LaTeXFlavor.Word`).
+- **Navigation**: Left and Right go through the slots of the structures (numerator, denominator, base, scripts, the
+  index of a root before its base, the cells of a table); Up and Down go to the slot above or below (numerator and
+  denominator, superscript and subscript, limits, the rows of a table), to the position nearest to the caret; Home and
+  End go to the ends of the row, then of the equation; Shift extends the selection, which covers a whole structure when
+  it leaves a slot. Backspace and Delete remove a code point of a run or of a token (a token becomes a run then), and
+  select a structure first and delete it the second time, as in Word. Ctrl+Z and Ctrl+Y undo and redo (an undo after a
+  build up gives back the text as it was typed); Ctrl+A selects all; Enter builds up all the runs. The shortcuts of copy,
+  paste, undo... are those of the platform (`PlatformHotkeyConfiguration`).
+- **Mouse**: a click places the caret at the nearest position of the deepest row under the pointer; a drag selects.
+- **Clipboard**: copy puts the selection as linear text in the input format and as MathML (`MathML` on Windows,
+  `application/mathml+xml` elsewhere); paste reads MathML, then the text in the input format or as MathML, and inserts
+  plain text as a run when it does not parse.
+- **Empty slots** are drawn as a dashed box, as the placeholder `⬚` of Word.
 
 ## Layers
 
 ```mermaid
 flowchart TB
-    subgraph Core["SharpEquations (exists, unchanged: .NET base library only)"]
-        P["Equation.Parse(UnicodeMath | LaTeX)"]
+    subgraph Core["SharpEquations (unchanged: .NET base library only)"]
+        P["Equation.Parse(UnicodeMath | LaTeX | MathML)"]
         W["Equation.ToString(UnicodeMath | LaTeX)"]
         X["Equation.ToMathML()"]
     end
-    subgraph Editing["SharpEquations.Editing (new, netstandard2.0 + net10.0, no UI)"]
-        D["MathDocument: tree of nodes + linear runs"]
-        C["Caret, selection, navigation"]
-        B["BuildUp / BuildDown"]
-        U["Undo stack, commands"]
+    subgraph Editing["SharpEquations.Editing (netstandard2.0, net10.0)"]
+        D["MathNode tree with runs"]
+        C["MathEditor: caret, selection, undo, commands"]
+        B["BuildUp: build up, build down"]
     end
-    subgraph Layout["SharpEquations.Rendering (new, no UI)"]
-        M["OpenType MATH table reader"]
-        L["MathML Core layout → boxes"]
-        H["Hit testing, caret geometry"]
+    subgraph Rendering["SharpEquations.Rendering (netstandard2.0, net10.0)"]
+        M["OpenType: MathTable, GlyphOutlines, FontFile"]
+        L["Layout/Engine: MathML Core layout"]
+        H["MathLayout: glyphs, shapes, caret geometry, hit testing"]
     end
-    subgraph Avalonia["SharpEquations.Avalonia (new, depends on Avalonia)"]
-        E["MathEditBox (editor control)"]
-        V["MathView (read-only control)"]
-        F["Font adapter, drawing, IME, clipboard"]
+    subgraph Avalonia["SharpEquations.Avalonia (net8.0, net10.0)"]
+        E["MathEditBox"]
+        V["MathView"]
+        F["AvaloniaMathFont, MathFonts, MathDrawing"]
     end
     B --> P
     B --> W
-    D --> X
-    E --> D
-    E --> L
-    V --> L
+    C --> X
+    E --> C
+    E --> H
+    V --> H
     L --> M
-    F --> L
+    F --> M
 ```
 
-The core stays as it is: the rules of `AGENTS.md` (no dependencies but the base library, no change of the public API
-without a reason that is the owner's) hold for it, and the editor is built on its public API. The two middle layers
-have no UI dependency, so that they are tested with TUnit like the core and could serve another toolkit (WPF, MAUI,
-Uno) later; only the last depends on Avalonia.
+The core is unchanged and the editor is built on its public API only. Editing and Rendering have no dependency on a
+user interface (they target netstandard2.0 and net10.0, with no package, as the core), so that they are tested without
+a toolkit and could serve another one; only `SharpEquations.Avalonia` depends on Avalonia (12.1). Each is a project of
+its own in this repository; `samples/SharpEquations.Avalonia.Demo` is a window with the editor and the equation in every
+format, and `tests/SharpEquations.Avalonia.Tests` tests the three.
 
-| Project | Target | Depends on |
-|---|---|---|
-| `src/SharpEquations.Editing/` | netstandard2.0, net10.0 | SharpEquations |
-| `src/SharpEquations.Rendering/` | netstandard2.0, net10.0 | SharpEquations.Editing (for the node tree) |
-| `src/SharpEquations.Avalonia/` | net8.0, net10.0 | SharpEquations.Rendering, Avalonia 11 |
-| `samples/SharpEquations.Avalonia.Demo/` | net10.0 | SharpEquations.Avalonia, Avalonia.Desktop |
-| `tests/SharpEquations.Editing.Tests/` | as the core tests | TUnit, Avalonia.Headless for the control |
-
-They ship as separate packages, so that who uses only the converter does not get Avalonia.
-
-## The document model (`SharpEquations.Editing`)
+## The model (`SharpEquations.Editing`)
 
 ### Why a tree and not a string
 
-The obvious design keeps the linear text as the source of truth and parses all of it at each keystroke. It does not
-work for an editor in two dimensions: the caret is in the rendered equation, and mapping it to an offset in the text
-needs the source span of every node, which no parser of SharpEquations gives (the UnicodeMath translator, ported line
-by line, has no notion of spans). The model is therefore the one of Word: a tree of built-up objects in which the only
-text is the *linear runs* at the caret, and parsing is limited to what is being built up.
+Keeping the linear text as the source of truth and parsing all of it at each keystroke does not work for an editor in
+two dimensions: the caret is in the rendered equation, and mapping it to an offset in the text needs the source span of
+every node, which the parsers of SharpEquations do not give (the UnicodeMath translator, ported line by line, has no
+notion of spans). The model is therefore the one of Word: a tree of built-up structures whose only text is in runs, and
+parsing is limited to what is being built up. For the same reason a streaming API in the core (input received a piece
+at a time) is not needed: the pieces are short, and each is parsed whole.
 
-```csharp
-abstract class MathNode            // immutable; a change gives a new tree (cheap undo, safe rendering)
-sealed class MathRow : MathNode    // a sequence: the slot of every structure; the caret lives here
-sealed class MathToken : MathNode  // mi, mn, mo, mtext, ms: one atom of the row, with its attributes
-sealed class MathRun : MathNode    // linear text not built up yet, drawn as typed
-sealed class MathScript : MathNode // msub, msup, msubsup, munder, mover, munderover, mmultiscripts
-sealed class MathFraction, MathRadical, MathEnclose, MathTable, MathStyle, MathPadded, MathPhantom, MathSpace ...
-```
+`MathNode` is an element of MathML (`Name`, `Attributes`, `Text` for tokens, `Children`) or a run (`IsRun`), immutable:
+an edit gives a new tree that shares the nodes it did not change, which makes undo a stack of trees. Every slot of a
+structure is a row (`mrow`), even where MathML has a single element or an inferred row (`msqrt`, `mtd`...), so that the
+caret always has a row to stand in. `MathNode.FromMathML` adds these rows; `ToMathML` writes them back, and without a
+row the slots that hold a single node, which is the normalized form (the normalization recognizes the operand of an
+n-ary operator only that way). Elements the editor does not enter (`semantics`, `mstack`, `mlongdiv`) are kept as they
+were read.
 
-The nodes are the elements of the normalized MathML of `MathMLParser.Normalize`, which is a small set (MathML Core
-plus `menclose`, `mlabeledtr`, `ms`, `mstack`/`mlongdiv` read as they are); each knows its *slots*, the children that
-are rows the caret can enter (both children of `mfrac`, the base and the scripts of `msubsup`, each `mtd`). A node that
-is not a row is wrapped in a row when it is a slot, so that the caret always has a row to stand in.
-
-- `MathDocument.FromMathML(XElement)`: the normalized MathML (`Equation.Parse(...).ToMathML()`) to nodes.
-- `MathDocument.ToMathML()`: nodes to MathML; the runs are built up on the way (a run that does not parse is written as
-  `merror` with its text, or, with an option, as `mtext`), and the result goes through `Equation.Parse(xml, MathML)`
-  so that it is normalized like any other equation and `Equation` equality works on what the editor gives.
-- `MathDocument.Equation`: the `Equation` of the content, the value a binding of the control sees.
-
-### Caret and selection
-
-A caret is a path of slots from the root plus an offset in a row (between two children) or in a run (between two code
-points, never two UTF-16 `char`s, as everywhere in SharpEquations). A selection is two carets in the same row (a range
-of siblings); extending it out of a row selects the whole structure the row belongs to, as Word does. Navigation is a
-table per node kind (which slot is *up*, *down*, *next* and *previous* of which), kept out of the layout: the geometry
-is the renderer's, and only *up*/*down* inside a table or a stack ask the layout for the nearest x.
+A position (`MathPosition`) is the path of a row (offset between two children) or of a run (offset between two code
+points, never UTF-16 units), as child indexes from the `math` node. A position between a run and its neighbour is the
+end or the start of the run. A selection (`MathSelection`) is a range of the children of a row, or of the code points of
+a run; when its two ends are in different rows, it is the range of the deepest row that holds both, where an end inside
+a child covers the child.
 
 ### Build up
 
-When a character that ends an argument is typed in a run (the list is the one of UnicodeMath, *Unicode Technical Note
-28*, §3.5: space, operators, closing brackets, `&`, `@`, Enter), `BuildUp` takes:
+`BuildUp.Parse` builds up a run together with the nodes before it in its row, since the operand of an operator typed in
+the run can be one of them: `(a+b)/c` makes a fraction of a bracket built up earlier, `x^2` a superscript of the `x`
+before. Those nodes are written in the text as they were typed when they are tokens without attributes (`a`, `+`, `12`,
+`sin`) or brackets of tokens, so that the parser reads them as it would have read the text; any other node (a structure,
+a token with attributes) is written as a placeholder, a character of the Yi syllables (U+A000...) that the parsers read
+as an identifier, and the node is put back in place of the identifier in the result. The result is discarded if a
+placeholder is lost, merged or repeated.
 
-1. the *argument* before the caret: the run, together with the siblings before it in the row back to the start of the
-   row or to an operator of lower precedence, since `(a+b)/c` makes a fraction of a bracket already built up;
-2. the linear text of those siblings, with `Equation.ToString(UnicodeMath)` (or `LaTeX`, `LaTeXFlavor.Word`) on the
-   MathML of each; this is exact because UnicodeMath round-trips exactly (`RoundTripPropertyTests`, kept at 100%):
-   building down and up again gives the same nodes;
-3. `Equation.TryParse` of the text in the input format; if it fails the run stays as it is, and nothing is lost;
-4. the nodes of the result replace the siblings and the run, and the caret goes after them, in a new empty run if the
-   character typed was a space (which is consumed, as in Word) or after the operator otherwise.
+This is exact because UnicodeMath round-trips exactly (`RoundTripPropertyTests`): an equation of the corpus loaded in
+the editor, or built down to linear text and up again, is the same equation, for all of them
+(`Editing/CorpusTests`). Typed one character at a time, building up as it goes, an equation of the corpus is the
+equation of its whole text for 93% of the corpus: the others are text that UnicodeMath reads otherwise when it is read a
+piece at a time (prescripts typed before their base, `^+-` that becomes `^±`, spaces that end an operand), where what
+builds up at an operator stays built up, as in Word.
 
-`BuildDown` is the opposite: a node (the one at the caret, the selection, or the whole equation for the linear view)
-becomes one run with its linear text. Both are commands on the undo stack, so Ctrl+Z after a build-up gives back the
-text as it was typed, as in Word.
-
-Parsing is synchronous: the run is a few characters, and an equation built down whole is the size of the examples of
-`tests/data/unicodemath/`; `benchmarks/` gets a case for it so that the time per keystroke is measured, not assumed.
-
-### Autocorrect and autocomplete
-
-`\alpha␣` → `α` comes from the parser (a control word followed by a space). The list for the autocomplete popup is the
-table of `Internal/UnicodeMath/ControlWords.cs` and `Internal/LaTeX/LaTeXSymbols.cs`, which are internal; see *Open
-questions*.
+`MathEditor.ToEquation()` builds up a copy of the tree, with the runs that do not parse as `merror`, and reads it as
+MathML, so that the equation an editor gives is normalized like any other and compares with `==`.
 
 ## Layout and rendering (`SharpEquations.Rendering`)
 
-Rendering MathML well is the largest piece of work and the one with no shortcut in Avalonia: CSharpMath.Avalonia
-renders LaTeX with its own model, not MathML, and would mean a second representation to keep in step with the first.
-The renderer is therefore a MathML Core layout over the OpenType `MATH` table, as browsers implement it.
+The renderer lays out the nodes after MathML Core with the OpenType MATH table of a math font: there is no MathML
+renderer for Avalonia (CSharpMath renders LaTeX with its own model, which would be a second representation to keep in
+step with the first).
 
-- **Fonts**: a math font with a `MATH` table, by default Latin Modern Math or STIX Two Math (both SIL OFL, embeddable
-  as an Avalonia resource; the license goes in `NOTICE`). The table (constants, italic corrections, top accent
-  attachment, glyph variants and assemblies for stretchy operators) is read from the font bytes, which Avalonia gives
-  with `IGlyphTypeface.TryGetTable`.
-- **Layout**: an abstract `IMathFont` (advances, bounds, the `MATH` table, shaping of a run) and a layout that turns the
-  node tree into boxes (width, ascent, descent, italic correction) following MathML Core §3: tokens, `mrow` with the
-  spacing of the operator dictionary (`lspace`/`rspace`, `form` from the position), stretchy operators (brackets to the
-  height of their row, `∑` large in display), `mfrac`, `msqrt`/`mroot`, scripts and limits, `mtable`, `menclose`,
-  `mpadded`, `mspace`, display and inline style (`displaystyle`, `scriptlevel`).
-- **Editing geometry**: every box keeps the node and slot it comes from, so that the renderer answers the editor's
-  questions: the rectangle of a caret, the node and offset at a point (hit testing for clicks and drags), the outline
-  of a selection. Empty slots are drawn as a dotted box (the placeholder `⬚` of Word).
-- **Incremental**: the tree is immutable, so the layout of a subtree that did not change is reused (a cache keyed by
-  node identity and style); a keystroke lays out again only the path from the edited row to the root.
+- **Fonts**: `IMathFont` gives the glyphs, the advances, the ink boxes and the MATH table; `MathTable` reads the
+  constants, the italic corrections, the top accent attachments and the vertical and horizontal variants and
+  assemblies. The ink boxes come from the outlines of the font, not from a rasterizer: `GlyphOutlines` reads the boxes of
+  the `glyf` table of a TrueType font (Cambria Math) or runs the charstrings of the `CFF` table (Libertinus Math), within
+  0.12 design units of Skia. (Avalonia's own glyph metrics are empty for CFF outlines, and the bounds of a glyph run in
+  Skia can come back empty.)
+- **Layout** (`Layout/Engine.cs`): tokens (a single letter of `mi` in mathematical italic), rows with the spaces of the
+  operator dictionary by form (none in scripts, as TeX), vertical stretchy operators to the height of their row
+  (symmetric about the axis for fences), large operators in display style, fractions (`linethickness`, stacks without
+  rule), radicals and roots, scripts (with italic correction and the baseline drops), under and over scripts (accents on
+  the top accent attachment, limits, movable limits as scripts in inline style, horizontal stretchy operators and bars as
+  wide as the base), `mmultiscripts`, tables (`columnalign`, `columnspacing`, `rowspacing`, labels), `menclose`,
+  `mstyle`, `mpadded`, `mphantom`, `mspace`, `merror`, `ms`, `mathcolor` and `mathbackground`.
+- **Result** (`MathLayout`): glyphs and shapes with absolute coordinates for a toolkit to draw, and the geometry of every
+  row and run for an editor: the caret rectangle of a position, the rectangles of a selection, the position at a point
+  (`HitTest`: the deepest row under the point, or the nearest), the nearest position in a row (`IMathGeometry`, which
+  the editor uses to move up and down).
 
-## The Avalonia control (`SharpEquations.Avalonia`)
+## The controls (`SharpEquations.Avalonia`)
 
 ```csharp
-public class MathEditBox : TemplatedControl
+public class MathEditBox : Control
 {
-    public static readonly StyledProperty<Equation?> EquationProperty;         // two-way; the content as an Equation
-    public static readonly StyledProperty<EquationFormat> InputFormatProperty; // UnicodeMath (default) or LaTeX
-    public static readonly StyledProperty<MathViewMode> ViewModeProperty;      // Professional or Linear
-    public static readonly StyledProperty<bool> IsDisplayProperty;             // display or inline style
-    public static readonly StyledProperty<bool> IsReadOnlyProperty;
-    public static readonly StyledProperty<FontFamily> MathFontFamilyProperty;
-    public static readonly StyledProperty<double> FontSizeProperty;
+    public Equation? Equation { get; set; }                 // two-way; null when empty
+    public EquationFormat InputFormat { get; set; }         // UnicodeMath (default) or LaTeX
+    public MathViewMode ViewMode { get; set; }              // Professional or Linear
+    public bool IsDisplay { get; set; }                     // display (default) or inline
+    public bool IsReadOnly { get; set; }
+    public double FontSize { get; set; }
+    public IBrush? Foreground, Background, BorderBrush, SelectionBrush, CaretBrush, PlaceholderBrush { get; set; }
+    public FontFamily? MathFontFamily { get; set; }         // null: MathFonts.Default
+    public KeyGesture? ToggleViewModeGesture { get; set; }  // Ctrl+Shift+L
+    public MathEditor Editor { get; }                       // the model, for commands of an application
 
-    public string GetMath();                // MathML, as RichEditTextDocument.GetMath
-    public void SetMath(string mathML);     // as RichEditTextDocument.SetMath
+    public string GetMath();                                // as RichEditTextDocument.GetMath
+    public void SetMath(string mathML);                     // as RichEditTextDocument.SetMath
     public string GetText(EquationFormat format);
     public void BuildUp(); public void BuildDown();
+    public Task CopyAsync(); public Task CutAsync(); public Task PasteAsync();
     public event EventHandler<EquationChangedEventArgs>? EquationChanged;
 }
 
-public class MathView : Control             // read-only: Equation or MathML in, drawing out
+public class MathView : Control                             // read-only: Equation (or MathML) in, drawing out
 ```
 
-- Text input through `TextInput` and an `ITextInputMethodClient`, so that IMEs and dead keys work and the candidate
-  window is placed at the caret (Avalonia 11 `TextInputMethodClient`).
-- Key bindings as `KeyBinding`s of commands (`MathEditCommands.BuildUp`, `ToggleLinear`...), so that an application
-  changes them; the defaults are those of Word.
-- Accessibility: an `AutomationPeer` that exposes the value as UnicodeMath text (what Narrator and NVDA read in Word),
-  and the MathML for the readers that speak it.
-- Theming: colours from the theme resources (foreground, selection, placeholder), a template with a `ScrollViewer` for
-  long equations, and the linear view as a `TextBox` part of the template.
-- The `EquationProperty` is set on every build-up, not on every keystroke inside a run, so that a binding sees only
-  equations that parse; `GetMath()` builds up the runs as `ToMathML()` does.
+- **Fonts**: `MathFonts.Default` is Cambria Math on Windows, where it is a font of the system, and Libertinus Math
+  (SIL Open Font License, embedded as an Avalonia resource) elsewhere or when Cambria Math is missing; `MathFontFamily`
+  takes any family with a MATH table. Characters the font lacks come from a fallback font of the system.
+  `AvaloniaMathFont` reads the font file once (`TryGetStream`): the memory of `IFontMemory.TryGetTable` does not stay
+  valid after a garbage collection.
+- **Text input** comes from `TextInput`, so that IMEs and dead keys work, and a `TextInputMethodClient` gives the IME the
+  rectangle of the caret.
+- The `Equation` property is set on every change of the content, with the runs built up where they parse.
 
 ## Plan
 
-| Phase | Content | Done when |
+| Phase | Content | State |
 |---|---|---|
-| 1 | `SharpEquations.Rendering` with `MathView`: `MATH` table, layout of tokens, rows, fractions, scripts, radicals, brackets | the examples of `tests/data/unicodemath/` render without exceptions, screenshot tests of a set of them against reference images |
-| 2 | `SharpEquations.Editing`: nodes ↔ MathML, caret, navigation, `BuildUp`/`BuildDown`, undo | the property test *build down then build up gives the same nodes* for all the examples; typing an example one character at a time gives its equation |
-| 3 | `MathEditBox`: input, caret drawing, hit testing, selection, linear view, clipboard | headless tests (Avalonia.Headless) of typing, navigation and clipboard; the demo |
-| 4 | Tables and matrices, `menclose`, accents, `mmultiscripts`, autocomplete, accessibility, IME | the rest of the normalized MathML renders; Narrator reads an equation |
+| 1 | `SharpEquations.Rendering` and `MathView`: MATH table, outlines, layout of MathML Core | done: the corpus lays out (`Rendering/LayoutTests`) |
+| 2 | `SharpEquations.Editing`: nodes ↔ MathML, caret, navigation, selection, build up and down, undo | done: 100% of the corpus loads and round-trips through linear text, 93% typed a character at a time |
+| 3 | `MathEditBox`: input, caret, hit testing, selection, linear view, clipboard, demo | done: headless tests of typing, keys, mouse, MathML in and out |
+| 4 | Autocomplete of control words, accessibility (an `AutomationPeer` that reads the equation as UnicodeMath), keyboard navigation in tables (Tab, new rows), the `ssty` variants of scripts, cut lines of long equations, NuGet packages of the three projects | to do |
 
-Phase 1 first, because it is useful alone (showing MathML in Avalonia is something people need without editing) and
-because the editor cannot be judged without it.
+## Open points
 
-## Open questions
-
-These are the owner's to decide.
-
-1. **Repository**: the three projects in this repository (one solution, one CI, the core tested with them) or in a new
-   one (`SharpEquations.Avalonia`)? This document assumes this one, with separate packages and a version of their own.
-2. **Public API of the core** for the editor; none is needed for phases 1–3, but these would help:
-   - the list of control words and LaTeX commands with their symbols (`ControlWords`, `LaTeXSymbols`) for autocomplete;
-   - parsing a *fragment* to MathML without the `math` element and the normalization of a whole equation, if the
-     build-up of an argument needs it (to be seen in phase 2: wrapping the fragment in an equation may be enough);
-   - the operator dictionary (`form`, `lspace`, `rspace`, `stretchy`, `largeop`) if the core has or gets one, so that
-     the layout does not keep a second copy.
-3. **Default font**: Latin Modern Math (the look of LaTeX) or STIX Two Math (closer to Cambria Math of Word)?
-4. **Inline equations in text**: is the goal a control for one equation (as `RichEditMathMode.MathOnly`), or also math
-   zones inside a text document (as Word and `RichEditBox` without `MathOnly`)? The design is for the first; the second
-   is a rich text editor of its own, which Avalonia does not have.
+- **Public API of the core** (for its next major version): the list of the control words of UnicodeMath and of the
+  LaTeX commands with their symbols (`ControlWords`, `LaTeXSymbols`, internal today), for the autocomplete of phase 4.
+- **Packages**: the three projects are packable, but the CI packs and publishes only `SharpEquations`; publishing the
+  editor (with its own version or that of the core) is to be decided.
+- **Reference images**: the rendering is tested by the geometry of the layout, not by pictures; the tests write
+  pictures of a set of equations when `SHARPEQUATIONS_SCREENSHOTS` names a directory, for a look.

@@ -49,6 +49,32 @@ stream of its OLE object (`Equation.Parse(bytes, EquationFormat.Mtef)`); reading
 Equations compare by their normalized MathML: an equation written in its own format (UnicodeMath, OMML) reads back to
 the same equation, and one written in another format loses only what that format cannot hold.
 
+## Equation editor for Avalonia
+
+`SharpEquations.Avalonia` is a real-time equation editor in the manner of the `RichEditBox` of WinUI in math mode and of
+the equations of Word: UnicodeMath or LaTeX typed at the caret builds up into the equation when a space or an operator
+ends an argument (`a/b␣` becomes a fraction, `\alpha␣` α), the caret moves through the slots of the structures, and the
+equation is read and written as MathML or as an `Equation`.
+
+```xml
+<sharp:MathEditBox xmlns:sharp="using:SharpEquations.Avalonia" FontSize="28" InputFormat="UnicodeMath" Equation="{Binding Equation}" />
+```
+
+```csharp
+var editor = new MathEditBox { InputFormat = EquationFormat.LaTeX };
+editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(EquationFormat.MathML));
+string mathML = editor.GetMath();        // as RichEditTextDocument.GetMath
+editor.SetMath(mathML);                  // as RichEditTextDocument.SetMath
+editor.ViewMode = MathViewMode.Linear;   // the equation as one line of UnicodeMath (Ctrl+Shift+L)
+```
+
+`MathView` shows an equation without editing it. Both lay out MathML after MathML Core with the OpenType MATH table of
+a math font: Cambria Math on Windows, and Libertinus Math (SIL Open Font License), embedded, elsewhere. The editor is
+three projects, so that the core keeps no dependency: `SharpEquations.Editing` (the editing model, no user interface),
+`SharpEquations.Rendering` (the layout, no user interface) and `SharpEquations.Avalonia` (the controls). The design is in
+[docs/EDITOR.md](docs/EDITOR.md); `samples/SharpEquations.Avalonia.Demo` is a window with the editor and its MathML,
+UnicodeMath and LaTeX.
+
 ## Architecture
 
 How the conversions work, format by format, and how round trips are kept exact: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
