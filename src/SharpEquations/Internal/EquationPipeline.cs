@@ -26,19 +26,17 @@ namespace SharpEquations.Internal
 
         public static void CheckWritable(EquationFormat format)
         {
-            if (!IsDefined(format))
-                throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown equation format.");
+            CheckDefined(format);
             if (format == EquationFormat.Mtef)
                 throw new NotSupportedException("MTEF equations cannot be written.");
         }
 
-        /// <param name="source">A string, an XElement or a byte array.</param>
+        /// <param name="source">A string or an XElement.</param>
         public static XElement Read(object? source, EquationFormat format, EquationOptions options, CancellationToken cancellationToken)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
-            if (!IsDefined(format))
-                throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown equation format.");
+            CheckDefined(format);
             cancellationToken.ThrowIfCancellationRequested();
             var math = (format, source) switch
             {
@@ -46,14 +44,27 @@ namespace SharpEquations.Internal
                 (EquationFormat.MathML, string text) => MathMLParser.ParseXml(text, format),
                 (EquationFormat.Omml, XElement element) => ReadOmml(element, options),
                 (EquationFormat.Omml, string text) => ReadOmml(MathMLParser.ParseXml(text, format), options),
-                (EquationFormat.Mtef, byte[] bytes) => MtefParser.Parse(bytes),
                 (EquationFormat.UnicodeMath, string text) => UnicodeMathParser.Parse(text, options.Display, options.Strict, cancellationToken),
                 (EquationFormat.LaTeX, string text) => LaTeXParser.Parse(text, options.Display, LaTeXParser.Macros(options.LaTeXMacros), options.Strict, cancellationToken),
                 (EquationFormat.Mtef, _) => throw new ArgumentException("MTEF equations are binary: pass them as bytes.", nameof(format)),
-                (_, byte[]) => throw new ArgumentException(format + " equations are not binary: pass them as " + (IsXml(format) ? "text or XML." : "text."), nameof(format)),
                 _ => throw new ArgumentException(format + " equations are text, not XML: pass them as strings.", nameof(format)),
             };
             return MathMLParser.Normalize(math, options, format == EquationFormat.MathML);
+        }
+
+        /// <summary>Reads a binary source, MTEF, without copying it.</summary>
+        public static XElement Read(ReadOnlySpan<byte> source, EquationFormat format, EquationOptions options)
+        {
+            CheckDefined(format);
+            if (format != EquationFormat.Mtef)
+                throw new ArgumentException(format + " equations are not binary: pass them as " + (IsXml(format) ? "text or XML." : "text."), nameof(format));
+            return MathMLParser.Normalize(MtefParser.Parse(source), options, false);
+        }
+
+        private static void CheckDefined(EquationFormat format)
+        {
+            if (!IsDefined(format))
+                throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown equation format.");
         }
 
         private static XElement ReadOmml(XElement omml, EquationOptions options)

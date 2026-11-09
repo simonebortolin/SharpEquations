@@ -9,7 +9,7 @@ namespace SharpEquations.Internal.Omml
     using SharpEquations.Internal.Text;
 
     /// <summary>The names and helpers shared by <see cref="OmmlParser"/> and <see cref="OmmlSerializer"/>.</summary>
-    internal static class Omml
+    internal static partial class Omml
     {
         internal static readonly XNamespace M = MathMLNamespaces.Omml;
 
@@ -20,7 +20,8 @@ namespace SharpEquations.Internal.Omml
         // The class of the table that holds the lines of a display equation aligned with m:aln.
         internal const string AlignedLinesClass = "aligned-lines";
 
-        internal static readonly Regex CollapsibleSpaces = new Regex("^ +| +$| {2,}", RegexOptions.CultureInvariant);
+        [GeneratedRegex("^ +| +$| {2,}", RegexOptions.CultureInvariant)]
+        internal static partial Regex CollapsibleSpaces();
 
         internal static bool IsOn(XElement property)
         {

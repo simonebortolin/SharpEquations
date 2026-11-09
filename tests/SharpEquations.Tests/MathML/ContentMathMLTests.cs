@@ -62,7 +62,7 @@ namespace SharpEquations.Tests.MathML
         [Arguments("<math><apply><sin/><ci>x</ci></apply></math>", @"\sin x")]
         [Arguments("<math><apply><int/><bvar><ci>x</ci></bvar><lowlimit><cn>0</cn></lowlimit><uplimit><infinity/></uplimit><apply><exp/><apply><minus/><ci>x</ci></apply></apply></apply></math>",
             @"\int_0^\infty e^{-x}dx")]
-        [Arguments("<math><apply><sum/><bvar><ci>i</ci></bvar><lowlimit><cn>1</cn></lowlimit><uplimit><ci>n</ci></uplimit><ci>i</ci></apply></math>", @"\sum_{i=1}^ni")]
+        [Arguments("<math><apply><sum/><bvar><ci>i</ci></bvar><lowlimit><cn>1</cn></lowlimit><uplimit><ci>n</ci></uplimit><ci>i</ci></apply></math>", @"\sum\limits_{i=1}^ni")]
         [Arguments("<math><apply><diff/><bvar><ci>x</ci></bvar><apply><sin/><ci>x</ci></apply></apply></math>", @"\frac{d \sin x}{dx}")]
         [Arguments("<math><apply><partialdiff/><bvar><ci>x</ci></bvar><bvar><ci>y</ci></bvar><apply><ci>f</ci><ci>x</ci><ci>y</ci></apply></apply></math>",
             @"\frac{\partial^2f(x,y)}{\partial x\partial y}")]

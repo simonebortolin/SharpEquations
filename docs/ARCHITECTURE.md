@@ -289,8 +289,9 @@ commands.
 ## Text as code points (`Internal/Text/CodePoints.cs`)
 
 Equations are full of characters outside the basic plane, such as mathematical alphanumerics (`𝑥`, `𝔸`) and emoji. All
-text is handled as Unicode scalar values (`CodePoint`), never as UTF-16 `char`s. `CodePoint` is `System.Text.Rune` on
-.NET 10 and its `int` value on .NET Standard 2.0, which has no `Rune`. A lone surrogate reads as U+FFFD.
+text is handled as Unicode scalar values (`System.Text.Rune`), never as UTF-16 `char`s. On .NET Standard 2.0, which has
+no `Rune`, the library carries an internal one (`Internal/Text/Rune.cs`) with the same behavior: it is not visible to
+the consumers, so it meets no `Rune` of their framework. A lone surrogate reads as U+FFFD.
 
 ## Round trips and how they are tested
 

@@ -12,6 +12,12 @@ end_of_line = lf
 dotnet_sort_system_directives_first = true
 csharp_style_namespace_declarations = block_scoped
 
+[src/**.cs]
+# the regular expressions of the library are [GeneratedRegex] partial methods, not new Regex nor the static Regex
+# methods (SYSLIB1045, reported by the regular expression generator of the net10.0 build and by
+# SharpEquations.RegexPolyfill in the netstandard2.0 one)
+dotnet_diagnostic.SYSLIB1045.severity = error
+
 [*.{csproj,props,targets,slnx,xml,xsl}]
 indent_style = space
 indent_size = 2

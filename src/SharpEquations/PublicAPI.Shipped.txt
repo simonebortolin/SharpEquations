@@ -1,0 +1,59 @@
+#nullable enable
+override SharpEquations.Equation.Equals(object? obj) -> bool
+override SharpEquations.Equation.GetHashCode() -> int
+override SharpEquations.Equation.ToString() -> string!
+override SharpEquations.EquationOptions.Equals(object? obj) -> bool
+override SharpEquations.EquationOptions.GetHashCode() -> int
+override SharpEquations.EquationOptions.ToString() -> string!
+SharpEquations.Equation
+SharpEquations.Equation.Equals(SharpEquations.Equation? other) -> bool
+SharpEquations.Equation.IsDisplay.get -> bool
+SharpEquations.Equation.ToMathML() -> System.Xml.Linq.XElement!
+SharpEquations.Equation.ToOmml() -> System.Xml.Linq.XElement!
+SharpEquations.Equation.ToString(SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null) -> string!
+SharpEquations.Equation.ToString(string? format, System.IFormatProvider? formatProvider) -> string!
+SharpEquations.Equation.WithDisplay(bool display) -> SharpEquations.Equation!
+SharpEquations.EquationConverter
+SharpEquations.EquationFormat
+SharpEquations.EquationFormat.LaTeX = 4 -> SharpEquations.EquationFormat
+SharpEquations.EquationFormat.MathML = 1 -> SharpEquations.EquationFormat
+SharpEquations.EquationFormat.Mtef = 2 -> SharpEquations.EquationFormat
+SharpEquations.EquationFormat.Omml = 0 -> SharpEquations.EquationFormat
+SharpEquations.EquationFormat.UnicodeMath = 3 -> SharpEquations.EquationFormat
+SharpEquations.EquationOptions
+SharpEquations.EquationOptions.<Clone>$() -> SharpEquations.EquationOptions!
+SharpEquations.EquationOptions.Display.get -> bool
+SharpEquations.EquationOptions.Display.init -> void
+SharpEquations.EquationOptions.Equals(SharpEquations.EquationOptions? other) -> bool
+SharpEquations.EquationOptions.EquationOptions() -> void
+SharpEquations.EquationOptions.LaTeXFlavor.get -> SharpEquations.LaTeXFlavor
+SharpEquations.EquationOptions.LaTeXFlavor.init -> void
+SharpEquations.EquationOptions.LaTeXMacros.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+SharpEquations.EquationOptions.LaTeXMacros.init -> void
+SharpEquations.EquationOptions.PreserveFormatting.get -> bool
+SharpEquations.EquationOptions.PreserveFormatting.init -> void
+SharpEquations.EquationOptions.Strict.get -> bool
+SharpEquations.EquationOptions.Strict.init -> void
+SharpEquations.LaTeXFlavor
+SharpEquations.LaTeXFlavor.Standard = 0 -> SharpEquations.LaTeXFlavor
+SharpEquations.LaTeXFlavor.Word = 1 -> SharpEquations.LaTeXFlavor
+SharpEquations.MathMLNamespaces
+static SharpEquations.Equation.operator !=(SharpEquations.Equation? left, SharpEquations.Equation? right) -> bool
+static SharpEquations.Equation.operator ==(SharpEquations.Equation? left, SharpEquations.Equation? right) -> bool
+static SharpEquations.Equation.Parse(string! source, SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> SharpEquations.Equation!
+static SharpEquations.Equation.Parse(System.ReadOnlySpan<byte> source, SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null) -> SharpEquations.Equation!
+static SharpEquations.Equation.Parse(System.Xml.Linq.XElement! source, SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null) -> SharpEquations.Equation!
+static SharpEquations.Equation.TryParse(string? source, SharpEquations.EquationFormat format, out SharpEquations.Equation? equation) -> bool
+static SharpEquations.Equation.TryParse(string? source, SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options, out SharpEquations.Equation? equation) -> bool
+static SharpEquations.EquationConverter.CanRead(SharpEquations.EquationFormat format) -> bool
+static SharpEquations.EquationConverter.CanWrite(SharpEquations.EquationFormat format) -> bool
+static SharpEquations.EquationConverter.Convert(string! source, SharpEquations.EquationFormat sourceFormat, SharpEquations.EquationFormat destinationFormat, SharpEquations.EquationOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> string!
+static SharpEquations.EquationConverter.Convert(System.ReadOnlySpan<byte> source, SharpEquations.EquationFormat sourceFormat, SharpEquations.EquationFormat destinationFormat, SharpEquations.EquationOptions? options = null) -> string!
+static SharpEquations.EquationConverter.Convert(System.Xml.Linq.XElement! source, SharpEquations.EquationFormat sourceFormat, SharpEquations.EquationFormat destinationFormat, SharpEquations.EquationOptions? options = null) -> string!
+static SharpEquations.EquationConverter.TryConvert(string? source, SharpEquations.EquationFormat sourceFormat, SharpEquations.EquationFormat destinationFormat, out string? result, SharpEquations.EquationOptions? options = null) -> bool
+static SharpEquations.EquationOptions.Default.get -> SharpEquations.EquationOptions!
+static SharpEquations.EquationOptions.operator !=(SharpEquations.EquationOptions? left, SharpEquations.EquationOptions? right) -> bool
+static SharpEquations.EquationOptions.operator ==(SharpEquations.EquationOptions? left, SharpEquations.EquationOptions? right) -> bool
+static readonly SharpEquations.MathMLNamespaces.MathML -> System.Xml.Linq.XNamespace!
+static readonly SharpEquations.MathMLNamespaces.Omml -> System.Xml.Linq.XNamespace!
+static readonly SharpEquations.MathMLNamespaces.WordprocessingML -> System.Xml.Linq.XNamespace!

@@ -13,7 +13,8 @@ namespace SharpEquations.Internal.Mtef
     /// into the XML written by https://github.com/jure/mathtype (MIT), which mtef2mml.xsl converts to MathML:
     /// one element per record, named after the record, holding its fields.
     /// </summary>
-    internal sealed class MtefReader
+    /// <remarks>A ref struct, so that it reads the bytes the caller gives without copying them.</remarks>
+    internal ref struct MtefReader
     {
         private static readonly string[] HAlign = { null, "left", "center", "right", "al", "dec" };
         private static readonly string[] VAlign = { "top_baseline", "center_baseline", "bottom_baseline", "center", "axis" };
@@ -27,26 +28,30 @@ namespace SharpEquations.Internal.Mtef
             "embU_RARROW", "embU_LARROW", "embU_BARROW", "embU_R1ARROW", "embU_L1ARROW",
         };
 
-        private readonly byte[] data;
+        private readonly ReadOnlySpan<byte> data;
         private int position;
         private int bits;
         private int bitCount;
         private int version;
         private int depth;
 
-        private MtefReader(byte[] data)
+        private MtefReader(ReadOnlySpan<byte> data)
         {
             this.data = data;
+            position = 0;
+            bits = 0;
+            bitCount = 0;
+            version = 0;
+            depth = 0;
         }
 
         /// <summary>
         /// Reads an MTEF equation (without the OLE "Equation Native" header) into a root element holding an mtef element.
         /// </summary>
-        public static XElement Read(byte[] mtef)
+        public static XElement Read(ReadOnlySpan<byte> mtef)
         {
-            if (mtef == null)
-                throw new ArgumentNullException(nameof(mtef));
-            return new MtefReader(mtef).ReadEquation();
+            var reader = new MtefReader(mtef);
+            return reader.ReadEquation();
         }
 
         private XElement ReadEquation()
@@ -97,20 +102,16 @@ namespace SharpEquations.Internal.Mtef
             switch (type)
             {
                 case 0: return new XElement("end");
-                case 1: return Line5();
+                case 1: return Line(SByte());
                 case 2: return Char5();
                 case 3: return Template5();
-                case 4: return Pile5();
-                case 5: return Matrix5();
+                case 4: return Pile(SByte());
+                case 5: return Matrix(SByte(), false);
                 case 6: return Embellishment5();
                 case 7: return Ruler();
                 case 8: return new XElement("font_style_def", Field("font_def_index", MtUInt()), Field("char_style", SByte()));
                 case 9: return Size(null);
-                case 10: return new XElement("full");
-                case 11: return new XElement("sub");
-                case 12: return new XElement("sub2");
-                case 13: return new XElement("sym");
-                case 14: return new XElement("subsym");
+                case 10: case 11: case 12: case 13: case 14: return TypeSize(type);
                 case 15: return new XElement("color", Field("color_def_index", MtUInt()));
                 case 16: return ColorDefinition();
                 case 17: return new XElement("font_def", Field("enc_def_index", MtUInt()), Field("font_name", StringZ()));
@@ -125,21 +126,6 @@ namespace SharpEquations.Internal.Mtef
                 default:
                     throw new InvalidDataException("Unknown MTEF record type " + type + ".");
             }
-        }
-
-        private XElement Line5()
-        {
-            var options = SByte();
-            var slot = new XElement("slot", Field("options", options));
-            if ((options & 0x08) != 0)
-                slot.Add(Nudge());
-            if ((options & 0x04) != 0)
-                slot.Add(Field("line_spacing", UInt16()));
-            if ((options & 0x02) != 0)
-                slot.Add(Ruler());
-            if ((options & 0x01) == 0)
-                slot.Add(Records());
-            return slot;
         }
 
         private XElement Char5()
@@ -175,36 +161,6 @@ namespace SharpEquations.Internal.Mtef
             return template;
         }
 
-        private XElement Pile5()
-        {
-            var options = SByte();
-            if ((options & 0x08) != 0)
-                Nudge();
-            var halign = SByte();
-            var valign = SByte();
-            if ((options & 0x02) != 0)
-                Ruler();
-            return new XElement("pile", Field("options", options), Field("halign", Name(HAlign, halign)), Field("valign", Name(VAlign, valign)), Records());
-        }
-
-        private XElement Matrix5()
-        {
-            var options = SByte();
-            var nudge = (options & 0x08) != 0 ? Nudge() : null;
-            var valign = SByte();
-            var hJust = SByte();
-            var vJust = SByte();
-            var rows = SByte();
-            var cols = SByte();
-            var rowParts = LineParts(rows);
-            var colParts = LineParts(cols);
-            return new XElement("matrix",
-                Field("options", options), nudge,
-                Field("valign", Name(VAlign, valign)), Field("h_just", Name(HAlign, hJust)), Field("v_just", Name(VAlign, vJust)),
-                Field("rows", rows), Field("cols", cols),
-                rowParts.Select(p => Field("row_parts", p)), colParts.Select(p => Field("col_parts", p)),
-                Records());
-        }
 
         /// <summary>
         /// The (count + 1) partition line styles of a matrix: 2 bits each, packed from the low bits of each byte.
@@ -293,11 +249,11 @@ namespace SharpEquations.Internal.Mtef
             switch (type)
             {
                 case 0: return new XElement("end");
-                case 1: return Line3(options);
+                case 1: return Line(options);
                 case 2: return Char3(options);
                 case 3: return Template3(options);
-                case 4: return Pile3(options);
-                case 5: return Matrix3(options);
+                case 4: return Pile(options);
+                case 5: return Matrix(options, true);
                 case 6: return Embellishment3(options);
                 case 7: return Ruler();
                 case 8:
@@ -305,17 +261,20 @@ namespace SharpEquations.Internal.Mtef
                     var style = SByte();
                     return new XElement("font", Field("options", options), Field("name", StringZ()), Field("typeface", typeface), Field("style", style));
                 case 9: return Size(options);
-                case 10: return new XElement("full");
-                case 11: return new XElement("sub");
-                case 12: return new XElement("sub2");
-                case 13: return new XElement("sym");
-                case 14: return new XElement("subsym");
+                case 10: case 11: case 12: case 13: case 14: return TypeSize(type);
                 default:
                     throw new InvalidDataException("Unknown MTEF record type " + type + ".");
             }
         }
 
-        private XElement Line3(int options)
+        // the records MTEF 3 and 5 write alike, after the options (in the record byte in MTEF 3, a byte of their own in 5)
+
+        private static readonly string[] TypeSizes = { "full", "sub", "sub2", "sym", "subsym" };
+
+        /// <summary>The records 10 to 14, which select a type size (full, subscript...) and hold nothing else.</summary>
+        private static XElement TypeSize(int type) => new XElement(TypeSizes[type - 10]);
+
+        private XElement Line(int options)
         {
             var slot = new XElement("slot", Field("options", options));
             if ((options & 0x08) != 0)
@@ -352,7 +311,7 @@ namespace SharpEquations.Internal.Mtef
             return template;
         }
 
-        private XElement Pile3(int options)
+        private XElement Pile(int options)
         {
             if ((options & 0x08) != 0)
                 Nudge();
@@ -363,7 +322,8 @@ namespace SharpEquations.Internal.Mtef
             return new XElement("pile", Field("options", options), Field("halign", Name(HAlign, halign)), Field("valign", Name(VAlign, valign)), Records());
         }
 
-        private XElement Matrix3(int options)
+        /// <summary>A matrix, whose partition lines MTEF 3 (<see cref="BitParts"/>) and 5 (<see cref="LineParts"/>) pack differently.</summary>
+        private XElement Matrix(int options, bool mtef3)
         {
             var nudge = (options & 0x08) != 0 ? Nudge() : null;
             var valign = SByte();
@@ -371,8 +331,8 @@ namespace SharpEquations.Internal.Mtef
             var vJust = SByte();
             var rows = SByte();
             var cols = SByte();
-            var rowParts = BitParts(rows);
-            var colParts = BitParts(cols);
+            var rowParts = mtef3 ? BitParts(rows) : LineParts(rows);
+            var colParts = mtef3 ? BitParts(cols) : LineParts(cols);
             return new XElement("matrix",
                 Field("options", options), nudge,
                 Field("valign", Name(VAlign, valign)), Field("h_just", Name(HAlign, hJust)), Field("v_just", Name(VAlign, vJust)),
@@ -519,7 +479,9 @@ namespace SharpEquations.Internal.Mtef
             while (Byte() != 0)
             {
             }
-            return Encoding.GetEncoding("ISO-8859-1").GetString(data, start, position - start - 1);
+            // one path on every target: .NET Standard 2.0 has no Encoding.GetString for spans, so the few bytes of
+            // the string (a font or encoding name, a comment) are copied
+            return Encoding.GetEncoding("ISO-8859-1").GetString(data.Slice(start, position - start - 1).ToArray());
         }
 
         private void Skip(int count)

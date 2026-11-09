@@ -10,9 +10,10 @@ namespace SharpEquations.Internal.UnicodeMath
     /// Reads UnicodeMath into MathML with <see cref="UnicodeMathTranslator"/>, a port of UnicodeMathML (MIT, see NOTICE)
     /// whose grammar is compiled at build time by Parlot.SourceGenerator.
     /// </summary>
-    internal static class UnicodeMathParser
+    internal static partial class UnicodeMathParser
     {
-        private static readonly Regex BareAmpersand = new Regex("&(?!#x[0-9A-Fa-f]+;|#[0-9]+;|lt;|gt;|amp;|quot;|apos;)", RegexOptions.CultureInvariant);
+        [GeneratedRegex("&(?!#x[0-9A-Fa-f]+;|#[0-9]+;|lt;|gt;|amp;|quot;|apos;)", RegexOptions.CultureInvariant)]
+        private static partial Regex BareAmpersand();
 
         public static XElement Parse(string unicodemath, bool display = false, bool strict = false, CancellationToken cancellationToken = default)
         {
@@ -35,7 +36,7 @@ namespace SharpEquations.Internal.UnicodeMath
             XElement math;
             try
             {
-                math = XElement.Parse(BareAmpersand.Replace(mathML, "&amp;"), LoadOptions.PreserveWhitespace);
+                math = XElement.Parse(BareAmpersand().Replace(mathML, "&amp;"), LoadOptions.PreserveWhitespace);
             }
             catch (XmlException e)
             {

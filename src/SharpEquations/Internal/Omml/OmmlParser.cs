@@ -7,6 +7,7 @@ namespace SharpEquations.Internal.Omml
     using System.Text.RegularExpressions;
     using System.Xml.Linq;
     using SharpEquations.Internal.Text;
+    using SharpEquations.Internal.UnicodeMath;
     using static SharpEquations.Internal.Omml.Omml;
 
     /// <summary>
@@ -86,8 +87,8 @@ namespace SharpEquations.Internal.Omml
 
             // omml2mml splits the text of runs character by character, which breaks surrogate pairs (math
             // alphanumerics such as 𝑥, emoji): they go through the stylesheet as private use characters
-            var placeholders = new Dictionary<CodePoint, CodePoint>();
-            var used = new HashSet<CodePoint>(equations.SelectMany(e => e.Descendants(M + "t")).SelectMany(t => CodePoints.Of(t.Value)));
+            var placeholders = new Dictionary<Rune, Rune>();
+            var used = new HashSet<Rune>(equations.SelectMany(e => e.Descendants(M + "t")).SelectMany(t => CodePoints.Of(t.Value)));
             var converted = equations.Select(e => SingleRow(EquationStylesheets.Transform("omml2mml.xsl", HideAstral(PrepareOmml(e), placeholders, used)))).ToList();
             if (placeholders.Count > 0)
             {
@@ -129,7 +130,7 @@ namespace SharpEquations.Internal.Omml
             }
             // MathML also trims tokens and collapses their spaces: " ove " would touch the formula around it.
             foreach (var text in math.Descendants(Mml + "mtext").Where(e => !e.HasElements))
-                text.Value = CollapsibleSpaces.Replace(text.Value, m => new string('\u00A0', m.Length));
+                text.Value = CollapsibleSpaces().Replace(text.Value, m => new string('\u00A0', m.Length));
             JoinNumbers(math);
             LabelEquationNumbers(math);
             if (display)
@@ -243,35 +244,35 @@ namespace SharpEquations.Internal.Omml
 
         private static bool IsXmlSpace(char c) => c == ' ' || c == '\t' || c == '\n' || c == '\r';
 
-        private static XElement HideAstral(XElement oMath, Dictionary<CodePoint, CodePoint> placeholders, HashSet<CodePoint> used)
+        private static XElement HideAstral(XElement oMath, Dictionary<Rune, Rune> placeholders, HashSet<Rune> used)
         {
-            foreach (var text in oMath.Descendants(M + "t").Where(t => CodePoints.Of(t.Value).Any(c => !CodePoints.IsBmp(c))))
+            foreach (var text in oMath.Descendants(M + "t").Where(t => CodePoints.Of(t.Value).Any(c => !c.IsBmp)))
             {
                 var sb = new StringBuilder();
                 foreach (var codePoint in CodePoints.Of(text.Value))
                 {
                     var hidden = codePoint;
-                    if (!CodePoints.IsBmp(codePoint) && !placeholders.TryGetValue(codePoint, out hidden))
+                    if (!codePoint.IsBmp && !placeholders.TryGetValue(codePoint, out hidden))
                     {
                         int value = 0xE000 + placeholders.Count;
-                        while (used.Contains(CodePoints.From(value)))
+                        while (used.Contains(new Rune(value)))
                             value++;
-                        hidden = CodePoints.From(value);
+                        hidden = new Rune(value);
                         used.Add(hidden);
                         placeholders[codePoint] = hidden;
                     }
-                    sb.Append(CodePoints.ToString(hidden));
+                    sb.Append(hidden.ToString());
                 }
                 text.Value = sb.ToString();
             }
             return oMath;
         }
 
-        private static string RestoreAstral(string value, Dictionary<CodePoint, CodePoint> astral)
+        private static string RestoreAstral(string value, Dictionary<Rune, Rune> astral)
         {
             var sb = new StringBuilder();
             foreach (var codePoint in CodePoints.Of(value))
-                sb.Append(CodePoints.ToString(astral.TryGetValue(codePoint, out var original) ? original : codePoint));
+                sb.Append((astral.TryGetValue(codePoint, out var original) ? original : codePoint).ToString());
             return sb.ToString();
         }
 
@@ -283,7 +284,7 @@ namespace SharpEquations.Internal.Omml
                 var value = property.Attribute(M + "val");
                 property.SetAttributeValue(M + "val", value == null || IsTrue(value.Value) ? "on" : "off");
             }
-            // an upright word (max, argmin) is one identifier, which omml2mml would split letter by letter: it goes
+            // an upright word (max, argmin, sharet1) is one identifier, which omml2mml would split letter by letter: it goes
             // through the stylesheet as normal text, marked, and comes back as an mi (see UnmarkNames)
             foreach (var run in copy.Descendants(M + "r").Where(IsUprightName).ToList())
             {
@@ -292,7 +293,36 @@ namespace SharpEquations.Internal.Omml
                 var text = run.Element(M + "t")!;
                 text.Value = NameMark + text.Value;
             }
+            // omml2mml writes no mathvariant on numbers, which would lose the style of a bold or double-struck digit:
+            // the digits of a styled run go through the stylesheet as their mathematical alphanumerics (𝟏, 𝟙), each an
+            // identifier, as UnicodeMath and LaTeX read them
+            foreach (var run in copy.Descendants(M + "r"))
+            {
+                var properties = run.Elements(M + "rPr").LastOrDefault();
+                if (properties == null || (string)properties.Element(M + "nor")?.Attribute(M + "val") == "on")
+                    continue;
+                var style = DigitStyle((string)properties.Element(M + "scr")?.Attribute(M + "val"), (string)properties.Element(M + "sty")?.Attribute(M + "val"));
+                if (style == null)
+                    continue;
+                foreach (var text in run.Elements(M + "t"))
+                    text.Value = string.Concat(CodePoints.Of(text.Value).Select(c => c.Value is >= '0' and <= '9' ? UnicodeMathText.GetMathAlphanumeric(c.ToString(), style) : c.ToString()));
+            }
             return copy;
+        }
+
+        /// <summary>The style of the mathematical digits for the m:scr and m:sty of a run, null for plain digits.</summary>
+        private static string DigitStyle(string script, string style)
+        {
+            return (script, style) switch
+            {
+                ("monospace", _) => "mtt",
+                ("sans-serif", "b") => "mbfsans",
+                ("sans-serif", "i" or "bi") => null,
+                ("sans-serif", _) => "msans",
+                ("double-struck", _) => "Bbb",
+                ("roman" or null or "", "b") => "mbf",
+                _ => null,
+            };
         }
 
         private const char NameMark = '\uF8FF';
@@ -303,7 +333,7 @@ namespace SharpEquations.Internal.Omml
             var texts = run.Elements(M + "t").ToList();
             return properties != null && properties.Element(M + "nor") == null && (string)properties.Element(M + "sty")?.Attribute(M + "val") == "p"
                 && !run.Ancestors(M + "fName").Any() && texts.Count == 1 && texts[0].Value.Length > 1
-                && texts[0].Value.All(c => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z');
+                && AsciiPatterns.Name().IsMatch(texts[0].Value);
         }
 
         private static void UnmarkNames(XElement math)

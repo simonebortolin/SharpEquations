@@ -16,6 +16,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\*.xsl" LogicalName="SharpEquations.Resources.%(Filename)%(Extension)" />
     <InternalsVisibleTo Include="SharpEquations.Tests" />
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
     <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
     <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
     <None Include="..\..\NOTICE" Pack="true" PackagePath="" Visible="false" />
@@ -23,6 +25,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <!-- build time only: the public API is listed in PublicAPI.Shipped.txt and PublicAPI.Unshipped.txt, and a change
+         to it fails the build until it is listed there -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
     <!-- build time only: the generated parser does not reference Parlot -->
     <PackageReference Include="Parlot.SourceGenerator" PrivateAssets="all" />
   </ItemGroup>
@@ -31,6 +36,12 @@
        consumers of the package -->
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="System.Memory" />
+  </ItemGroup>
+
+  <!-- build time only: [GeneratedRegex], which .NET Standard 2.0 lacks, as a Regex built once (the regular expression
+       generator of .NET does it on net10.0) -->
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <ProjectReference Include="..\SharpEquations.RegexPolyfill\SharpEquations.RegexPolyfill.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

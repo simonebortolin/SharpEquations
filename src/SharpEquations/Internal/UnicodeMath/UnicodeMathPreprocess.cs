@@ -53,14 +53,10 @@ namespace SharpEquations.Internal.UnicodeMath
                 }
             }
 
-            object basE;
-            int i;
+            // a dispatcher with a small frame: the cases live in their own methods, since every level of nesting goes
+            // through Preprocess several times and the frame of one large switch overflows the stack on .NET 10
             string key = K(uast);
             object value = V(uast);
-            string opClose, opOpen;
-            object ret;
-            string type;
-            object val;
 
             string intent = dsty.Intent;
             string arg = dsty.Arg;
@@ -70,301 +66,305 @@ namespace SharpEquations.Internal.UnicodeMath
                 intent = Get(uast, "intent") as string;
             dsty.Intent = dsty.Arg = "";
 
-            switch (key)
+            return key switch
             {
-                case "unicodemath":
-                    return O("unicodemath", O(("content", Preprocess(dsty, Get(value, "content"))), ("eqnumber", Get(value, "eqnumber"))));
+                "unicodemath" => PreprocessUnicodeMath(dsty, value),
+                "expr" => O("expr", Preprocess(dsty, value)),
+                "element" => O("element", Preprocess(dsty, value)),
+                "array" => O("array", Preprocess(dsty, value)),
+                "arows" => O("arows", Preprocess(dsty, value)),
+                "arow" => PreprocessArow(dsty, (List<object>)value),
+                "specialMatrix" => PreprocessSpecialMatrix(dsty, (List<object>)value, intent, arg),
+                "matrix" => O("matrix", Preprocess(dsty, value)),
+                "mrows" => O("mrows", Preprocess(dsty, value)),
+                "mrow" => PreprocessMrow(dsty, (List<object>)value),
+                "nary" => PreprocessNary(dsty, (JsObject)value, intent, arg, index, arr),
+                "negatedoperator" => PreprocessNegatedOperator(value),
+                "phantom" => PreprocessPhantom(dsty, value, intent, arg),
+                "smash" => PreprocessSmash(dsty, value, intent, arg),
+                "fraction" => PreprocessFraction(dsty, (JsObject)value, intent, arg, index, arr),
+                "unicodefraction" => PreprocessUnicodeFraction(value),
+                "atop" or "factorial" => PreprocessWrapped(dsty, key, value, intent, arg),
+                "binom" => PreprocessBinom(dsty, (JsObject)value, intent, arg),
+                "href" => PreprocessHref(dsty, value),
+                "script" => PreprocessScript(dsty, (JsObject)value, intent, arg, index, arr),
+                "enclosed" => PreprocessEnclosed(dsty, (JsObject)value, intent, arg),
+                "abstractbox" => PreprocessAbstractBox(dsty, value),
+                "hbrack" => PreprocessHbrack(dsty, value, intent, arg),
+                "intend" => PreprocessIntend(dsty, value, intent, arg),
+                "root" => PreprocessRoot(dsty, value, intent, arg),
+                "sqrt" => PreprocessSqrt(dsty, value, intent, arg),
+                "function" => PreprocessFunction(dsty, (JsObject)value, intent, arg),
+                "sizeoverride" => PreprocessSizeOverride(dsty, value),
+                "colored" or "bgcolored" => PreprocessColored(dsty, key, value),
+                "primed" => PreprocessPrimed(dsty, uast, (JsObject)value, intent, arg, index, arr),
+                "atoms" => PreprocessAtoms(dsty, value, intent, arg, index, arr),
+                "diacriticized" => PreprocessDiacriticized(dsty, value),
+                "spaces" => O("spaces", Preprocess(dsty, value)),
+                "bracketedMatrix" => PreprocessBracketedMatrix(dsty, value, arg),
+                "bracketed" => PreprocessBracketed(dsty, (JsObject)value, intent, arg),
+                "operator" => PreprocessOperator(value, intent, arg, index, arr),
+                "fontoverride" => PreprocessFontOverride(value),
+                _ => uast
+            };
+        }
 
-                case "expr":
-                    return O("expr", Preprocess(dsty, value));
+        private JsObject PreprocessUnicodeMath(PreprocessStyle dsty, object value) =>
+            O("unicodemath", O(("content", Preprocess(dsty, Get(value, "content"))), ("eqnumber", Get(value, "eqnumber"))));
 
-                case "element":
-                    return O("element", Preprocess(dsty, value));
-
-                case "array":
-                    return O("array", Preprocess(dsty, value));
-                case "arows":
-                    return O("arows", Preprocess(dsty, value));
-                case "arow":
-                {
-                    var currAcol = new List<object>();
-                    var rows = new List<object>();
-                    var cells = (List<object>)value;
-                    i = 0;
-                    if (cells[0] == null)
-                        i = 1;
-                    for (; i < cells.Count; i++)
-                    {
-                        currAcol.Add(i % 2 == 0 ? O("aaligngroup", null) : O("aalignmark", null));
-                        currAcol.Add(Preprocess(dsty, cells[i]));
-                    }
-                    if (currAcol.Count > 0)
-                        rows.Add(O("acol", currAcol));
-                    return O("arow", rows);
-                }
-
-                case "specialMatrix":
-                {
-                    var special = (List<object>)value;
-                    type = (string)special[2];
-                    value = MatrixRows(ParseInt((string)special[0]), special[1] is string m ? ParseInt(m) : 0);
-                    if (EmitDefaultIntents && MatrixIntents.TryGetValue(type, out var matrixIntent) && Truthy(matrixIntent))
-                        intent = matrixIntent;
-                    if (type != "■")
-                    {
-                        opOpen = Brackets[type].Substring(0, 1);
-                        opClose = Brackets[type].Substring(1, 1);
-                        return O("bracketed", O(("open", opOpen), ("close", opClose), ("intent", intent), ("arg", arg),
-                            ("content", O("matrix", Preprocess(dsty, value)))));
-                    }
-                    return O("matrix", Preprocess(dsty, value));
-                }
-                case "matrix":
-                    return O("matrix", Preprocess(dsty, value));
-                case "mrows":
-                    return O("mrows", Preprocess(dsty, value));
-                case "mrow":
-                    return O("mrow", ((List<object>)value).Select(c => (object)O("mcol", Preprocess(dsty, c))).ToList());
-
-                case "nary":
-                    return PreprocessNary(dsty, (JsObject)value, intent, arg, index, arr);
-
-                case "negatedoperator":
-                    return Negs.TryGetValue(Str(value), out var neg) ? O("operator", neg) : O("negatedoperator", value);
-
-                case "phantom":
-                    return O("phantom", O(("mask", Get(value, "mask")), ("symbol", Get(value, "symbol")), ("intent", intent), ("arg", arg),
-                        ("of", Preprocess(dsty, Get(value, "of")))));
-                case "smash":
-                    return O("smash", O(("symbol", Get(value, "symbol")), ("intent", intent), ("arg", arg), ("of", Preprocess(dsty, Get(value, "of")))));
-
-                case "fraction":
-                    return PreprocessFraction(dsty, (JsObject)value, intent, arg, index, arr);
-
-                case "unicodefraction":
-                {
-                    var fraction = UnicodeFractions.FirstOrDefault(f => f.Fraction == Str(value));
-                    return fraction.Fraction == null ? value
-                        : O("fraction", O(("symbol", "⊘"), ("of", A(O("number", fraction.Numerator), O("number", fraction.Denominator)))));
-                }
-
-                case "atop":
-                    value = Preprocess(dsty, value);
-                    if (Truthy(intent))
-                        Set(value, "intent", intent);
-                    if (Truthy(arg))
-                        Set(value, "arg", arg);
-                    return O("atop", value);
-                case "binom":
-                {
-                    var binom = (JsObject)value;
-                    binom["top"] = Preprocess(dsty, binom["top"]);
-                    binom["bottom"] = Preprocess(dsty, binom["bottom"]);
-                    if (!Truthy(intent) && EmitDefaultIntents)
-                    {
-                        var top = GetVariable(binom["top"]);
-                        var bottom = GetVariable(binom["bottom"]);
-                        intent = "binomial-coefficient(";
-                        if (Ch(top, 0) == "$")
-                        {
-                            intent += "$t,";
-                            Set(binom["top"], "arg", "t");
-                        }
-                        else
-                        {
-                            intent += top + ",";
-                        }
-                        if (Ch(bottom, 0) == "$")
-                        {
-                            intent += "$b)";
-                            Set(binom["bottom"], "arg", "b");
-                        }
-                        else
-                        {
-                            intent += bottom + ")";
-                        }
-                    }
-                    return O("bracketed", O(("intent", intent), ("arg", arg), ("open", "("), ("close", ")"),
-                        ("content", O("atop", A(binom["top"], binom["bottom"])))));
-                }
-
-                case "href":
-                    val = FoldMathItalics(Str(Get(value, "url")));
-                    if (!Truthy(Get(value, "name")))
-                        Set(value, "name", "");
-                    return O("href", O(("url", val), ("content", Preprocess(dsty, Get(value, "name")))));
-
-                case "script":
-                    return PreprocessScript(dsty, (JsObject)value, intent, arg, index, arr);
-
-                case "enclosed":
-                {
-                    var enclosed = (JsObject)value;
-                    var of = enclosed["of"];
-                    var symbol = enclosed["symbol"] as string;
-                    if (of is List<object> ofList && Eq(Get(Get(ofList[0], "colored"), "color"), "#F01"))
-                    {
-                        ofList.Insert(0, O("operator", symbol));
-                        return ofList;
-                    }
-                    if (symbol == "Ⓐ" || symbol == "Ⓕ")
-                    {
-                        val = "0";
-                        if (Truthy(of) && Truthy(Get(of, "expr")))
-                        {
-                            var expr = (List<object>)Get(of, "expr");
-                            int last = expr.Count - 1;
-                            val = Get(At(expr[last], 0), "number");
-                            if (last > 0)
-                                val = "-" + Str(val);
-                        }
-                        return O("intend", O(("symbol", symbol), ("value", val), ("op", enclosed["mask"])));
-                    }
-                    if (symbol != null && string.CompareOrdinal(symbol, "╱") >= 0 && string.CompareOrdinal(symbol, "╳") <= 0)
-                        // ╱ strikes from bottom left to top right (MathML updiagonalstrike, 128), ╲ the other way (64)
-                        enclosed["mask"] = symbol == "╱" ? 143 : symbol == "╲" ? 79 : 207;
-                    return O("enclosed", O(("mask", enclosed["mask"]), ("symbol", symbol), ("intent", intent), ("arg", arg), ("of", Preprocess(dsty, of))));
-                }
-
-                case "abstractbox":
-                    return O("abstractbox", O(("mask", Get(value, "mask")), ("of", Preprocess(dsty, Get(value, "of")))));
-
-                case "hbrack":
-                    return O("hbrack", O(("intent", intent), ("arg", arg), ("bracket", Get(value, "bracket")), ("of", Preprocess(dsty, Get(value, "of")))));
-
-                case "intend":
-                {
-                    var content = Get(value, "content");
-                    var op = Get(value, "op") as string;
-                    if (Truthy(Get(content, "expr")) && Length(Get(content, "expr")) > 1)
-                    {
-                        var c = Preprocess(dsty, V(content));
-                        if (op == "ⓘ")
-                        {
-                            Set(c, "intent", Get(Get(value, "intent"), "text"));
-                            if (Eq(Get(c, "intent"), "cardinality"))
-                                Set(c, "intent", Str(Get(c, "intent")) + "($a)");
-                            if (Truthy(arg))
-                                Set(c, "arg", arg);
-                        }
-                        else
-                        {
-                            Set(c, "arg", Get(Get(value, "intent"), "text"));
-                            if (Truthy(intent))
-                                Set(c, "intent", intent);
-                        }
-                        return c;
-                    }
-                    var text = Get(Get(value, "intent"), "text") as string;
-                    switch (op)
-                    {
-                        case "ⓘ":
-                            dsty.Intent = text;
-                            if (dsty.Intent == "cardinality")
-                                dsty.Intent += "($a)";
-                            if (Truthy(arg))
-                                dsty.Arg = arg;
-                            break;
-                        case "ⓐ":
-                            dsty.Arg = text;
-                            if (Truthy(intent))
-                                dsty.Intent = intent;
-                            break;
-                    }
-                    return Preprocess(dsty, V(content));
-                }
-
-                case "root":
-                    return O("root", O(("intent", intent), ("arg", arg), ("degree", Get(value, "degree")), ("of", Preprocess(dsty, Get(value, "of")))));
-                case "sqrt":
-                    value = Preprocess(dsty, value);
-                    if (value is List<object> radicand &&
-                        (Eq(Get(Get(radicand[0], "colored"), "color"), "#F01") || Truthy(Get(radicand[0], "intend")) && radicand.Count == 1))
-                    {
-                        radicand.Insert(0, O("operator", "√"));
-                        return radicand;
-                    }
-                    if (Truthy(intent))
-                        Set(value, "intent", intent);
-                    if (Truthy(arg))
-                        Set(value, "arg", arg);
-                    return O("sqrt", value);
-
-                case "function":
-                    return PreprocessFunction(dsty, (JsObject)value, intent, arg);
-
-                case "sizeoverride":
-                    return O("sizeoverride", O(("size", Get(value, "size")), ("of", Preprocess(dsty, Get(value, "of")))));
-
-                case "colored":
-                    return O("colored", O(("color", FoldMathItalics(Str(Get(value, "color")))), ("of", Preprocess(dsty, Get(value, "of")))));
-                case "bgcolored":
-                    return O("bgcolored", O(("color", FoldMathItalics(Str(Get(value, "color")))), ("of", Preprocess(dsty, Get(value, "of")))));
-
-                case "primed":
-                    return PreprocessPrimed(dsty, uast, (JsObject)value, intent, arg, index, arr);
-
-                case "factorial":
-                    value = Preprocess(dsty, value);
-                    if (Truthy(intent))
-                        Set(value, "intent", intent);
-                    if (Truthy(arg))
-                        Set(value, "arg", arg);
-                    return O("factorial", value);
-
-                case "atoms":
-                    return PreprocessAtoms(dsty, value, intent, arg, index, arr);
-
-                case "diacriticized":
-                    return O("diacriticized", O(("base", Preprocess(dsty, Get(value, "base"))), ("diacritics", Get(value, "diacritics"))));
-                case "spaces":
-                    return O("spaces", Preprocess(dsty, value));
-
-                case "bracketedMatrix":
-                {
-                    type = (string)Get(value, "type");
-                    opOpen = Brackets[type].Substring(0, 1);
-                    opClose = Brackets[type].Substring(1, 1);
-                    if (!Truthy(Get(value, "intent")) && EmitDefaultIntents && MatrixIntents.TryGetValue(type, out var matrixIntent))
-                        Set(value, "intent", matrixIntent);
-                    return O("bracketed", O(("open", opOpen), ("close", opClose), ("intent", Get(value, "intent")), ("arg", arg),
-                        ("content", Preprocess(dsty, Get(value, "content")))));
-                }
-
-                case "bracketed":
-                    return PreprocessBracketed(dsty, (JsObject)value, intent, arg);
-
-                case "operator":
-                {
-                    if (value is string op && Len(op) > 1 && op[0] == '\\')
-                    {
-                        value = Sub(op, 1, 1 + 1);
-                        intent = ":text";
-                    }
-                    if (Eq(value, "<"))
-                    {
-                        value = "&lt;";
-                    }
-                    else if (Eq(value, "…") && index > 0)
-                    {
-                        var o = Get(arr[index.Value - 1], "operator");
-                        if (Truthy(o) && Eq(Get(o, "content"), "+"))
-                            value = "⋯";
-                    }
-                    return O(key, O(("intent", intent), ("arg", arg), ("content", value)));
-                }
-
-                case "fontoverride":
-                {
-                    var style = MathStyles[CodePointAt((string)Get(value, "font"), 0) - 0x61];
-                    var text = GetTextContent(Get(value, "of"));
-                    text = GetMathAlphanumerics(FoldMathItalics(Str(text)), style);
-                    return O("atoms", A(O("chars", text)));
-                }
-
-                default:
-                    return uast;
+        private JsObject PreprocessArow(PreprocessStyle dsty, List<object> cells)
+        {
+            var currAcol = new List<object>();
+            var rows = new List<object>();
+            int i = 0;
+            if (cells[0] == null)
+                i = 1;
+            for (; i < cells.Count; i++)
+            {
+                currAcol.Add(i % 2 == 0 ? O("aaligngroup", null) : O("aalignmark", null));
+                currAcol.Add(Preprocess(dsty, cells[i]));
             }
+            if (currAcol.Count > 0)
+                rows.Add(O("acol", currAcol));
+            return O("arow", rows);
+        }
+
+        private JsObject PreprocessSpecialMatrix(PreprocessStyle dsty, List<object> special, string intent, string arg)
+        {
+            var type = (string)special[2];
+            object value = MatrixRows(ParseInt((string)special[0]), special[1] is string m ? ParseInt(m) : 0);
+            if (EmitDefaultIntents && MatrixIntents.TryGetValue(type, out var matrixIntent) && Truthy(matrixIntent))
+                intent = matrixIntent;
+            if (type != "■")
+            {
+                var opOpen = Brackets[type].Substring(0, 1);
+                var opClose = Brackets[type].Substring(1, 1);
+                return O("bracketed", O(("open", opOpen), ("close", opClose), ("intent", intent), ("arg", arg),
+                    ("content", O("matrix", Preprocess(dsty, value)))));
+            }
+            return O("matrix", Preprocess(dsty, value));
+        }
+
+        private JsObject PreprocessMrow(PreprocessStyle dsty, List<object> cells)
+        {
+            var mcols = new List<object>(cells.Count);
+            foreach (var c in cells)
+                mcols.Add(O("mcol", Preprocess(dsty, c)));
+            return O("mrow", mcols);
+        }
+
+        private static JsObject PreprocessNegatedOperator(object value) =>
+            Negs.TryGetValue(Str(value), out var neg) ? O("operator", neg) : O("negatedoperator", value);
+
+        private JsObject PreprocessPhantom(PreprocessStyle dsty, object value, string intent, string arg) =>
+            O("phantom", O(("mask", Get(value, "mask")), ("symbol", Get(value, "symbol")), ("intent", intent), ("arg", arg),
+                ("of", Preprocess(dsty, Get(value, "of")))));
+
+        private JsObject PreprocessSmash(PreprocessStyle dsty, object value, string intent, string arg) =>
+            O("smash", O(("symbol", Get(value, "symbol")), ("intent", intent), ("arg", arg), ("of", Preprocess(dsty, Get(value, "of")))));
+
+        private static object PreprocessUnicodeFraction(object value)
+        {
+            var symbol = Str(value);
+            var fraction = UnicodeFractions.FirstOrDefault(f => f.Fraction == symbol);
+            return fraction.Fraction == null ? value
+                : O("fraction", O(("symbol", "⊘"), ("of", A(O("number", fraction.Numerator), O("number", fraction.Denominator)))));
+        }
+
+        /// <summary>atop and factorial: the content processed, with the intent and the argument set on it.</summary>
+        private JsObject PreprocessWrapped(PreprocessStyle dsty, string key, object value, string intent, string arg)
+        {
+            value = Preprocess(dsty, value);
+            if (Truthy(intent))
+                Set(value, "intent", intent);
+            if (Truthy(arg))
+                Set(value, "arg", arg);
+            return O(key, value);
+        }
+
+        private JsObject PreprocessBinom(PreprocessStyle dsty, JsObject binom, string intent, string arg)
+        {
+            binom["top"] = Preprocess(dsty, binom["top"]);
+            binom["bottom"] = Preprocess(dsty, binom["bottom"]);
+            if (!Truthy(intent) && EmitDefaultIntents)
+            {
+                var top = GetVariable(binom["top"]);
+                var bottom = GetVariable(binom["bottom"]);
+                intent = "binomial-coefficient(";
+                if (Ch(top, 0) == "$")
+                {
+                    intent += "$t,";
+                    Set(binom["top"], "arg", "t");
+                }
+                else
+                {
+                    intent += top + ",";
+                }
+                if (Ch(bottom, 0) == "$")
+                {
+                    intent += "$b)";
+                    Set(binom["bottom"], "arg", "b");
+                }
+                else
+                {
+                    intent += bottom + ")";
+                }
+            }
+            return O("bracketed", O(("intent", intent), ("arg", arg), ("open", "("), ("close", ")"),
+                ("content", O("atop", A(binom["top"], binom["bottom"])))));
+        }
+
+        private JsObject PreprocessHref(PreprocessStyle dsty, object value)
+        {
+            var val = FoldMathItalics(Str(Get(value, "url")));
+            if (!Truthy(Get(value, "name")))
+                Set(value, "name", "");
+            return O("href", O(("url", val), ("content", Preprocess(dsty, Get(value, "name")))));
+        }
+
+        private object PreprocessEnclosed(PreprocessStyle dsty, JsObject enclosed, string intent, string arg)
+        {
+            var of = enclosed["of"];
+            var symbol = enclosed["symbol"] as string;
+            if (of is List<object> ofList && Eq(Get(Get(ofList[0], "colored"), "color"), "#F01"))
+            {
+                ofList.Insert(0, O("operator", symbol));
+                return ofList;
+            }
+            if (symbol == "Ⓐ" || symbol == "Ⓕ")
+            {
+                object val = "0";
+                if (Truthy(of) && Truthy(Get(of, "expr")))
+                {
+                    var expr = (List<object>)Get(of, "expr");
+                    int last = expr.Count - 1;
+                    val = Get(At(expr[last], 0), "number");
+                    if (last > 0)
+                        val = "-" + Str(val);
+                }
+                return O("intend", O(("symbol", symbol), ("value", val), ("op", enclosed["mask"])));
+            }
+            if (symbol != null && string.CompareOrdinal(symbol, "╱") >= 0 && string.CompareOrdinal(symbol, "╳") <= 0)
+                // ╱ strikes from bottom left to top right (MathML updiagonalstrike, 128), ╲ the other way (64)
+                enclosed["mask"] = symbol == "╱" ? 143 : symbol == "╲" ? 79 : 207;
+            return O("enclosed", O(("mask", enclosed["mask"]), ("symbol", symbol), ("intent", intent), ("arg", arg), ("of", Preprocess(dsty, of))));
+        }
+
+        private JsObject PreprocessAbstractBox(PreprocessStyle dsty, object value) =>
+            O("abstractbox", O(("mask", Get(value, "mask")), ("of", Preprocess(dsty, Get(value, "of")))));
+
+        private JsObject PreprocessHbrack(PreprocessStyle dsty, object value, string intent, string arg) =>
+            O("hbrack", O(("intent", intent), ("arg", arg), ("bracket", Get(value, "bracket")), ("of", Preprocess(dsty, Get(value, "of")))));
+
+        private object PreprocessIntend(PreprocessStyle dsty, object value, string intent, string arg)
+        {
+            var content = Get(value, "content");
+            var op = Get(value, "op") as string;
+            if (Truthy(Get(content, "expr")) && Length(Get(content, "expr")) > 1)
+            {
+                var c = Preprocess(dsty, V(content));
+                if (op == "ⓘ")
+                {
+                    Set(c, "intent", Get(Get(value, "intent"), "text"));
+                    if (Eq(Get(c, "intent"), "cardinality"))
+                        Set(c, "intent", Str(Get(c, "intent")) + "($a)");
+                    if (Truthy(arg))
+                        Set(c, "arg", arg);
+                }
+                else
+                {
+                    Set(c, "arg", Get(Get(value, "intent"), "text"));
+                    if (Truthy(intent))
+                        Set(c, "intent", intent);
+                }
+                return c;
+            }
+            var text = Get(Get(value, "intent"), "text") as string;
+            switch (op)
+            {
+                case "ⓘ":
+                    dsty.Intent = text;
+                    if (dsty.Intent == "cardinality")
+                        dsty.Intent += "($a)";
+                    if (Truthy(arg))
+                        dsty.Arg = arg;
+                    break;
+                case "ⓐ":
+                    dsty.Arg = text;
+                    if (Truthy(intent))
+                        dsty.Intent = intent;
+                    break;
+            }
+            return Preprocess(dsty, V(content));
+        }
+
+        private JsObject PreprocessRoot(PreprocessStyle dsty, object value, string intent, string arg) =>
+            O("root", O(("intent", intent), ("arg", arg), ("degree", Get(value, "degree")), ("of", Preprocess(dsty, Get(value, "of")))));
+
+        private object PreprocessSqrt(PreprocessStyle dsty, object value, string intent, string arg)
+        {
+            value = Preprocess(dsty, value);
+            if (value is List<object> radicand &&
+                (Eq(Get(Get(radicand[0], "colored"), "color"), "#F01") || Truthy(Get(radicand[0], "intend")) && radicand.Count == 1))
+            {
+                radicand.Insert(0, O("operator", "√"));
+                return radicand;
+            }
+            if (Truthy(intent))
+                Set(value, "intent", intent);
+            if (Truthy(arg))
+                Set(value, "arg", arg);
+            return O("sqrt", value);
+        }
+
+        private JsObject PreprocessSizeOverride(PreprocessStyle dsty, object value) =>
+            O("sizeoverride", O(("size", Get(value, "size")), ("of", Preprocess(dsty, Get(value, "of")))));
+
+        /// <summary>colored and bgcolored.</summary>
+        private JsObject PreprocessColored(PreprocessStyle dsty, string key, object value) =>
+            O(key, O(("color", FoldMathItalics(Str(Get(value, "color")))), ("of", Preprocess(dsty, Get(value, "of")))));
+
+        private JsObject PreprocessDiacriticized(PreprocessStyle dsty, object value) =>
+            O("diacriticized", O(("base", Preprocess(dsty, Get(value, "base"))), ("diacritics", Get(value, "diacritics"))));
+
+        private JsObject PreprocessBracketedMatrix(PreprocessStyle dsty, object value, string arg)
+        {
+            var type = (string)Get(value, "type");
+            var opOpen = Brackets[type].Substring(0, 1);
+            var opClose = Brackets[type].Substring(1, 1);
+            if (!Truthy(Get(value, "intent")) && EmitDefaultIntents && MatrixIntents.TryGetValue(type, out var matrixIntent))
+                Set(value, "intent", matrixIntent);
+            return O("bracketed", O(("open", opOpen), ("close", opClose), ("intent", Get(value, "intent")), ("arg", arg),
+                ("content", Preprocess(dsty, Get(value, "content")))));
+        }
+
+        private static JsObject PreprocessOperator(object value, string intent, string arg, int? index, List<object> arr)
+        {
+            if (value is string op && Len(op) > 1 && op[0] == '\\')
+            {
+                value = Sub(op, 1, 1 + 1);
+                intent = ":text";
+            }
+
+            if (Eq(value, "<"))
+            {
+                value = "&lt;";
+            }
+            else if (Eq(value, "…") && index > 0)
+            {
+                var o = Get(arr[index.Value - 1], "operator");
+                if (Truthy(o) && Eq(Get(o, "content"), "+"))
+                    value = "⋯";
+            }
+            return O("operator", O(("intent", intent), ("arg", arg), ("content", value)));
+        }
+
+        private static JsObject PreprocessFontOverride(object value)
+        {
+            var style = MathStyles[CodePointAt((string)Get(value, "font"), 0) - 0x61];
+            var text = GetTextContent(Get(value, "of"));
+            text = GetMathAlphanumerics(FoldMathItalics(Str(text)), style);
+            return O("atoms", A(O("chars", text)));
         }
 
         private JsObject PreprocessNary(PreprocessStyle dsty, JsObject value, string intent, string arg, int? index, List<object> arr)
@@ -614,6 +614,7 @@ namespace SharpEquations.Internal.UnicodeMath
                             ret["base"] = basE;
                         }
                     }
+
                     if (Truthy(Get(basE, "intend")) && Eq(Get(Get(basE, "intend"), "op"), "Ⓐ"))
                     {
                         val = Get(Get(Get(basE, "intend"), "intent"), "text");
@@ -627,6 +628,7 @@ namespace SharpEquations.Internal.UnicodeMath
                         var primes = O("operator", ProcessPrimes(Get(Get(basE, "primed"), "primes")));
                         if (value.Has("low"))
                             ret["low"] = Preprocess(dsty, value["low"]);
+
                         if (value.Has("high"))
                             ret["high"] = A(primes, Preprocess(dsty, value["high"]));
                         else
@@ -655,7 +657,8 @@ namespace SharpEquations.Internal.UnicodeMath
                     var n = Length(baseAtoms) is int count && baseAtoms is List<object> ? count : (int?)null;
                     if (n == null)
                         break;
-                    var retBaseAtoms = (List<object>)Get(ret["base"], "atoms");
+                    if (!(Get(DropSingletonLists(ret["base"]), "atoms") is List<object> retBaseAtoms))
+                        break;
                     var ret0 = new List<object>();
                     if (n > 1)
                     {
@@ -825,6 +828,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 var x = At(ofList, 0);
                 if (x is List<object>)
                     x = At(x, 0);
+
                 if (Truthy(x) && Truthy(Get(x, "atoms")))
                 {
                     var ch = Get(At(Get(x, "atoms"), 0), "chars") as string;

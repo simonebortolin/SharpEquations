@@ -64,3 +64,19 @@ maintained by Murray Sargent.
 [davidcarlisle/web-xslt](https://github.com/davidcarlisle/web-xslt) (commit 64a32a4a4f78529010f548524f3acc7241be54d5),
 one file each, as they are there: Content MathML, some of it mixed with presentation MathML. Copyright David Carlisle,
 MIT License.
+
+`latex/latex2mathml-converter.json`: the LaTeX of the `test_converter` and `test_converter_inline` cases of
+`tests/test_converter.py` of [roniemartinez/latex2mathml](https://github.com/roniemartinez/latex2mathml) (commit
+b9ee564589d79c3b7bfaf4bb920962745abbb694), with the MathML of their snapshots (`tests/__snapshots__/test_converter`,
+character references resolved), as `{id, latex, display, mathml}`; `latex/latex2mathml-macros.json`: the `test_macro`
+cases, as `{id, latex, equivalent, display}`. Copyright (c) 2016 Ronie Martinez, MIT License. Nine snapshots were
+corrected where latex2mathml writes MathML that is not what the LaTeX means: the `~` of `\text{ Hello~World }` and of
+`\textbf`, `\textit`, `\textrm`, `\textsf`, `\texttt` is a no-break space, not a tilde (`tilde-and-space-in-text`,
+`textbf`...); the superscript of `( - 25 ) ^ { 2 }` is that of the parenthesized group, not of `)` (`issue-42`);
+`\omicron` is a letter, not an operator (`omicron`); the limit of `\lim` goes under it in a display equation
+(`limit-at-plus-infinity`).
+
+`mathml/mml2tex.json`: the scenarios of `xspec/*.xspec` of [transpect/mml2tex](https://github.com/transpect/mml2tex)
+(commit 9458a7a2f5125609c92eb178fcd0f8b8419e2c40), MathML with the LaTeX mml2tex writes for it, and the MathML of
+`example/*.xml`, which has none, as `{source, label, mathml, tex}` (namespace prefixes, processing instructions and
+whitespace removed). Copyright (c) 2015, transpect.io, BSD 2-Clause License.

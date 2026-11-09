@@ -1,3 +1,5 @@
+#nullable enable
+
 namespace SharpEquations
 {
     using System.Xml.Linq;
