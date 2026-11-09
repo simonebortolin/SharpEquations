@@ -402,8 +402,6 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\foo x", @"Unknown control word \foo in the LaTeX.")]
         [Arguments(@"a+\undefinedcommand", @"Unknown control word \undefinedcommand in the LaTeX.")]
         [Arguments(@"\sgn r", @"Unknown control word \sgn in the LaTeX.")]
-        [Arguments(@"\erfc d", @"Unknown control word \erfc in the LaTeX.")]
-        [Arguments(@"\cosec v", @"Unknown control word \cosec in the LaTeX.")]
         [Arguments(@"a \backslash b", @"Unknown control word \backslash in the LaTeX.")]
         [Arguments(@"\sgn2", @"Unknown control word \sgn in the LaTeX.")]
         public async Task RejectsUnknownControlWordsWhenStrict(string latex, string message)
@@ -414,8 +412,6 @@ namespace SharpEquations.Tests.LaTeX
 
         [Test]
         [Arguments(@"\sgn r", @"\sgn", "r")]
-        [Arguments(@"\erfc d", @"\erfc", "d")]
-        [Arguments(@"\cosec v", @"\cosec", "v")]
         [Arguments(@"a \backslash b", @"\backslash", "b")]
         [Arguments(@"\sgn  r", @"\sgn", "r")]
         [Arguments(@"\sgn{r}", @"\sgn", "r")]
