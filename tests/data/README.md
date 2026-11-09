@@ -80,3 +80,8 @@ corrected where latex2mathml writes MathML that is not what the LaTeX means: the
 (commit 9458a7a2f5125609c92eb178fcd0f8b8419e2c40), MathML with the LaTeX mml2tex writes for it, and the MathML of
 `example/*.xml`, which has none, as `{source, label, mathml, tex}` (namespace prefixes, processing instructions and
 whitespace removed). Copyright (c) 2015, transpect.io, BSD 2-Clause License.
+
+`latex/treeblood-mhchem.json`: the LaTeX of the `chemistry` cases of `test/TESTCASES.yaml` of
+[Wyatt915/treeblood](https://github.com/Wyatt915/treeblood) (commit 83ddf845ee4aafc040ea4639dae0f8536aeda071), the
+`\ce` formulas of mhchem, as a list of strings; their MathML, which treeblood writes in its own form, is not kept.
+Copyright (c) 2024 Wyatt Sheffield, MIT License.

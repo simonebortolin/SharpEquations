@@ -39,10 +39,10 @@ namespace SharpEquations.Internal.LaTeX
         /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def
         /// or \newcommand go to <paramref name="macros"/>, where later conversions find them. In a display equation the
         /// scripts of a large operator other than an integral (\sum, \prod, \bigcup...) go under and over it, as TeX
-        /// puts them.
+        /// puts them. The \ce and \pu of mhchem are rewritten as plain LaTeX first (<see cref="Mhchem"/>).
         /// </summary>
         public static string ToUnicodeMath(string tex, IDictionary<string, string> macros = null, bool display = false) =>
-            RestoreTextEscapes(new LaTeXReader(macros, display).Convert(tex));
+            RestoreTextEscapes(new LaTeXReader(macros, display).Convert(Mhchem.Rewrite(tex)));
 
         // the characters that \text escapes ({, \_, ...), held as noncharacters through the passes, which would read them as LaTeX
         private static readonly (string Escape, char Held, char Character)[] TextEscapes =
