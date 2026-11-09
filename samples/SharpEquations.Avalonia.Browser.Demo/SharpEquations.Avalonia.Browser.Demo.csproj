@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+
+  <!-- The demo of the equation editor in the browser, with Avalonia on WebAssembly: the view of the desktop demo in a
+       page. Needs the wasm-tools workload (dotnet workload install wasm-tools); dotnet publish -c Release writes the
+       site to bin/Release/net10.0-browser/publish/wwwroot. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-browser</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SharpEquations.Avalonia.Demo</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- the stylesheets of OMML are compiled to IL by XslCompiledTransform: keep the interpreter, no AOT -->
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <WasmEnableThreads>false</WasmEnableThreads>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- XslCompiledTransform (OMML) reaches its runtime by reflection: System.Private.Xml is kept whole, and the trim
+         warnings it would give are not errors of this sample -->
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <TrimmerRootAssembly Include="System.Private.Xml" />
+  </ItemGroup>
+
+  
+  <ItemGroup>
+    <Compile Include="..\SharpEquations.Avalonia.Demo\DemoView.cs" Link="DemoView.cs" />
+    <Compile Include="..\SharpEquations.Avalonia.Demo\DemoTheme.cs" Link="DemoTheme.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Browser" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpEquations.Avalonia\SharpEquations.Avalonia.csproj" />
+  </ItemGroup>
+
+</Project>

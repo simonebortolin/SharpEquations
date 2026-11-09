@@ -85,7 +85,9 @@ a math font: Cambria Math on Windows, and Libertinus Math (SIL Open Font License
 three projects, so that the core keeps no dependency: `SharpEquations.Editing` (the editing model, no user interface),
 `SharpEquations.Rendering` (the layout, no user interface) and `SharpEquations.Avalonia` (the controls). The design is in
 [docs/EDITOR.md](docs/EDITOR.md); `samples/SharpEquations.Avalonia.Demo` is a window with the editor and its MathML,
-UnicodeMath and LaTeX.
+UnicodeMath and LaTeX, and `samples/SharpEquations.Avalonia.Browser.Demo` the same demo in the browser, on WebAssembly
+(published to GitHub Pages from `main`; to run it locally: `dotnet workload install wasm-tools`, then
+`dotnet run --project samples/SharpEquations.Avalonia.Browser.Demo`).
 
 ## Architecture
 

@@ -2,9 +2,7 @@ namespace SharpEquations.Avalonia.Demo
 {
     using System;
     using global::Avalonia;
-    using global::Avalonia.Controls;
     using global::Avalonia.Controls.ApplicationLifetimes;
-    using global::Avalonia.Themes.Fluent;
 
     public static class Program
     {
@@ -16,7 +14,7 @@ namespace SharpEquations.Avalonia.Demo
 
     public sealed class App : Application
     {
-        public override void Initialize() => Styles.Add(new FluentTheme());
+        public override void Initialize() => DemoTheme.Apply(this);
 
         public override void OnFrameworkInitializationCompleted()
         {

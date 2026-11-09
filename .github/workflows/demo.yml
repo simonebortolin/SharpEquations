@@ -1,0 +1,68 @@
+name: Web demo
+
+# The equation editor on WebAssembly (samples/SharpEquations.Avalonia.Browser.Demo): built on every pull request that
+# touches it, published to GitHub Pages from main (Settings → Pages → Source: GitHub Actions).
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  PROJECT: samples/SharpEquations.Avalonia.Browser.Demo/SharpEquations.Avalonia.Browser.Demo.csproj
+
+jobs:
+  build:
+    name: Build the web demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install the WebAssembly workload
+        run: dotnet workload install wasm-tools
+
+      - name: Publish
+        run: dotnet publish "$PROJECT" -c Release -o publish
+
+      # GitHub Pages serves the site from a folder: no Jekyll, and the index for any path that is not a file
+      - name: Prepare the site
+        run: |
+          touch publish/wwwroot/.nojekyll
+          cp publish/wwwroot/index.html publish/wwwroot/404.html
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: publish/wwwroot
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
