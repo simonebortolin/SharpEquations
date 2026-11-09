@@ -76,7 +76,7 @@ namespace SharpEquations.Internal.LaTeX
                 if (Charge != null)
                     latex += "^{" + Charge + "}";
                 if (Mass != null || Z != null)
-                    latex = "{" + (Mass != null ? "^{" + Mass + "}" : "") + (Z != null ? "_{" + Z + "}" : "") + latex + "}";
+                    latex = "\\prescript{" + Mass + "}{" + Z + "}{" + latex + "}";
                 return latex;
             }
         }

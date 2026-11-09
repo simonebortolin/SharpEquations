@@ -718,6 +718,19 @@ namespace SharpEquations.Internal.LaTeX
                     i = afterSideset;
                     continue;
                 }
+                if (cw == "prescript" && Arguments(tex, j, 3) is var (prescript, afterPrescript))
+                {
+                    // \prescript{sup}{sub}{base} of mathtools: the scripts at the start of the group of their base, where
+                    // UnicodeMath reads them as prescripts
+                    result.Append('{');
+                    if (prescript[0].Trim().Length > 0)
+                        result.Append("^{").Append(RewriteTeXOnly(prescript[0])).Append('}');
+                    if (prescript[1].Trim().Length > 0)
+                        result.Append("_{").Append(RewriteTeXOnly(prescript[1])).Append('}');
+                    result.Append(RewriteTeXOnly(prescript[2])).Append('}');
+                    i = afterPrescript;
+                    continue;
+                }
                 if (cw == "pod" && Argument(tex, j) is var (pod, afterPod) && afterPod >= 0)
                 {
                     result.Append("\\quad(").Append(RewriteTeXOnly(pod)).Append(')');

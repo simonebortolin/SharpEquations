@@ -81,6 +81,7 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\xrightarrow[y]{x} \xleftarrow x", @"\underset{y}{\overset{x}{\to}}\overset{x}{\leftarrow}", @"→┬𝑦┴𝑥 ←┴𝑥")]
         [Arguments(@"\underset ab+\underleftarrow{c}", @"\underset{a}{b}+\underset{\leftarrow}{c}", @"𝑏┬𝑎+𝑐┬←")]
         [Arguments(@"\sideset{_1^2}{_3^4}\sum", @"\vphantom{\sum}_1^2\sum_3^4", @"⇳∑₁²∑₃⁴")]
+        [Arguments(@"\prescript{14}{6}{C}+\prescript{}{2}{x}", @"{}_6^{14}C+{}_2x", @"_6^14 𝐶+(_2)𝑥")]
         [Arguments(@"\genfrac\{]{0pt}{}{a}{b}+\dbinom a b", @"\{\genfrac{}{}{0pt}{}{a}{b}]+\binom{a}{b}", @"{𝑎¦𝑏]+𝑎⒞𝑏")]
         [Arguments(@"a \pod{n}+\not a", @"a\quad(n)+\overset{̸}{a}", @"𝑎 (𝑛)+𝑎̸")]
         [Arguments(@"^3+{'x}", @"{}^3+{}'x", @"⬚³+⬚′𝑥")]
