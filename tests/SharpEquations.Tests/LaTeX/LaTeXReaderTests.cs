@@ -170,6 +170,11 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"(a+b)/2", @"(a+b)/2", @"(𝑎+𝑏)\/2")]
         [Arguments(@"\left( a \middle/ b \right)", @"(a/b)", @"(𝑎\/𝑏)")]
         [Arguments(@"\left( a \middle\| b \right)", @"(a\|b)", @"(𝑎\‖𝑏)")]
+        [Arguments(@"\left\{\middle|\right\}", @"\{{}|{}\}", @"{⬚│⬚}")]
+        [Arguments(@"\left( a \middle| \right)", @"(a|{})", @"(𝑎│⬚)")]
+        [Arguments(@"|a|\\|b|", @"|a||b|", @"|𝑎||𝑏|")]
+        [Arguments(@"|\,|\\|\!|\,|", @"|\,||\!|\,|", "|\u2009|\\||\u2009|")]
+        [Arguments(@"|a|~|b|", @"|a|~|b|", "|𝑎|\u00A0|𝑏|")]
         [Arguments(@"\langle a | b \rangle | c", @"\langle a|b\rangle|c", @"⟨𝑎│𝑏⟩\|𝑐")]
         [Arguments(@"a|b", @"a|b", @"𝑎\|𝑏")]
         [Arguments(@"(a\|b)", @"(a\|b)", @"(𝑎\‖𝑏)")]
@@ -268,6 +273,15 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"a\!b", "ab")]
         [Arguments(@"a\>b", @"a\:b")]
         [Arguments(@"\hspace{1em}x", "x")]
+        [Arguments(@"a\hspace1em b", @"a\quad b")]
+        [Arguments(@"a\hspace{2cm}b", @"a\quad\quad b")]
+        [Arguments(@"a\kern-1.5pt b", "ab")]
+        [Arguments(@"a\mkern10mu b", @"a\enspace b")]
+        [Arguments(@"a\mspace{18mu}b", @"a\quad b")]
+        [Arguments(@"a\hskip 1em plus 1fil b", @"a\quad b")]
+        [Arguments(@"a\thinspace b\negthinspace c\nobreakspace d\space e", @"a\,bc~d~e")]
+        [Arguments(@"a\\b", "ab")]
+        [Arguments(@"(a)~b", @"(a)~b")]
         public async Task ReadsSpaces(string latex, string expected)
         {
             await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX).ToString(EquationFormat.LaTeX)).IsEqualTo(expected);
@@ -391,7 +405,6 @@ namespace SharpEquations.Tests.LaTeX
         }
 
         [Test]
-        [Arguments(@"a\\b")]
         [Arguments(@"\frac{a}")]
         [Arguments(@"x_\frac{1}")]
         [Arguments(@"\text{unclosed")]

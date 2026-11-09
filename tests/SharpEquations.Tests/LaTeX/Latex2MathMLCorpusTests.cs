@@ -76,7 +76,8 @@ namespace SharpEquations.Tests
         /// The equation as MathML, with what latex2mathml and SharpEquations write differently for the same equation
         /// made the same: attributes that say the default or set the style, spaces (formatting, which an equation does not
         /// keep), invisible function application and times, the middle dot of \cdot (· for latex2mathml, ⋅ for
-        /// SharpEquations), names of operators and primes (mo for latex2mathml, mi and mo for SharpEquations), spacing
+        /// SharpEquations), the bar of \middle (| for latex2mathml, the separator │ of UnicodeMath for SharpEquations),
+        /// names of operators and primes (mo for latex2mathml, mi and mo for SharpEquations), spacing
         /// accents (˙ for latex2mathml, the combining dot above for SharpEquations), bars (mover with ¯ for latex2mathml,
         /// menclose for SharpEquations), capital Greek letters (upright in TeX, which latex2mathml writes as mi without
         /// mathvariant), symbols that are neither letters nor digits (mi for latex2mathml, %, °, mo for SharpEquations,
@@ -114,6 +115,9 @@ namespace SharpEquations.Tests
                         break;
                     case "mo" when text == "·":
                         e.Value = "⋅";
+                        break;
+                    case "mo" when text == "│":
+                        e.Value = "|";
                         break;
                     case "mo" when text != null && Accents.TryGetValue(text, out var mark) && e.Parent!.Name.LocalName is "mover" && e.ElementsBeforeSelf().Any():
                         e.Value = mark;
@@ -198,11 +202,10 @@ namespace SharpEquations.Tests
 
         // LaTeX and amsmath that the reader does not read yet: an operator name with nothing after it (\lg, \liminf,
         // \injlim, \operatorname*{argmax}_x), which UnicodeMath reads as letters, and the names of amsmath that are two
-        // words (lim inf); \middle between empty delimiters and bars with nothing between them (|\,|)
+        // words (lim inf)
         private static readonly HashSet<string> NotReadYet = new HashSet<string>
         {
             "lg", "liminf", "limsup", "injlim", "projlim", "varinjlim", "operatornamewithlimits", "operatorname-star",
-            "middle", "spaces",
         };
 
         // the same equation, which SharpEquations holds otherwise: an equation number as the label of its row (\tag),
