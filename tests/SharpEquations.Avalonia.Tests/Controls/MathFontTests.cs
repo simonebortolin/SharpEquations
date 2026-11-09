@@ -13,13 +13,16 @@ namespace SharpEquations.Avalonia.Tests.Controls
     {
         private static readonly Equation Quadratic = Equation.Parse("x=(-b±√(b^2-4ac))/2a", EquationFormat.UnicodeMath, new EquationOptions { Display = true });
 
-        private static IEnumerable<FontFamily?> Families()
+        private static bool Windows => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+        private static IEnumerable<(FontFamily? Family, string Expected)> Families()
         {
-            yield return null;
-            yield return MathFonts.LibertinusMath;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                yield return new FontFamily("Cambria Math");
-            yield return null;
+            var system = Windows ? "Cambria Math" : "Libertinus Math";
+            yield return (null, system);
+            yield return (MathFonts.LibertinusMath, "Libertinus Math");
+            if (Windows)
+                yield return (new FontFamily("Cambria Math"), "Cambria Math");
+            yield return (null, system);
         }
 
         [Test]
@@ -32,11 +35,10 @@ namespace SharpEquations.Avalonia.Tests.Controls
                 var window = new Window { Content = new StackPanel { Children = { editor, view } }, Width = 800, Height = 400 };
                 window.Show();
                 var list = new List<(string Expected, string Editor, string View, double Width)>();
-                foreach (var family in Families())
+                foreach (var (family, expected) in Families())
                 {
                     editor.MathFontFamily = view.MathFontFamily = family;
                     window.UpdateLayout();
-                    var expected = MathFonts.Get(family).GetGlyphTypeface()!.FamilyName;
                     list.Add((expected, Drawn(editor.Layout), Drawn(view.Layout), editor.Layout!.Width));
                 }
                 window.Close();
@@ -46,12 +48,11 @@ namespace SharpEquations.Avalonia.Tests.Controls
             var widths = new HashSet<double>();
             foreach (var (expected, editorFont, viewFont, width) in results)
             {
-                await Assert.That(editorFont).IsEqualTo(expected);
-                await Assert.That(viewFont).IsEqualTo(expected);
+                await Assert.That($"{editorFont} / {viewFont}").IsEqualTo($"{expected} / {expected}");
                 widths.Add(width);
             }
             await Assert.That(results[0].Width).IsEqualTo(results[^1].Width);
-            await Assert.That(widths.Count).IsEqualTo(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 2 : 1);
+            await Assert.That(widths.Count).IsEqualTo(Windows ? 2 : 1);
         }
 
         private static string Drawn(SharpEquations.Rendering.MathLayout? layout)
