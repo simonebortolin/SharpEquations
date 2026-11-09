@@ -18,7 +18,8 @@ namespace SharpEquations.Rendering.OpenType
 
         /// <summary>
         /// Reads the table directory of a font file. In a collection, the font is the one with that number of glyphs
-        /// (when it is not negative) or else the first with a MATH table, or the first.
+        /// (when it is not negative; with a MATH table, of the faces that share their glyphs), or else the first with a
+        /// MATH table, or the first.
         /// </summary>
         /// <exception cref="FormatException">The bytes are not an OpenType font.</exception>
         public static FontFile Parse(byte[] data, int glyphCount = -1)
@@ -33,17 +34,12 @@ namespace SharpEquations.Rendering.OpenType
                     var faces = new List<Dictionary<string, (int, int)>>();
                     for (var i = 0; i < count; i++)
                         faces.Add(Directory(data, (int)U32(data, 12 + i * 4)));
-                    foreach (var face in faces)
-                    {
-                        if (glyphCount >= 0 && face.TryGetValue("maxp", out var maxp) && U16(data, maxp.Item1 + 4) == glyphCount)
-                            return new FontFile(data, face);
-                    }
-                    foreach (var face in faces)
-                    {
-                        if (face.ContainsKey("MATH"))
-                            return new FontFile(data, face);
-                    }
-                    return new FontFile(data, faces[0]);
+                    // the faces of a collection can share their glyphs (Cambria and Cambria Math in cambria.ttc), and so
+                    // their number: of those, the one with a MATH table
+                    var counted = glyphCount < 0 ? faces : faces.FindAll(face => face.TryGetValue("maxp", out var maxp) && U16(data, maxp.Item1 + 4) == glyphCount);
+                    var chosen = counted.Find(face => face.ContainsKey("MATH")) ?? (counted.Count > 0 ? counted[0] : null)
+                        ?? faces.Find(face => face.ContainsKey("MATH")) ?? faces[0];
+                    return new FontFile(data, chosen);
                 }
                 return new FontFile(data, Directory(data, 0));
             }
