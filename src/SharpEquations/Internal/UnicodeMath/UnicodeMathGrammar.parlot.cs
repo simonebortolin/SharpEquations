@@ -608,7 +608,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 L("ⓐ(").SkipAnd(OneOrMany(alphaAscii)).AndSkip(Opt(__)).And(exp).AndSkip(L(")"))
                     .Then(t => (object)O("intend", O(("op", "ⓐ"), ("intent", O("text", Join(t.Item1.ToList()))), ("content", t.Item2)))));
             entity.Parser = Always<object>(null).When((context, x) => UnicodeMathGrammarWork.Step()).SkipAnd(OneOf(
-                expBracket.And(OneOf(Not(OneOf(L("\u00A0"), diacritic)).Then(x => (object)true), Always<object>(false)))
+                expBracket.And(OneOf(Not(OneOf(L("\u00A0").SkipAnd(diacritic), diacritic)).Then(x => (object)true), Always<object>(false)))
                     .When((context, t) => (bool)t.Item2 || t.Item1 is DiacriticizedParen)
                     .Then(t => t.Item1 is DiacriticizedParen d ? d.Atoms : t.Item1),
                 absoluteValue,

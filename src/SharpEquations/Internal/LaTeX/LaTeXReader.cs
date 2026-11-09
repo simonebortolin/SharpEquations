@@ -484,6 +484,15 @@ namespace SharpEquations.Internal.LaTeX
                         i += 2;
                         continue;
                     }
+                    // \\ outside an environment, a line break, which an equation does not keep: \!, no space
+                    if (tex[i + 1] == "\\" && !InEnvironment(tex, i))
+                    {
+                        result.Append("\\!");
+                        for (i += 2; i < tex.Length && tex[i] == " "; i++)
+                        {
+                        }
+                        continue;
+                    }
                     // \_ held, which the passes would read as a subscript of what follows (\_\{\})
                     if (tex[i + 1] == "_")
                     {
@@ -507,36 +516,30 @@ namespace SharpEquations.Internal.LaTeX
                         k++;
                     while (result.Length > 0 && result[result.Length - 1] == ' ')
                         result.Length--;
-                    if (tex[k] == "\\" && tex[k + 1] == "|")
-                    {
-                        result.Append("\\‖");
-                        for (i = k + 2; i < tex.Length && tex[i] == " "; i++)
-                        {
-                        }
-                        continue;
-                    }
-                    if (tex[k] == "|")
-                    {
-                        result.Append('│');
-                        i = k + 1;
-                        continue;
-                    }
-                    if (tex.Sub(k, k + 5) == "\\vert")
-                    {
-                        result.Append('│');
-                        i = k + 5;
-                        continue;
-                    }
                     // another delimiter in the middle is the delimiter itself, a slash the slash of UnicodeMath
-                    if (tex[k] == "/")
-                    {
-                        result.Append("\\/");
-                        for (i = k + 1; i < tex.Length && tex[i] == " "; i++)
-                        {
-                        }
+                    var (middle, afterMiddle) = tex[k] == "\\" && tex[k + 1] == "|" ? ("\\‖", k + 2)
+                        : tex[k] == "|" ? ("│", k + 1)
+                        : tex.Sub(k, k + 5) == "\\vert" && !IsAsciiAlphabetic(tex[k + 5]) ? ("│", k + 5)
+                        : tex[k] == "/" ? ("\\/", k + 1)
+                        : (null, k);
+                    i = afterMiddle;
+                    if (middle == null)
                         continue;
+                    if (middle != "│")
+                    {
+                        while (i < tex.Length && tex[i] == " ")
+                            i++;
                     }
-                    i = k;
+                    // UnicodeMath wants something on each side of the bar (├{│┤} is no UnicodeMath): an empty side holds
+                    // the placeholder, which the writer writes as {}
+                    if (EndsWithOpening(result))
+                        result.Append('⬚');
+                    result.Append(middle);
+                    int afterBlanks = i;
+                    while (tex[afterBlanks] == " ")
+                        afterBlanks++;
+                    if (tex[afterBlanks] == "\\" && ControlWord(tex, afterBlanks + 1) is "right" or "middle")
+                        result.Append('⬚');
                     continue;
                 }
                 if (cw == "vert" && angles > 0)
@@ -615,9 +618,20 @@ namespace SharpEquations.Internal.LaTeX
                     i = afterModulus;
                     continue;
                 }
-                if (cw == "hspace" && BracedArgument(tex, tex[j] == "*" ? j + 1 : j) is var (_, afterSpace) && afterSpace >= 0)
+                if (SpaceCommands.TryGetValue(cw, out var spaceCommand))
                 {
-                    result.Append("\\quad ");
+                    result.Append(spaceCommand);
+                    i = j;
+                    while (i < tex.Length && tex[i] == " ")
+                        i++;
+                    continue;
+                }
+                if (LengthCommands.Contains(cw))
+                {
+                    // \hspace{10ex}, \kern-1.5pt, \mkern10mu: the space of UnicodeMath nearest to the length, an em one when
+                    // the length is not a number with a unit
+                    var (length, afterSpace) = LengthArgument(tex, cw == "hspace" && tex[j] == "*" ? j + 1 : j);
+                    result.Append(Space(length ?? 18));
                     i = afterSpace;
                     continue;
                 }
@@ -900,13 +914,37 @@ namespace SharpEquations.Internal.LaTeX
             frames.Push(new List<int>());
             var escaped = new List<int>();
             var kets = new HashSet<int>();
+            bool ZeroSpacesBetween(int first, int second)
+            {
+                bool zero = false;
+                for (int k = first + 1; k < second; k++)
+                {
+                    if (tex[k] == "\\" && tex[k + 1] == "!")
+                    {
+                        zero = true;
+                        k++;
+                    }
+                    else if (tex[k] != " ")
+                        return false;
+                }
+                return zero;
+            }
             void Close(List<int> bars, bool inBrackets)
             {
                 foreach (var bar in new[] { "|", "‖", "∣" })
                 {
                     var some = bars.Where(b => tex[b] == bar).ToList();
-                    if (some.Count % 2 == 1 && !(inBrackets && some.Count == 1 && bar != "‖"))
-                        escaped.Add(some[some.Count - 1]);
+                    if (inBrackets && some.Count == 1 && bar != "‖")
+                        continue;
+                    // bars in pairs, but two with only zero spaces between them (|\!|, which UnicodeMath would read as
+                    // ||, one double bar): the first is then a bar alone
+                    for (int k = 0; k < some.Count; k++)
+                    {
+                        if (k + 1 < some.Count && !ZeroSpacesBetween(some[k], some[k + 1]))
+                            k++;
+                        else
+                            escaped.Add(some[k]);
+                    }
                 }
             }
             for (int i = 0; i < tex.Length; i++)
@@ -1745,6 +1783,135 @@ namespace SharpEquations.Internal.LaTeX
             while (tex[i] == " ")
                 i++;
             return tex[i];
+        }
+
+        /// <summary>Whether the index is between a \begin and its \end, where \\ parts rows.</summary>
+        private static bool InEnvironment(Text tex, int i)
+        {
+            int depth = 0;
+            for (int k = 0; k < i; k++)
+            {
+                if (tex[k] == "\\")
+                {
+                    var cw = ControlWord(tex, k + 1);
+                    depth += cw switch { "begin" => 1, "end" => -1, _ => 0 };
+                    k += Math.Max(1, cw.Length);
+                }
+            }
+            return depth > 0;
+        }
+
+        /// <summary>Whether the result ends with \left and its delimiter, with nothing after them.</summary>
+        private static bool EndsWithOpening(StringBuilder result)
+        {
+            var text = result.ToString();
+            var at = text.LastIndexOf("\\left", StringComparison.Ordinal);
+            if (at < 0)
+                return false;
+            var delimiter = new Text(text.Substring(at + 5).Trim());
+            return delimiter.Length <= 1 || delimiter[0] == "\\" && (delimiter.Length == 2 || ControlWord(delimiter, 1).Length == delimiter.Length - 1);
+        }
+
+        // the commands of a space whose length follows them
+        private static readonly HashSet<string> LengthCommands = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "hspace", "hskip", "kern", "mkern", "mskip", "mspace",
+        };
+
+        // the spaces of plain TeX and amsmath that UnicodeMath has no control word for; the negative ones none, as \!
+        private static readonly Dictionary<string, string> SpaceCommands = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["thinspace"] = "\\,", ["negthinspace"] = "\\!", ["negmedspace"] = "\\!", ["negthickspace"] = "\\!", ["nobreakspace"] = "~",
+            ["space"] = "\\ ",
+        };
+
+        /// <summary>The space of UnicodeMath nearest to a length in mu (18 to the em), \! (none) for a negative one.</summary>
+        private static string Space(double mu) => mu switch
+        {
+            <= 0 => "\\!",
+            < 3.5 => "\\,",
+            < 4.5 => "\\:",
+            < 7 => "\\;",
+            < 13.5 => "\\enspace ",
+            < 27 => "\\quad ",
+            _ => "\\qquad ",
+        };
+
+        /// <summary>
+        /// The length after a space command, in mu, braced ({10ex}) or not (-1.5pt, 1em plus 2em), and the index after
+        /// it; null if it is no number with a unit (\hspace{\fill}).
+        /// </summary>
+        private static (double? Mu, int Next) LengthArgument(Text tex, int i)
+        {
+            while (tex[i] == " ")
+                i++;
+            if (tex[i] == "{")
+            {
+                var (braced, afterBraced) = BracedArgument(tex, i);
+                if (afterBraced < 0)
+                    return (null, i);
+                var inner = new Text(braced);
+                var (mu, afterLength) = Dimension(inner, 0);
+                return (NonBlank(inner, afterLength) == null ? mu : null, afterBraced);
+            }
+            var (length, next) = Dimension(tex, i);
+            if (length == null)
+                return (null, i);
+            // the stretch and the shrink of glue, \hskip 1em plus 1fil minus 2pt
+            while (true)
+            {
+                int word = next;
+                while (tex[word] == " ")
+                    word++;
+                var glue = tex.Sub(word, word + 4) == "plus" ? 4 : tex.Sub(word, word + 5) == "minus" ? 5 : 0;
+                if (glue == 0 || Dimension(tex, word + glue) is not (not null, var afterGlue))
+                    return (length, next);
+                next = afterGlue;
+            }
+        }
+
+        /// <summary>A number with its unit (-1.5pt, 10 mu, 1fil) in mu, and the index after it; null if none.</summary>
+        private static (double? Mu, int Next) Dimension(Text tex, int i)
+        {
+            while (tex[i] == " ")
+                i++;
+            int start = i;
+            if (tex[i] is "-" or "+")
+                i++;
+            int digits = i;
+            while (tex[i] is { Length: 1 } d && (d[0] is >= '0' and <= '9' or '.'))
+                i++;
+            if (i == digits || !double.TryParse(tex.Sub(start, i), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number))
+                return (null, start);
+            while (tex[i] == " ")
+                i++;
+            // a unit is two letters (1ptx is 1pt and x), but for the infinite ones of glue (fil, fill, filll)
+            int unit = i;
+            i += 2;
+            if (tex.Sub(unit, i) == "fi")
+            {
+                while (i < unit + 5 && tex[i] == "l")
+                    i++;
+            }
+            double? mu = tex.Sub(unit, i) switch
+            {
+                "em" => 18,
+                "ex" => 7.75,
+                "mu" => 1,
+                "pt" => 1.8,
+                "bp" => 1.81,
+                "dd" => 1.93,
+                "px" => 1.35,
+                "mm" => 5.12,
+                "pc" => 21.6,
+                "cc" => 23.1,
+                "cm" => 51.2,
+                "in" => 130.1,
+                "sp" => 1.8 / 65536,
+                "fil" or "fill" or "filll" => 0,
+                _ => null,
+            };
+            return mu == null ? (null, start) : (number * mu, i);
         }
     }
 }
