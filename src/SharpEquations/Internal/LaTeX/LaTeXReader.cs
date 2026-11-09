@@ -37,7 +37,7 @@ namespace SharpEquations.Internal.LaTeX
 
         /// <summary>
         /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def
-        /// or \newcommand go to <paramref name="macros"/>, where later conversions find them. In a display equation the
+        /// or \newcommand, and environments defined with \newenvironment, go to <paramref name="macros"/>, where later conversions find them. In a display equation the
         /// scripts of a large operator other than an integral (\sum, \prod, \bigcup...) go under and over it, as TeX
         /// puts them. The \ce and \pu of mhchem are rewritten as plain LaTeX first (<see cref="Mhchem"/>).
         /// </summary>
@@ -383,7 +383,8 @@ namespace SharpEquations.Internal.LaTeX
             ["smallfrown"] = "⌢", ["smallsmile"] = "⌣", ["thicksim"] = "∼", ["thickapprox"] = "≈", ["varsubsetneqq"] = "⫋",
             ["varsupsetneq"] = "⊋", ["varsupsetneqq"] = "⫌", ["bigcirc"] = "\\◯", ["centerdot"] = "⬝", ["degree"] = "°",
             ["intop"] = "\\int", ["smallint"] = "\\int", ["diagup"] = "\\╱", ["diagdown"] = "\\╲", ["thickspace"] = "\\;",
-            ["And"] = "\\&",
+            ["And"] = "\\&", ["lvert"] = "|", ["rvert"] = "|", ["idotsint"] = "\\∫⋯\\∫",
+            ["mathscr"] = "\\mathcal", ["operatornamewithlimits"] = "\\operatorname", ["mathstrut"] = "\\vphantom{\\(}",
         };
 
         private static readonly HashSet<string> OpeningBrackets = new HashSet<string>(StringComparer.Ordinal) { "(", "[", "{", "⟨", "⌈", "⌊" };
@@ -456,6 +457,9 @@ namespace SharpEquations.Internal.LaTeX
                     {
                         while (result.Length > 0 && result[result.Length - 1] == ' ')
                             result.Length--;
+                        // a script without a base (^3 at the start of a group) is on an empty one, as LaTeX puts it
+                        if (HasNoBase(result))
+                            result.Append("{}");
                         result.Append(tex[i]);
                         for (i++; i < tex.Length && tex[i] == " "; i++)
                         {
@@ -465,6 +469,17 @@ namespace SharpEquations.Internal.LaTeX
                             result.Append('{').Append(RewriteTeXOnly(command)).Append('}');
                             i = after;
                         }
+                        continue;
+                    }
+                    // a prime without a base ('x) is on an empty one, as LaTeX puts it
+                    if (tex[i] == "'" && HasNoBase(result))
+                        result.Append("{}");
+                    // a comma before a digit parts two numbers in LaTeX (a_{1,1}, a_{m,1}), where UnicodeMath reads one (1,1 or
+                    // ,1): {,} is LaTeX's decimal comma
+                    if (tex[i] == "," && tex[i + 1] is { Length: 1 } next && next[0] is >= '0' and <= '9')
+                    {
+                        result.Append(", ");
+                        i++;
                         continue;
                     }
                     // a combining mark after its base (𝑎⃑), held: the passes read the marks of \vec and the like before theirs
@@ -642,16 +657,107 @@ namespace SharpEquations.Internal.LaTeX
                     i = afterFraction;
                     continue;
                 }
-                if ((cw == "xrightarrow" || cw == "xleftarrow") && BracedArgument(tex, j) is var (arrowLabel, afterArrowLabel) && afterArrowLabel >= 0)
+                if (ExtensibleArrows.TryGetValue(cw, out var arrow) && OptionalArgument(tex, j) is var (arrowUnder, afterUnder) &&
+                    Argument(tex, afterUnder) is var (arrowLabel, afterArrowLabel) && afterArrowLabel >= 0)
                 {
-                    result.Append(RewriteTeXOnly("\\overset{" + arrowLabel + "}{" + (cw == "xrightarrow" ? "\\rightarrow" : "\\leftarrow") + "}"));
+                    // \xrightarrow[under]{over}, its label without braces too (\xrightarrow x)
+                    var arrowOver = "\\overset{" + arrowLabel + "}{" + arrow + "}";
+                    result.Append(RewriteTeXOnly(arrowUnder == null ? arrowOver : "\\underset{" + arrowUnder + "}{" + arrowOver + "}"));
                     i = afterArrowLabel;
+                    continue;
+                }
+                if (UnderArrows.TryGetValue(cw, out var underArrow) && Argument(tex, j) is var (underBase, afterUnderBase) && afterUnderBase >= 0)
+                {
+                    result.Append(RewriteTeXOnly("\\underset{" + underArrow + "}{" + underBase + "}"));
+                    i = afterUnderBase;
+                    continue;
+                }
+                if (cw is "overbrace" or "underbrace" && Argument(tex, j) is var (braced, afterBraced) && afterBraced >= 0 &&
+                    Scripts(tex, afterBraced) is var (braceUnder, braceOver, afterBraceScripts) && braceUnder != null && braceOver != null)
+                {
+                    // \overbrace3^a_x: for TeX the brace is an operator with limits, both scripts under and over the whole construct
+                    result.Append(RewriteTeXOnly("\\underset{" + braceUnder + "}{\\overset{" + braceOver + "}{\\" + cw + "{" + braced + "}}}"));
+                    i = afterBraceScripts;
+                    continue;
+                }
+                if (cw == "underset" && Arguments(tex, j, 2) is var (underArguments, afterUnderset) &&
+                    new Text(underArguments[1].Trim()) is var overText && overText.Find("\\overset", 0) == 0 &&
+                    Arguments(overText, 8, 2) is var (overArguments, afterOverset) && afterOverset == overText.Length)
+                {
+                    // \underset{a}{\overset{b}{X}}: the scripts under and over X, munderover, as the writer writes it
+                    result.Append("〖〖").Append(RewriteTeXOnly(overArguments[1])).Append("〗┬(").Append(RewriteTeXOnly(underArguments[0]))
+                        .Append(")┴(").Append(RewriteTeXOnly(overArguments[0])).Append(")〗");
+                    i = afterUnderset;
+                    continue;
+                }
+                if (cw is "underset" or "overset" or "stackrel" && !(NonBlank(tex, j) == "{" && NonBlank(tex, BracedArgument(tex, j).Next) == "{") &&
+                    Arguments(tex, j, 2) is var (stackArguments, afterStack))
+                {
+                    // the arguments of a stack braced: \underset ab
+                    result.Append(RewriteTeXOnly("\\" + cw + "{" + stackArguments[0] + "}{" + stackArguments[1] + "}"));
+                    i = afterStack;
+                    continue;
+                }
+                if (cw == "boxed" && NonBlank(tex, j) != "{" && Argument(tex, j) is var (boxed, afterBoxed) && afterBoxed >= 0)
+                {
+                    result.Append(RewriteTeXOnly("\\boxed{" + boxed + "}"));
+                    i = afterBoxed;
+                    continue;
+                }
+                if (cw == "substack" && BracedArgument(tex, j) is var (rows, afterSubstack) && afterSubstack >= 0)
+                {
+                    // the rows of a script, as a matrix
+                    result.Append(RewriteTeXOnly("\\begin{smallmatrix}" + rows + "\\end{smallmatrix}"));
+                    i = afterSubstack;
+                    continue;
+                }
+                if (cw == "sideset" && Arguments(tex, j, 3) is var (sideset, afterSideset))
+                {
+                    // \sideset{_1^2}{_3^4}\sum: the scripts before the operator on its phantom, as MathML writes them
+                    result.Append(RewriteTeXOnly("{\\vphantom{" + sideset[2] + "}}" + sideset[0] + "{" + sideset[2] + "}" + sideset[1]));
+                    i = afterSideset;
+                    continue;
+                }
+                if (cw == "pod" && Argument(tex, j) is var (pod, afterPod) && afterPod >= 0)
+                {
+                    result.Append("\\quad(").Append(RewriteTeXOnly(pod)).Append(')');
+                    i = afterPod;
+                    continue;
+                }
+                if (cw == "not")
+                {
+                    // \not over the next symbol, the long solidus of UnicodeMath (≠ for \not=), over a group when it is a command
+                    // with arguments (\not\operatorname{R}); alone, a slash
+                    var (negated, afterNegated) = Argument(tex, j);
+                    if (afterNegated < 0)
+                    {
+                        result.Append("\\/");
+                        i = j;
+                        continue;
+                    }
+                    var negatedText = new Text(negated);
+                    bool symbol = negatedText.Length == 1 || negatedText[0] == "\\" && ControlWord(negatedText, 1).Length == negatedText.Length - 1;
+                    result.Append(symbol ? RewriteTeXOnly(negated) : "(" + RewriteTeXOnly(negated) + ")").Append(HoldMark("\u0338"));
+                    i = afterNegated;
+                    continue;
+                }
+                if (cw == "operatorname" && tex[j] == "*")
+                {
+                    // \operatorname*, a name with limits, read as \operatorname
+                    result.Append("\\operatorname");
+                    i = j + 1;
                     continue;
                 }
                 if (cw == "mathop" && BracedArgument(tex, j) is var (operatorText, afterOperator) && afterOperator >= 0)
                 {
-                    // \mathop{\mathrm{argmin}}: an operator name
+                    // \mathop{\mathrm{argmin}}: an operator name; \mathop{x}, of one symbol, a group, which takes the limits
                     var name = operatorText.Trim();
+                    if (Js.Len(name) == 1)
+                    {
+                        result.Append('{').Append(RewriteTeXOnly(name)).Append('}');
+                        i = afterOperator;
+                        continue;
+                    }
                     if (name.StartsWith("\\mathrm{", StringComparison.Ordinal) && name[name.Length - 1] == '}')
                         name = name.Substring(8, name.Length - 9);
                     result.Append(name.All(char.IsLetter) ? "\\operatorname{" + name + "}" : RewriteTeXOnly(operatorText));
@@ -749,7 +855,11 @@ namespace SharpEquations.Internal.LaTeX
                             afterBody = GroupEnd(tex, afterColor);
                             body = tex.Sub(afterColor, afterBody);
                         }
-                        result.Append(cw == "color" ? "✎(" : "☁(").Append(color.Trim()).Append("&{").Append(RewriteTeXOnly(body)).Append("})");
+                        // \color{} has no color: the body alone
+                        if (color.Trim().Length == 0)
+                            result.Append(RewriteTeXOnly(body));
+                        else
+                            result.Append(cw == "color" ? "✎(" : "☁(").Append(color.Trim()).Append("&{").Append(RewriteTeXOnly(body)).Append("})");
                         i = afterBody;
                         continue;
                     }
@@ -797,7 +907,7 @@ namespace SharpEquations.Internal.LaTeX
             ["mathit"] = 1, ["mathcal"] = 1, ["mathbb"] = 1, ["mathfrak"] = 1, ["mathsf"] = 1, ["mathtt"] = 1, ["mathscr"] = 1,
             ["boldsymbol"] = 1, ["operatorname"] = 1, ["boxed"] = 1, ["sqrt"] = 1, ["hat"] = 1, ["bar"] = 1, ["vec"] = 1, ["dot"] = 1,
             ["ddot"] = 1, ["tilde"] = 1, ["widehat"] = 1, ["widetilde"] = 1, ["overline"] = 1, ["underline"] = 1,
-            ["frac"] = 2, ["dfrac"] = 2, ["tfrac"] = 2, ["binom"] = 2,
+            ["frac"] = 2, ["dfrac"] = 2, ["tfrac"] = 2, ["cfrac"] = 2, ["binom"] = 2, ["dbinom"] = 2, ["tbinom"] = 2,
         };
 
         /// <summary>The command with its braced arguments at the index (after blanks), and the index after it.</summary>
@@ -939,11 +1049,122 @@ namespace SharpEquations.Internal.LaTeX
                 i++;
             if (i < tex.Length && tex[i] == "{")
                 return BracedArgument(tex, i);
+            // a command with its arguments (\not\operatorname{R}), a command (\frac\alpha\beta, \not\in) or an escaped
+            // character (\genfrac\{]...)
+            if (i + 1 < tex.Length && tex[i] == "\\")
+            {
+                if (ScriptCommand(tex, i) is var (command, afterCommand) && command != null)
+                    return (command, afterCommand);
+                var end = i + 1 + Math.Max(1, ControlWord(tex, i + 1).Length);
+                return (tex.Sub(i, end), end);
+            }
             return i < tex.Length && tex[i] != "\\" && tex[i] != "}" ? (tex[i], i + 1) : (null, -1);
         }
 
+        /// <summary>Whether a script written now would have no base: at the start of the equation, of a group or of a cell.</summary>
+        private static bool HasNoBase(StringBuilder result)
+        {
+            int end = result.Length;
+            while (end > 0 && result[end - 1] == ' ')
+                end--;
+            return end == 0 || result[end - 1] is '{' or '(' or '[' or '&' or '〖' || end > 1 && result[end - 1] == '\\' && result[end - 2] == '\\';
+        }
+
+        /// <summary>The optional [...] argument at the index (after blanks), null if there is none, and the index after it.</summary>
+        private static (string Text, int Next) OptionalArgument(Text tex, int i)
+        {
+            int j = i;
+            while (j < tex.Length && tex[j] == " ")
+                j++;
+            if (tex[j] != "[")
+                return (null, i);
+            int end = tex.IndexOf("]", j);
+            return end < 0 ? (null, i) : (tex.Sub(j + 1, end), end + 1);
+        }
+
+        // the extensible arrows of amsmath and mathtools, \xrightarrow[under]{over}
+        private static readonly Dictionary<string, string> ExtensibleArrows = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["xrightarrow"] = "\\rightarrow", ["xleftarrow"] = "\\leftarrow", ["xRightarrow"] = "\\Rightarrow", ["xLeftarrow"] = "\\Leftarrow",
+            ["xleftrightarrow"] = "\\leftrightarrow", ["xLeftrightarrow"] = "\\Leftrightarrow", ["xhookleftarrow"] = "\\hookleftarrow",
+            ["xhookrightarrow"] = "\\hookrightarrow", ["xmapsto"] = "\\mapsto",
+        };
+
+        // the arrows of amsmath under a base, \underleftarrow{a}
+        private static readonly Dictionary<string, string> UnderArrows = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["underleftarrow"] = "\\leftarrow", ["underrightarrow"] = "\\rightarrow", ["underleftrightarrow"] = "\\leftrightarrow",
+        };
+
         /// <summary>The text of the {...} argument at the index (after blanks) and the index after it; -1 if there is none.</summary>
         private static bool IsAsciiLetterOrDigit(char c) => c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9';
+
+        /// <summary>
+        /// The argument of a font command in the font, as TeX sets it: its ASCII letters and digits, between escaped braces
+        /// too (\mathrm{\{b\}}), but not the text (\text{var}), which has the text font, nor the argument of an inner font
+        /// command, which has its own. Upright letters are quoted, as UnicodeMath writes them; a digit, which has no bold
+        /// italic form, is bold upright in a bold italic style (\boldsymbol{1}, 𝟏).
+        /// </summary>
+        private static string InFont(string argument, int style)
+        {
+            var tex = new Text(argument);
+            var mathStyle = MathStyles[style];
+            var digitStyle = mathStyle switch
+            {
+                "mbfit" or "mbfscr" or "mbffrak" => "mbf",
+                "mbfitsans" => "mbfsans",
+                _ => mathStyle,
+            };
+            var result = new StringBuilder();
+            for (int i = 0; i < tex.Length;)
+            {
+                var ch = tex[i];
+                int end;
+                switch (ch)
+                {
+                    case "ⓣ" when tex[i + 1] == "{" && FindClosingBrace(tex, i + 2) is var close && close != -1:
+                        end = close + 1;
+                        break;
+                    case "Ⅎ" when IsAsciiAlphabetic(tex[i + 1]) && tex[i + 2] == "{" && FindClosingBrace(tex, i + 3) is var close && close != -1:
+                        end = close + 1;
+                        break;
+                    case "\\" when IsAsciiAlphabetic(tex[i + 1]):
+                        end = i + 1 + ControlWord(tex, i + 1).Length;
+                        break;
+                    case "\\":
+                        end = System.Math.Min(i + 2, tex.Length);
+                        break;
+                    case var _ when IsAsciiAlphabetic(ch):
+                        end = i;
+                        while (IsAsciiAlphabetic(tex[end]))
+                            end++;
+                        var letters = tex.Sub(i, end);
+                        // a function name (\sin, which the first pass leaves as its letters) is in its own font
+                        if (IsFunctionName(letters))
+                            result.Append(letters);
+                        else if (mathStyle == "mup")
+                            result.Append(Quoted(letters));
+                        else
+                            result.Append(string.Concat(Characters(letters).Select(c => GetMathAlphanumeric(c, mathStyle))));
+                        i = end;
+                        continue;
+                    case var _ when ch.Length == 1 && char.IsLetter(ch[0]) && mathStyle != "mup":
+                        result.Append(GetMathAlphanumeric(ch, mathStyle));
+                        i++;
+                        continue;
+                    case var _ when ch.Length == 1 && ch[0] >= '0' && ch[0] <= '9':
+                        result.Append(GetMathAlphanumeric(ch, digitStyle));
+                        i++;
+                        continue;
+                    default:
+                        end = i + 1;
+                        break;
+                }
+                result.Append(tex.Sub(i, end));
+                i = end;
+            }
+            return result.ToString();
+        }
 
         private static (string Text, int Next) BracedArgument(Text tex, int i)
         {
@@ -964,9 +1185,145 @@ namespace SharpEquations.Internal.LaTeX
             return (null, -1);
         }
 
+        /// <summary>
+        /// The environments of \newenvironment{name}[n][default]{begin}{end} (and \renewenvironment) applied: the
+        /// definitions removed and kept in the macros under {name}, where later conversions find them, and each
+        /// \begin{name}{arguments}...\end{name} replaced by the begin code with its arguments (#1...), the body and the
+        /// end code, as TeX expands them.
+        /// </summary>
+        private string NewEnvironments(string latex)
+        {
+            var tex = new Text(latex);
+            var result = new StringBuilder();
+            int expansions = 0;
+            for (int i = 0; i < tex.Length;)
+            {
+                var cw = tex[i] == "\\" ? ControlWord(tex, i + 1) : "";
+                int j = i + 1 + cw.Length;
+                switch (cw)
+                {
+                    case "newenvironment" or "renewenvironment" when BracedArgument(tex, j) is var (name, afterName) && afterName >= 0 &&
+                        EnvironmentDefinition(tex, afterName) is var (_, _, _, _, afterDefinition) && afterDefinition >= 0:
+                        macros["{" + name.Trim() + "}"] = tex.Sub(afterName, afterDefinition);
+                        i = afterDefinition;
+                        continue;
+                    case "begin" when BracedArgument(tex, j) is var (name, afterName) && afterName >= 0 &&
+                        macros.TryGetValue("{" + name.Trim() + "}", out var definition) &&
+                        EnvironmentDefinition(new Text(definition), 0) is var (count, optional, begin, end, _) &&
+                        EnvironmentArguments(tex, afterName, count, optional) is var (arguments, afterArguments) && afterArguments >= 0 &&
+                        EnvironmentEnd(tex, afterArguments, name.Trim()) is var (bodyEnd, afterEnd) && bodyEnd >= 0:
+                        if (++expansions > 1000)
+                            throw new FormatException("The LaTeX environment " + name.Trim() + " does not stop expanding.");
+                        // the expansion read again, for the environments it uses
+                        var expansion = new StringBuilder();
+                        foreach (var part in new[] { Substitute(begin, arguments), tex.Sub(afterArguments, bodyEnd), end, tex.Sub(afterEnd) })
+                            Join(expansion, part);
+                        tex = new Text(expansion.ToString());
+                        i = 0;
+                        if (ContinuesControlWord(result, expansion.ToString()))
+                            result.Append(' ');
+                        continue;
+                    default:
+                        var next = cw.Length > 0 ? j : i + (tex[i] == "\\" ? 2 : 1);
+                        result.Append(tex.Sub(i, next));
+                        i = next;
+                        continue;
+                }
+            }
+            return result.ToString();
+        }
+
+        /// <summary>The [n][default]{begin}{end} of an environment definition at the index; Next -1 if there is none.</summary>
+        private static (int Count, string Optional, string Begin, string End, int Next) EnvironmentDefinition(Text tex, int i)
+        {
+            var (countText, afterCount) = OptionalArgument(tex, i);
+            int count = 0;
+            if (countText != null && (!int.TryParse(countText.Trim(), out count) || count < 0 || count > 9))
+                return (0, null, null, null, -1);
+            var (optional, afterOptional) = countText == null ? (null, afterCount) : OptionalArgument(tex, afterCount);
+            var (begin, afterBegin) = BracedArgument(tex, afterOptional);
+            var (end, afterEnd) = afterBegin < 0 ? (null, -1) : BracedArgument(tex, afterBegin);
+            return (count, optional, begin, end, afterEnd);
+        }
+
+        /// <summary>The arguments of an environment at the index (the first one optional when it has a default); Next -1 if missing.</summary>
+        private static (List<string> Arguments, int Next) EnvironmentArguments(Text tex, int i, int count, string optional)
+        {
+            var arguments = new List<string>();
+            if (optional != null && count > 0)
+            {
+                var (given, afterGiven) = OptionalArgument(tex, i);
+                arguments.Add(given ?? optional);
+                i = afterGiven;
+            }
+            return Arguments(tex, i, count - arguments.Count) is var (rest, next) ? (arguments.Concat(rest).ToList(), next) : (null, -1);
+        }
+
+        /// <summary>The index of the \end{name} that closes an environment whose body starts at the index, and the index after it; -1 if none.</summary>
+        private static (int End, int Next) EnvironmentEnd(Text tex, int i, string name)
+        {
+            int depth = 1;
+            for (; i < tex.Length; i++)
+            {
+                if (tex[i] != "\\")
+                    continue;
+                var cw = ControlWord(tex, i + 1);
+                if (cw is "begin" or "end" && BracedArgument(tex, i + 1 + cw.Length) is var (environment, after) && after >= 0 && environment.Trim() == name)
+                {
+                    depth += cw == "begin" ? 1 : -1;
+                    if (depth == 0)
+                        return (i, after);
+                }
+                i += Math.Max(1, cw.Length);
+            }
+            return (-1, -1);
+        }
+
+        /// <summary>The begin code of an environment with its #1... replaced by the arguments, and ## by #.</summary>
+        private static string Substitute(string code, List<string> arguments)
+        {
+            var tex = new Text(code);
+            var result = new StringBuilder();
+            for (int i = 0; i < tex.Length; i++)
+            {
+                switch (tex[i])
+                {
+                    case "#" when tex[i + 1] == "#":
+                        result.Append('#');
+                        i++;
+                        break;
+                    case "#" when tex[i + 1] is { Length: 1 } digit && digit[0] is >= '1' and <= '9' && digit[0] - '1' < arguments.Count:
+                        result.Append(arguments[digit[0] - '1']);
+                        i++;
+                        break;
+                    default:
+                        result.Append(tex[i]);
+                        break;
+                }
+            }
+            return result.ToString();
+        }
+
+        /// <summary>A part of an expansion appended, after a space if it would continue the control word before it (\alpha x).</summary>
+        private static void Join(StringBuilder expansion, string part)
+        {
+            if (ContinuesControlWord(expansion, part))
+                expansion.Append(' ');
+            expansion.Append(part);
+        }
+
+        private static bool ContinuesControlWord(StringBuilder before, string after)
+        {
+            var text = new Text(before.ToString());
+            int i = text.Length;
+            while (i > 0 && IsAsciiAlphabetic(text[i - 1]))
+                i--;
+            return i < text.Length && text[i - 1] == "\\" && IsAsciiAlphabetic(new Text(after)[0]);
+        }
+
         private string Convert(string latex)
         {
-            var tex = new Text(EscapeOddBars(RewriteTeXOnly(Limits(latex))));
+            var tex = new Text(EscapeOddBars(RewriteTeXOnly(Limits(NewEnvironments(latex)))));
             var cwPrev = "";
             bool needMacroPass = false;
             var uniTeX = new StringBuilder();
@@ -1408,10 +1765,10 @@ namespace SharpEquations.Internal.LaTeX
                                 RemoveLast(uniTeX);
                                 uniTeX.Append(Quoted(argument));
                             }
-                            else if (style > 0 && style < MathStyles.Length && argument.Length > 0 && argument.All(IsAsciiLetterOrDigit))
+                            else if (style > 0 && style < MathStyles.Length && argument.Length > 0 && argument.All(char.IsLetterOrDigit))
                             {
                                 RemoveLast(uniTeX);
-                                uniTeX.Append(string.Concat(argument.Select(c => GetMathAlphanumeric(c.ToString(), MathStyles[style]))));
+                                uniTeX.Append(InFont(argument, style));
                             }
                             else if (argument.All(char.IsLetterOrDigit))
                             {
@@ -1422,10 +1779,7 @@ namespace SharpEquations.Internal.LaTeX
                                 // other mathematics in a font (\mathbf{b\times c}, \mathrm{x_1}): its ASCII letters and digits in
                                 // the font, the rest as it is
                                 RemoveLast(uniTeX);
-                                var styled = style > 0 && style < MathStyles.Length
-                                    ? string.Concat(Characters(argument).Select(c => c.Length == 1 && IsAsciiLetterOrDigit(c[0]) ? GetMathAlphanumeric(c, MathStyles[style]) : c))
-                                    : argument;
-                                uniTeX.Append(Pass2(styled));
+                                uniTeX.Append(Pass2(style >= 0 && style < MathStyles.Length ? InFont(argument, style) : argument));
                             }
                             i = j + 1;
                         }
