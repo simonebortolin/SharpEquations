@@ -1,7 +1,8 @@
 name: Web demo
 
-# The equation editor on WebAssembly (samples/SharpEquations.Avalonia.Browser.Demo): built on every pull request that
-# touches it, published to GitHub Pages from main (Settings → Pages → Source: GitHub Actions).
+# The equation editor on WebAssembly (samples/SharpEquations.Avalonia.Browser.Demo): built on every pull request,
+# published to GitHub Pages from main, or from any branch when the workflow is run by hand (Settings → Pages → Source:
+# GitHub Actions; a branch other than main must be allowed in Settings → Environments → github-pages).
 on:
   push:
     branches:
@@ -54,7 +55,7 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:
