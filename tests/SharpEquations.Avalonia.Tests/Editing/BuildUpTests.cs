@@ -93,6 +93,18 @@ namespace SharpEquations.Avalonia.Tests.Editing
             await Assert.That(editor.ToEquation()).IsEqualTo(Equation.Parse("√(x^2+1)/2", EquationFormat.UnicodeMath));
         }
 
+        /// <summary>A command of LaTeX whose arguments come without braces, after a space, waits for them before it builds up.</summary>
+        [Test]
+        [Arguments("\\underset ab", "\\underset{a}{b}")]
+        [Arguments("\\xrightarrow[y] x", "\\xrightarrow[y]{x}")]
+        [Arguments("\\boxed \\Box", "\\boxed{\\Box}")]
+        [Arguments("\\not a", "\\not{a}")]
+        public async Task CommandWaitsForItsArguments(string typed, string expected)
+        {
+            var editor = Type(typed + " ", EquationFormat.LaTeX);
+            await Assert.That(editor.ToEquation()).IsEqualTo(Equation.Parse(expected, EquationFormat.LaTeX));
+        }
+
         [Test]
         public async Task LinearInLaTeX()
         {
