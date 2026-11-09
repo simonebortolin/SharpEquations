@@ -456,6 +456,11 @@ namespace SharpEquations.Internal.LaTeX
                     break;
 
                 case "munder":
+                    if (VarLimit(value) is { } varLimit)
+                    {
+                        ret = varLimit;
+                        break;
+                    }
                     if (Name(Last(value)) == "mo" && AccentsBelow.TryGetValue(Text(Last(value)), out var below))
                     {
                         if (standard && below == "underbar")
@@ -641,6 +646,11 @@ namespace SharpEquations.Internal.LaTeX
                             ret = GetMathAlphanumeric(c, mathstyle);
                             break;
                         }
+                    }
+                    else if (LimitNames.TryGetValue(Text(value), out var limitName))
+                    {
+                        ret = limitName;
+                        break;
                     }
                     else if (IsFunctionName(Text(value)))
                     {
@@ -873,6 +883,23 @@ namespace SharpEquations.Internal.LaTeX
         private static bool IsZeroThickness(string thickness) =>
             thickness != null && ZeroThickness().IsMatch(thickness.Trim()) && thickness.Trim().Length > 0;
 
+        // the operator names of amsmath of two words, with the thin space of TeX
+        private static readonly Dictionary<string, string> LimitNames = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["lim\u2009inf"] = "\\liminf ", ["lim\u2009sup"] = "\\limsup ", ["inj\u2009lim"] = "\\injlim ",
+            ["proj\u2009lim"] = "\\projlim ",
+        };
+
+        /// <summary>lim with an arrow under it, as amsmath writes it (\varinjlim, \varprojlim), or null.</summary>
+        private static string VarLimit(XElement element) =>
+            Name(element) == "munder" && ChildCount(element) == 2 && Name(First(element)) == "mi" && Text(First(element)) == "lim" &&
+            Name(Last(element)) == "mo" ? Text(Last(element)) switch
+            {
+                "→" => "\\varinjlim ",
+                "←" => "\\varprojlim ",
+                _ => null,
+            } : null;
+
         /// <summary>Whether limits under or over the element are its subscript and superscript: an operator or a function name.</summary>
         private static bool TakesLimits(XElement element)
         {
@@ -880,8 +907,10 @@ namespace SharpEquations.Internal.LaTeX
                 element = First(element);
             if (Name(element) == "mo")
                 return IsLargeOperator(element) || IsFunctionName(Text(element));
+            if (VarLimit(element) != null)
+                return true;
             // a name that is not a function's, \operatorname{argmax}, takes its scripts at its side: \underset puts them under
-            return Name(element) == "mi" && IsFunctionName(Text(element));
+            return Name(element) == "mi" && (IsFunctionName(Text(element)) || LimitNames.ContainsKey(Text(element)));
         }
 
         /// <summary>Whether an operator is large (∑, ∫, ⋃…) or a horizontal brace, whose limits go under and over it.</summary>
@@ -910,6 +939,8 @@ namespace SharpEquations.Internal.LaTeX
                 // an empty identifier, which holds a place (the base of {}^3, the left side of &=)
                 if (text.Length == 0)
                     return "{}";
+                if (LimitNames.TryGetValue(text, out var limitName))
+                    return limitName;
                 if (IsFunctionName(text))
                     return "\\" + text + " ";
                 var plain = string.Concat(Characters(text).Where(c => c.Length == 1 && (c[0] >= 'A' && c[0] <= 'Z' || c[0] >= 'a' && c[0] <= 'z')));

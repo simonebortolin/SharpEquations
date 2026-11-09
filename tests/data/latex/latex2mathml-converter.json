@@ -957,7 +957,7 @@
   "id": "injlim",
   "latex": "\\injlim",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo movablelimits=\"true\">inj\u2006lim</mo></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>inj\u2009lim</mi></mrow></math>"
  },
  {
   "id": "ker",
@@ -1077,13 +1077,13 @@
   "id": "liminf",
   "latex": "\\liminf",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo movablelimits=\"true\">lim\u2006inf</mo></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>lim\u2009inf</mi></mrow></math>"
  },
  {
   "id": "limsup",
   "latex": "\\limsup",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo movablelimits=\"true\">lim\u2006sup</mo></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>lim\u2009sup</mi></mrow></math>"
  },
  {
   "id": "llless",
@@ -1155,7 +1155,7 @@
   "id": "projlim",
   "latex": "\\projlim",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo movablelimits=\"true\">proj\u2006lim</mo></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mi>proj\u2009lim</mi></mrow></math>"
  },
  {
   "id": "rvert",
@@ -1605,7 +1605,7 @@
   "id": "varinjlim",
   "latex": "\\varinjlim",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><mo movablelimits=\"true\">inj\u2006lim</mo></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><munder><mi>lim</mi><mo>→</mo></munder></mrow></math>"
  },
  {
   "id": "nolimits",
@@ -1713,7 +1713,7 @@
   "id": "operatornamewithlimits",
   "latex": "\\operatornamewithlimits{lim}_{x}",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msub><mo movablelimits=\"true\">lim</mo><mrow><mi>x</mi></mrow></msub></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><munder><mo movablelimits=\"true\">lim</mo><mrow><mi>x</mi></mrow></munder></mrow></math>"
  },
  {
   "id": "pod",
@@ -1785,7 +1785,7 @@
   "id": "operatorname-star",
   "latex": "\\operatorname*{argmax}_{x}",
   "display": true,
-  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msub><mo movablelimits=\"true\">argmax</mo><mrow><mi>x</mi></mrow></msub></mrow></math>"
+  "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><munder><mo movablelimits=\"true\">argmax</mo><mrow><mi>x</mi></mrow></munder></mrow></math>"
  },
  {
   "id": "vcenter",
