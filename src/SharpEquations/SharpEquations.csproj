@@ -11,10 +11,12 @@
     <!-- the UnicodeMath grammar (*.parlot.cs) is compiled by Parlot.SourceGenerator; relative #line paths keep
          the build reproducible -->
     <ParlotLineDirectives>relative</ParlotLineDirectives>
+    <!-- trimming and Native AOT: no reflection and no code generated at run time (the stylesheets are compiled to C#
+         at build time); the analyzers keep it so -->
+    <IsAotCompatible Condition=" $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0')) ">true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources\*.xsl" LogicalName="SharpEquations.Resources.%(Filename)%(Extension)" />
     <InternalsVisibleTo Include="SharpEquations.Tests" />
     <AdditionalFiles Include="PublicAPI.Shipped.txt" />
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
@@ -36,6 +38,12 @@
        consumers of the package -->
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="System.Memory" />
+  </ItemGroup>
+
+  <!-- build time only: the stylesheets compiled to C# (Internal/Xslt), which runs without generating code at run time -->
+  <ItemGroup>
+    <AdditionalFiles Include="Resources\*.xsl" />
+    <ProjectReference Include="..\SharpEquations.XsltGenerator\SharpEquations.XsltGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- build time only: [GeneratedRegex], which .NET Standard 2.0 lacks, as a Regex built once (the regular expression

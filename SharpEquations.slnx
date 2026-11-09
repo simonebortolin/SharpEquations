@@ -17,6 +17,7 @@
     <Project Path="src/SharpEquations.Avalonia/SharpEquations.Avalonia.csproj" />
     <Project Path="src/SharpEquations.Editing/SharpEquations.Editing.csproj" />
     <Project Path="src/SharpEquations.RegexPolyfill/SharpEquations.RegexPolyfill.csproj" />
+    <Project Path="src/SharpEquations.XsltGenerator/SharpEquations.XsltGenerator.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/SharpEquations.Benchmarks/SharpEquations.Benchmarks.csproj" />

@@ -13,11 +13,13 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 |---|---|
 | `src/SharpEquations/` | The library: `Public/` (the public API), `Internal/` (one folder per format), `Resources/` (XSLT stylesheets) |
 | `src/SharpEquations.RegexPolyfill/` | Build time only: the `[GeneratedRegex]` source generator of the netstandard2.0 build |
+| `src/SharpEquations.XsltGenerator/` | Build time only: the source generator that compiles the XSLT stylesheets of `Resources/` to C# |
 | `src/SharpEquations.Editing/` | The equation editor's model, no user interface: `MathNode` tree, caret, selection, undo, build up and build down |
 | `src/SharpEquations.Rendering/` | The layout of MathML Core over the OpenType MATH table, no user interface: `MathLayoutEngine`, `MathLayout` |
 | `src/SharpEquations.Avalonia/` | The controls for Avalonia: `MathEditBox` (the editor), `MathView`; embeds Libertinus Math |
 | `samples/SharpEquations.Avalonia.Demo/` | A window with the editor (`DemoView`, shared with the web demo) |
 | `samples/SharpEquations.Avalonia.Browser.Demo/` | The same demo on WebAssembly (needs the `wasm-tools` workload, so not in the solution; `.github/workflows/demo.yml` publishes it to GitHub Pages) |
+| `benchmarks/SharpEquations.Benchmarks/` | BenchmarkDotNet benchmarks of reading, writing and converting the corpora |
 | `tests/SharpEquations.Tests/` | TUnit tests, in folders by subject (PublicApi, MathML, Omml, Mtef, UnicodeMath, LaTeX, Property, Regression) |
 | `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia) |
 | `tests/data/` | Test data and its provenance (`tests/data/README.md`) |
@@ -64,8 +66,14 @@ init-only record: `Display`, `Strict`, `PreserveFormatting`, `LaTeXFlavor` stand
   UnicodeMath writers. Content MathML of the source (`apply`, `ci`, `cn`..., outside the annotations) is first rewritten
   as presentation MathML by `ctop.xsl` (David Carlisle's, see `NOTICE`), keeping the presentation MathML around it.
 - `Internal/Omml/`: OMML ↔ MathML with the XSLT 1.0 stylesheets of `Resources/` (from the TEI Stylesheets, see
-  `NOTICE`), run with `XslCompiledTransform`. OMML is written as Word writes it (plain letters with `m:sty`/`m:scr`,
+  `NOTICE`). OMML is written as Word writes it (plain letters with `m:sty`/`m:scr`,
   underbars as `m:bar`), and an upright word of OMML (`max`) is read as one identifier.
+- `Internal/Xslt/`: the run time of the stylesheets, which `SharpEquations.XsltGenerator` compiles to C# at build time
+  (no code generated at run time, so the library runs under Native AOT, `IsAotCompatible` on net10.0): the XPath data
+  model over LINQ to XML (`XPathFunctions`), the result tree (`XsltOutput`), and the partial classes the generator
+  implements (`Stylesheets.cs`; the generated code goes to `obj/`, and is declared there so that Parlot, which compiles
+  the project without the other generators, sees it). `Xslt/CompiledStylesheetTests` compares them with
+  `XslCompiledTransform` on the corpora.
 - `Internal/Mtef/`: MTEF of Equation Editor 3.0 and MathType, read only; a C# port of the jure/mathtype gem, converted
   with `mtef2mml.xsl`. It reads the "Equation Native" stream of the OLE object; opening the OLE object is the caller's.
 - `Internal/UnicodeMath/`: a port of UnicodeMathML. Its PEG grammar is `UnicodeMathGrammar.parlot.cs`, compiled at
