@@ -75,6 +75,84 @@ namespace SharpEquations.Editing
                 node.Name == "mtext" && node.Text.Contains(command) || node.Name == "mi" && node.Text == "\u2B1A" || node.Children.Any(c => Pending(c, command));
         }
 
+        private static readonly Lazy<Dictionary<string, int>> LaTeXArguments = new Lazy<Dictionary<string, int>>(() =>
+            EquationCommands.Get(EquationFormat.LaTeX).Where(c => c.Arguments > 0).ToDictionary(c => c.Name, c => c.Arguments, StringComparer.Ordinal));
+
+        /// <summary>
+        /// Whether the LaTeX text ends before the arguments of one of its commands: <c>\underset a</c>, <c>\xrightarrow[y]</c>,
+        /// whose arguments may come without braces (<c>\underset ab</c>, <c>\not a</c>), after a space too.
+        /// </summary>
+        public static bool AwaitsArguments(string text)
+        {
+            var runes = CodePointText.Runes(text).Select(r => r.Value).ToList();
+            var i = 0;
+            while (true)
+            {
+                SkipSpaces(ref i);
+                if (i >= runes.Count)
+                    return false;
+                if (!Item(ref i))
+                    return true;
+            }
+
+            void SkipSpaces(ref int k)
+            {
+                while (k < runes.Count && runes[k] == ' ')
+                    k++;
+            }
+
+            // a token, a group or a command with its arguments; false if the text ends before them
+            bool Item(ref int k)
+            {
+                switch (runes[k])
+                {
+                    case '{':
+                        var depth = 0;
+                        for (; k < runes.Count; k++)
+                        {
+                            depth += runes[k] switch { '{' => 1, '}' => -1, _ => 0 };
+                            if (runes[k] == '\\')
+                                k++;
+                            else if (depth == 0)
+                                break;
+                        }
+                        k++;
+                        return k <= runes.Count;
+                    case '\\':
+                        var start = ++k;
+                        while (k < runes.Count && IsAsciiLetter(runes[k]))
+                            k++;
+                        if (k == start)
+                        {
+                            k = Math.Min(k + 1, runes.Count);
+                            return true;
+                        }
+                        var name = string.Concat(runes.Skip(start).Take(k - start).Select(c => (char)c));
+                        if (!LaTeXArguments.Value.TryGetValue(name, out var count))
+                            return true;
+                        var optional = k;
+                        SkipSpaces(ref optional);
+                        if (optional < runes.Count && runes[optional] == '[')
+                        {
+                            var close = runes.IndexOf(']', optional);
+                            if (close < 0)
+                                return false;
+                            k = close + 1;
+                        }
+                        for (var argument = 0; argument < count; argument++)
+                        {
+                            SkipSpaces(ref k);
+                            if (k >= runes.Count || !Item(ref k))
+                                return false;
+                        }
+                        return true;
+                    default:
+                        k++;
+                        return true;
+                }
+            }
+        }
+
         /// <summary>Whether the brackets (UnicodeMath) or the groups and environments (LaTeX) of the text are closed.</summary>
         public static bool IsBalanced(string text, EquationFormat format)
         {

@@ -64,6 +64,9 @@ namespace SharpEquations.Tests
         // the bars over and under a base, a mark of mover or munder for latex2mathml, menclose for SharpEquations
         private static readonly HashSet<string> Bars = new HashSet<string> { "¯", "‾", "―", "_", "\u0305", "\u0332" };
 
+        // a length of 0 in any unit: 0, 0pt, 0.0em
+        private static bool IsZero(string length) => length.Trim().TrimEnd("abcdefghijklmnopqrstuvwxyz%".ToCharArray()).Trim('0', '.').Length == 0;
+
         private static bool IsSpace(string text) => text.Length > 0 &&
             text.All(c => c == ' ' || c == '\u00A0' || c is >= '\u2000' and <= '\u200B' || c == '\u205F');
 
@@ -73,7 +76,8 @@ namespace SharpEquations.Tests
         /// The equation as MathML, with what latex2mathml and SharpEquations write differently for the same equation
         /// made the same: attributes that say the default or set the style, spaces (formatting, which an equation does not
         /// keep), invisible function application and times, the middle dot of \cdot (· for latex2mathml, ⋅ for
-        /// SharpEquations), names of operators and primes (mo for latex2mathml, mi and mo for SharpEquations), spacing
+        /// SharpEquations), the bar of \middle (| for latex2mathml, the separator │ of UnicodeMath for SharpEquations),
+        /// names of operators and primes (mo for latex2mathml, mi and mo for SharpEquations), spacing
         /// accents (˙ for latex2mathml, the combining dot above for SharpEquations), bars (mover with ¯ for latex2mathml,
         /// menclose for SharpEquations), capital Greek letters (upright in TeX, which latex2mathml writes as mi without
         /// mathvariant), symbols that are neither letters nor digits (mi for latex2mathml, %, °, mo for SharpEquations,
@@ -97,8 +101,12 @@ namespace SharpEquations.Tests
                 var text = e.HasElements ? null : e.Value;
                 switch (name)
                 {
-                    case "mi" when text is { Length: 1 } && !char.IsLetterOrDigit(text[0]):
+                    case "mi" when text is { Length: 1 } && !char.IsLetterOrDigit(text[0]) && text != "⬚":
                         e.Name = M + "mo";
+                        break;
+                    // a digit of a math alphabet (𝟏), one identifier for SharpEquations, as OMML and UnicodeMath read it
+                    case "mn" when text is { Length: 2 } && char.IsSurrogatePair(text, 0) && char.ConvertToUtf32(text, 0) is >= 0x1D7CE and <= 0x1D7FF:
+                        e.Name = M + "mi";
                         break;
                     case "mspace":
                     case "mo" or "mtext" when text != null && IsSpace(text):
@@ -107,6 +115,9 @@ namespace SharpEquations.Tests
                         break;
                     case "mo" when text == "·":
                         e.Value = "⋅";
+                        break;
+                    case "mo" when text == "│":
+                        e.Value = "|";
                         break;
                     case "mo" when text != null && Accents.TryGetValue(text, out var mark) && e.Parent!.Name.LocalName is "mover" && e.ElementsBeforeSelf().Any():
                         e.Value = mark;
@@ -128,6 +139,24 @@ namespace SharpEquations.Tests
             math.Descendants(M + "mtr").Where(r => r.Elements().All(d => !d.HasElements && d.Value.Length == 0)).Remove();
             foreach (var e in math.Descendants(M + "mstyle").Where(e => !e.HasAttributes))
                 e.Name = M + "mrow";
+            // the thickness of a fraction bar that is not 0, and the moves of mpadded relative to the content (the labels
+            // of \xrightarrow), formatting; an operator that holds an element (\mathop{x}), its element; the empty
+            // placeholders (an empty mrow or mi for latex2mathml, ⬚ for SharpEquations), which hold a place only as the
+            // argument of a script or a fraction; a length of 0 in any unit (0px), 0
+            math.Descendants(M + "mfrac").Attributes("linethickness").Where(a => !IsZero(a.Value)).Remove();
+            foreach (var e in math.Descendants(M + "mpadded").Where(e => e.HasAttributes && e.Attributes().All(a => a.Value.StartsWith("+") || a.Value.StartsWith("-"))).ToList())
+                e.ReplaceWith(new XElement(M + "mrow", e.Nodes()));
+            foreach (var a in math.Descendants(M + "mpadded").Attributes().Where(a => IsZero(a.Value)))
+                a.Value = "0";
+            foreach (var e in math.Descendants(M + "mo").Where(e => e.HasElements).ToList())
+                e.ReplaceWith(e.Nodes());
+            foreach (var e in math.Descendants().Where(e => e.Name.LocalName is "mi" or "mrow" && !e.HasElements && e.Value is "" or "⬚").ToList())
+            {
+                if (InferredRow.Contains(e.Parent!.Name.LocalName))
+                    e.Remove();
+                else
+                    e.ReplaceWith(new XElement(M + "mi"));
+            }
             bool changed;
             do
             {
@@ -155,64 +184,54 @@ namespace SharpEquations.Tests
 
         // commands of MathJax, KaTeX, plain TeX or packages that Word's LaTeX, which the reader follows, does not have:
         // links, classes, colors, boxes and moves, sizes, \hbox and \verb, \LaTeX, \skew, the primitives of plain TeX
-        // (\matrix{}, \cr, \eqalign, \displaylines, \above, \atop, \brace) and its font switches (\Bbb, \frak, \scr, and \rm or \tt over text),
-        // the classes of \mathord and the like, the bra-kets of the physics package, \mathsfit, \argmax, \widecheck,
-        // the arrows of mathtools
+        // (\matrix{}, \cr, \eqalign, \displaylines, \above, \atop, \brace) and its font switches (\frak, \scr, and \rm or
+        // \tt over text), the classes of \mathord, \mathbin and \mathrel, the bra-kets of the physics package, \mathsfit,
+        // \argmax, \widecheck
         private static readonly HashSet<string> NotInWordLaTeX = new HashSet<string>
         {
             "href", "class", "style", "textcolor", "colorbox", "fcolorbox", "raise", "lower", "moveleft", "moveright",
-            "shoveleft", "vcenter", "smash", "smash-bottom", "smash-top", "llap", "mathllap", "rule", "mathchoice-block",
+            "shoveleft", "vcenter", "smash-bottom", "smash-top", "llap", "mathllap", "rule", "mathchoice-block",
             "mathchoice-inline", "unicode", "verb", "huge", "large", "normalsize-scriptsize", "small-tiny", "footnotesize",
             "LaTeX", "LaTeX-with-style", "TeX", "TeX-with-style", "hbox", "hbox-with-math-mode", "hbox-with-backslash-in-text",
             "fbox", "leftroot-uproot", "skew", "skew-with-braces", "displaylines", "eqalign", "matrix-without-begin-and-end",
             "hfil", "above", "abovewithdelims", "atop-and-atopwithdelims", "brace", "brace-1", "oldstyle", "scr", "tt",
-            "fraktur", "blackboard-bold", "global-fonts", "greatest-common-divisor",
-            "math-commands-that-currently-does-nothing", "mathbin", "mathord", "mathrel", "mathop", "issue-125-4-mathop",
-            "bra", "ket", "braket", "mathsfit", "argmax", "widecheck", "xLeftarrow-double", "xleftrightarrow", "xhookleftarrow",
+            "fraktur", "greatest-common-divisor",
+            "math-commands-that-currently-does-nothing", "mathbin", "mathord", "mathrel", "bra", "ket", "braket", "mathsfit",
+            "argmax", "widecheck",
         };
 
-        // LaTeX and amsmath that the reader does not read yet: \lg and the operator names of amsmath (\liminf, \injlim,
-        // \operatorname*), \idotsint, \xrightarrow without braces or with its optional argument, the arrows under a
-        // base, \sideset, \substack, \genfrac with unbraced delimiters, \dbinom a b, unbraced arguments (\underset ab,
-        // \boxed\Box), \limits after \mathop, the scripts of \overbrace and \underbrace, \pod, \mathstrut, \middle, \not,
-        // a bar or a script alone (\rvert, |\,|, ^3, 'x), \color{}, \mathscr, a font over \text and braces (\mathrm{\{b\}},
-        // \mathsf{\text{}}, \boldsymbol{1}), a digit of a math alphabet read as an identifier (\mathbf{1}), a number
-        // with a comma in a script (a_{1,1}), \newenvironment and ## in a macro
+        // LaTeX and amsmath that the reader does not read yet: an operator name with nothing after it (\lg, \liminf,
+        // \injlim, \operatorname*{argmax}_x), which UnicodeMath reads as letters, and the names of amsmath that are two
+        // words (lim inf)
         private static readonly HashSet<string> NotReadYet = new HashSet<string>
         {
             "lg", "liminf", "limsup", "injlim", "projlim", "varinjlim", "operatornamewithlimits", "operatorname-star",
-            "idotsint", "xleftarrow", "xleftarrow-with-argument", "xrightarrow", "xrightarrow-with-argument",
-            "underleftarrow", "underrightarrow", "underleftrightarrow", "sideset", "307-a", "307-b", "issue-75-1-row",
-            "issue-75-2-rows", "genfrac-displaystyle", "genfrac-textstyle", "genfrac-scriptstyle", "genfrac-scriptscriptstyle",
-            "binomial-coefficients", "issue-125-3-underset", "boxed-box", "issue-125-4-limits", "overbrace-c", "underbrace-c",
-            "pod", "mathstrut", "middle", "not", "rvert", "spaces", "exponent-without-base-works", "prime-no-base",
-            "empty-color-works", "mathscr", "mathrm", "mathsf", "boldsymbol", "mathbf", "mathtt", "issue-33",
-            "newenvironment-multi-node", "newcommand-escaped-hash",
         };
 
         // the same equation, which SharpEquations holds otherwise: an equation number as the label of its row (\tag),
         // and none for aligned equations, whose numbers latex2mathml writes as cells; the alignment of align, split and
-        // cases as marks in one cell; ... as an ellipsis and * as the operator ∗, as Word reads them; an empty script as
-        // the placeholder ⬚; a letter of \text as an upright identifier; the space of \ and the font of the text
+        // cases as marks in one cell; ... as an ellipsis and * as the operator ∗, as Word reads them; a letter of \text
+        // as an upright identifier; \Box as □, as KaTeX and MathJax write it (◻ for latex2mathml); \not as the long
+        // solidus over the symbol, where latex2mathml puts a slash before it; the space of \ and the font of the text
         // (\textbf), formatting an equation does not keep
         private static readonly HashSet<string> HeldOtherwise = new HashSet<string>
         {
             "tag", "tag-star", "align1", "align-nonumber", "align-notag", "split", "align0", "issue-106", "issue-60-1",
-            "issue-60-2", "numbers-identifiers-and-operators", "empty-subscript", "hphantom", "issue-118", "textbf", "textit",
+            "issue-60-2", "numbers-identifiers-and-operators", "hphantom", "boxed-box", "not", "issue-118", "textbf", "textit",
             "textsf", "texttt", "emph",
         };
 
-        // what is no LaTeX: \e, which no package defines, and ntext, a mistyped \text
-        private static readonly HashSet<string> NotLaTeX = new HashSet<string> { "backslash-e", "issue-125-1-overset" };
+        // what is no LaTeX: \e, which no package defines, ntext, a mistyped \text, and a # in math mode (## in the body of
+        // a macro is # in its expansion, which TeX rejects there)
+        private static readonly HashSet<string> NotLaTeX = new HashSet<string> { "backslash-e", "issue-125-1-overset", "newcommand-escaped-hash" };
 
         private static readonly HashSet<string> ReadOtherwise = new HashSet<string>(NotInWordLaTeX.Concat(NotReadYet).Concat(HeldOtherwise).Concat(NotLaTeX));
 
         // the macros the reader does not expand as LaTeX does: \DeclareMathOperator, the default of an optional argument,
-        // an empty body (which leaves an empty group), \newenvironment
+        // and an empty body (which leaves an empty group)
         private static readonly HashSet<string> NotExpanded = new HashSet<string>
         {
-            "declare-math-operator", "newcommand-optional-default", "newcommand-empty-body", "newenvironment",
-            "newenvironment-with-args",
+            "declare-math-operator", "newcommand-optional-default", "newcommand-empty-body",
         };
 
         private static string? Check(Func<string?> check)

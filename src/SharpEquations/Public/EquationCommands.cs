@@ -61,6 +61,10 @@ namespace SharpEquations
             ("sin", 0), ("cos", 0), ("tan", 0), ("cot", 0), ("sec", 0), ("csc", 0), ("arcsin", 0), ("arccos", 0), ("arctan", 0),
             ("sinh", 0), ("cosh", 0), ("tanh", 0), ("coth", 0), ("log", 0), ("ln", 0), ("exp", 0), ("arg", 0),
             ("deg", 0), ("dim", 0), ("ker", 0), ("hom", 0), ("Pr", 0), ("quad", 0), ("qquad", 0),
+            ("dddot", 1), ("ddddot", 1), ("overleftrightarrow", 1), ("mathscr", 1), ("not", 1), ("substack", 1), ("prescript", 3),
+            ("xrightarrow", 1), ("xleftarrow", 1), ("xRightarrow", 1), ("xLeftarrow", 1), ("xleftrightarrow", 1),
+            ("xLeftrightarrow", 1), ("xhookleftarrow", 1), ("xhookrightarrow", 1), ("xmapsto", 1),
+            ("underleftarrow", 1), ("underrightarrow", 1), ("underleftrightarrow", 1), ("ce", 1), ("pu", 1),
         };
 
         private static readonly Lazy<IReadOnlyList<EquationCommand>> UnicodeMath = new Lazy<IReadOnlyList<EquationCommand>>(() =>

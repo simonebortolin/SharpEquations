@@ -767,12 +767,14 @@ namespace SharpEquations.Internal.UnicodeMath
                     basE = DropSingletonLists(ret["base"]);
                     if (Truthy(Get(basE, "script")) && Eq(Get(Get(basE, "script"), "type"), "subsup"))
                     {
+                        // ret.base is preprocessed already, its scripts with it: preprocessed again, an operator would
+                        // become the content of an operator
                         var baseScript = Get(basE, "script");
                         if (Has(baseScript, "low"))
-                            ret["low"] = Preprocess(dsty, Get(baseScript, "low"));
+                            ret["low"] = Get(baseScript, "low");
                         if (Has(baseScript, "high"))
-                            ret["high"] = Preprocess(dsty, Get(baseScript, "high"));
-                        ret["base"] = Preprocess(dsty, Get(baseScript, "base"));
+                            ret["high"] = Get(baseScript, "high");
+                        ret["base"] = Get(baseScript, "base");
                     }
                     break;
 

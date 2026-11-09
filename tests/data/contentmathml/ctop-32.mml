@@ -1,0 +1,7 @@
+<math display="block">
+<apply><eq/>
+<mi>a</mi>
+<mi>n</mi>
+<apply><plus/><mn>1</mn><mn>2</mn></apply>
+</apply>
+</math>

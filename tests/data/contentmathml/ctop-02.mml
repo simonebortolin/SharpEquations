@@ -1,0 +1,16 @@
+<math display="block">
+<apply><csymbol cd="nums1">rational</csymbol>
+ <semantics>
+  <ci>x</ci>
+  <annotation-xml encoding="MathML-Presentation">
+   <mi>P</mi>
+  </annotation-xml>
+ </semantics>
+ <semantics>
+  <ci>y</ci>
+  <annotation-xml encoding="MathML-Presentation">
+   <mi>Q</mi>
+  </annotation-xml>
+ </semantics>
+</apply>
+</math>

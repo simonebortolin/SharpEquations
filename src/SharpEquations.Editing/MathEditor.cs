@@ -882,7 +882,7 @@ namespace SharpEquations.Editing
             if (last is { } l && BuildUp.ExpectsOperand(l, InputFormat))
                 return false;
             var text = CodePointText.Join(argument);
-            if (!BuildUp.IsBalanced(text, InputFormat))
+            if (!BuildUp.IsBalanced(text, InputFormat) || InputFormat == EquationFormat.LaTeX && BuildUp.AwaitsArguments(text))
                 return false;
 
             var nodes = BuildUp.Parse(row.Children.Take(j).ToList(), text, InputFormat, IsDisplay);
