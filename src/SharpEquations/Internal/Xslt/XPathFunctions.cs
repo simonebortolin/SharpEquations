@@ -605,9 +605,39 @@ namespace SharpEquations.Internal.Xslt
         {
             var first = Round(start);
             var end = first + Round(length);
+            var position = 0;
+            var index = 0;
+            var from = -1;
+            var to = 0;
+            foreach (var rune in s.EnumerateRunes())
+            {
+                position++;
+                var next = index + (rune.IsBmp ? 1 : 2);
+                if (position >= first && position < end)
+                {
+                    // a lone surrogate, which reads as U+FFFD, is written as U+FFFD
+                    if (rune.Value == 0xFFFD && s[index] != '\uFFFD')
+                        return SubstringOfRunes(s, first, end);
+                    if (from < 0)
+                        from = index;
+                    to = next;
+                }
+                else if (from >= 0)
+                {
+                    break;
+                }
+                index = next;
+            }
+            if (from < 0)
+                return "";
+            return from == 0 && to == s.Length ? s : s.Substring(from, to - from);
+        }
+
+        private static string SubstringOfRunes(string s, double first, double end)
+        {
             var result = new StringBuilder();
             var position = 0;
-            foreach (var rune in CodePoints.Of(s))
+            foreach (var rune in s.EnumerateRunes())
             {
                 position++;
                 if (position >= first && position < end)
@@ -616,7 +646,13 @@ namespace SharpEquations.Internal.Xslt
             return result.ToString();
         }
 
-        public static double StringLength(string s) => CodePoints.Of(s).Count();
+        public static double StringLength(string s)
+        {
+            var length = 0;
+            foreach (var rune in s.EnumerateRunes())
+                length++;
+            return length;
+        }
 
         public static string NormalizeSpace(string s)
         {
@@ -637,20 +673,14 @@ namespace SharpEquations.Internal.Xslt
             return result.ToString();
         }
 
-        public static string Translate(string s, string from, string to)
+        public static string Translate(string s, string from, string to) => new TranslateMap(from, to).Apply(s);
+
+        /// <summary>translate() with the map of the last call from the same place, which mostly has the same arguments.</summary>
+        public static string Translate(string s, string from, string to, ref TranslateMap? map)
         {
-            var source = CodePoints.Of(from).ToList();
-            var target = CodePoints.Of(to).ToList();
-            var result = new StringBuilder(s.Length);
-            foreach (var rune in CodePoints.Of(s))
-            {
-                var index = source.IndexOf(rune);
-                if (index < 0)
-                    result.Append(rune.ToString());
-                else if (index < target.Count)
-                    result.Append(target[index].ToString());
-            }
-            return result.ToString();
+            if (map == null || !map.Maps(from, to))
+                map = new TranslateMap(from, to);
+            return map.Apply(s);
         }
 
         public static double Round(double value)

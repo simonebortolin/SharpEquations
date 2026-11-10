@@ -29,6 +29,7 @@ namespace SharpEquations.XsltGenerator
 
         private readonly Dictionary<string, string> names = new Dictionary<string, string>();
         private readonly Dictionary<string, string> tests = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> statics = new Dictionary<string, string>();
         private readonly Dictionary<string, NamedTemplate> namedTemplates = new Dictionary<string, NamedTemplate>();
         private readonly Dictionary<string, GlobalVariable> globals = new Dictionary<string, GlobalVariable>();
         private readonly Dictionary<string, int> modes = new Dictionary<string, int> { [""] = 0 };
@@ -186,6 +187,27 @@ namespace SharpEquations.XsltGenerator
                 tests.Add(key, field);
                 testFields.Line("private static readonly NodeTest " + field + " = " + init + ";");
             }
+            return field;
+        }
+
+        /// <summary>A static field of the class with this value, the same for the same value.</summary>
+        public string StaticField(string type, string init)
+        {
+            var key = type + " " + init;
+            if (!statics.TryGetValue(key, out var field))
+            {
+                field = "Static" + statics.Count;
+                statics.Add(key, field);
+                staticFields.Line("private static readonly " + type + " " + field + " = " + init + ";");
+            }
+            return field;
+        }
+
+        /// <summary>A new field of the stylesheet that runs.</summary>
+        public string InstanceField(string type)
+        {
+            var field = NewName("field");
+            instanceFields.Line("private " + type + " " + field + ";");
             return field;
         }
 

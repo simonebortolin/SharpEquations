@@ -260,7 +260,9 @@ namespace SharpEquations.XsltGenerator
                     return new Compiled("NormalizeSpace(" + StringArgument(0) + ")", XType.String);
                 case "translate":
                     Arity(3, 3);
-                    return new Compiled("Translate(" + Str(args[0]) + ", " + Str(args[1]) + ", " + Str(args[2]) + ")", XType.String);
+                    if (function.Arguments[1] is LiteralExpr from && function.Arguments[2] is LiteralExpr to)
+                        return new Compiled(stylesheet.StaticField("TranslateMap", "new TranslateMap(" + Literal(from.Value) + ", " + Literal(to.Value) + ")") + ".Apply(" + Str(args[0]) + ")", XType.String);
+                    return new Compiled("Translate(" + Str(args[0]) + ", " + Str(args[1]) + ", " + Str(args[2]) + ", ref " + stylesheet.InstanceField("TranslateMap?") + ")", XType.String);
                 case "boolean":
                     Arity(1, 1);
                     return new Compiled(Bool(args[0]), XType.Boolean);
