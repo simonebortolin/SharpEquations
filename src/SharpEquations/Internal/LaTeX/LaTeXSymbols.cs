@@ -208,7 +208,9 @@ namespace SharpEquations.Internal.LaTeX
                 case "_":
                     return "\\" + ch;
             }
-            if (Alphanumerics.TryGetValue(ch, out var styled))
+            // a letterlike symbol with a command of its own is the command (ℑ is \Im, not \mathfrak{I})
+            bool letterlike = ch.Length == 1 && ch[0] is >= '℀' and <= '⅏' && Commands.ContainsKey(ch);
+            if (!letterlike && Alphanumerics.TryGetValue(ch, out var styled))
             {
                 var letter = Commands.TryGetValue(styled.Plain, out var greek) ? "\\" + greek + " " : styled.Plain;
                 // a capital Greek letter is upright in TeX (\Gamma): italic, it is \mathit{\Gamma}

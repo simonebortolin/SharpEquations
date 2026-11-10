@@ -43,6 +43,12 @@ Thilo Planz, and Javier Fernandez.
 `mtef/go`: two "Equation Native" streams extracted from MathType OLE objects supplied by the user and attributed to the
 Go project in the pasted source. `expected-MathML/` contains the corresponding MathML produced by SharpEquations.
 
+`mtef/npoi`: seven "Equation Native" streams (`*.eqn`) of the MathType objects of `equations-ole-all.doc` of the test
+data of NPOI (`testcases/test-data/document`), one paragraph of MathType's palettes each: `overlines` (horizontal
+strikes), `operators`, `symbols` (ℓ, ℑ, ℜ, ℘, ℏ, ℵ...), `fraction-and-rad` (with two long divisions), `bra-ket`,
+`parentheses` and `nested-fences` (angle brackets as MTEF writes them, U+2329 and U+232A), extracted from the
+`ObjectPool` of the document.
+
 `mtef/mtef-rs`: the "Equation Native" stream extracted from the MathType OLE object with the duplicate filename,
 supplied by the user and attributed to [hiro93/mtef-rs](https://github.com/hiro93/mtef-rs).
 `expected-MathML/` contains the MathML produced by SharpEquations.
