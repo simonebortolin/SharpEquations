@@ -335,6 +335,15 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\def\R{\mathbb{R}} x\in\R", @"x\in\mathbb{R}")]
         [Arguments(@"\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}\pd{f}{x}", @"\frac{\partial f}{\partial x}")]
         [Arguments(@"\newcommand{\N}{\mathbb{N}}\N", @"\mathbb{N}")]
+        [Arguments(@"\newcommand{\f}[2][y]{#1+#2} \f{a}+\f[b]{c}", @"y+a+b+c")]
+        [Arguments(@"\newcommand{\g}[1][Hello]{#1} \g{world}", @"Helloworld")]
+        [Arguments(@"\newcommand{\g}[1][a]{#1^2} \g", @"a^2")]
+        [Arguments(@"\newcommand{\e}{} \e x", @"x")]
+        [Arguments(@"\def\e{}\e x+\e y", @"x+y")]
+        [Arguments(@"\newcommand{\h}[2]{} \h{a}{b}x", @"x")]
+        [Arguments(@"\DeclareMathOperator{\Res}{Res} \Res_{z=0}", @"\operatorname{Res}_{z=0}")]
+        [Arguments(@"\DeclareMathOperator\Tr{Tr} \Tr A", @"\operatorname{Tr}A")]
+        [Arguments(@"\DeclareMathOperator*{\argmax}{argmax} \argmax_x f", @"\operatorname{argmax}_xf")]
         public async Task ExpandsMacros(string latex, string expected)
         {
             await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX).ToString(EquationFormat.LaTeX)).IsEqualTo(expected);
