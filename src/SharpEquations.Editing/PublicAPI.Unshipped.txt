@@ -3,8 +3,15 @@ SharpEquations.Editing.IMathGeometry
 SharpEquations.Editing.IMathGeometry.GetCaretX(SharpEquations.Editing.MathPosition! position) -> double?
 SharpEquations.Editing.IMathGeometry.GetNearestPosition(System.Collections.Generic.IReadOnlyList<int>! rowPath, double x) -> SharpEquations.Editing.MathPosition?
 SharpEquations.Editing.IMathGeometry.GetPositionOnAdjacentLine(SharpEquations.Editing.MathPosition! position, int direction) -> SharpEquations.Editing.MathPosition?
+SharpEquations.Editing.MathAutoCorrect
+SharpEquations.Editing.MathAutoCorrect.Entries.get -> System.Collections.Generic.IDictionary<string!, string!>!
+SharpEquations.Editing.MathAutoCorrect.MathAutoCorrect(bool withDefaults = true) -> void
+SharpEquations.Editing.MathAutoCorrect.ReplaceCommands.get -> bool
+SharpEquations.Editing.MathAutoCorrect.ReplaceCommands.set -> void
 SharpEquations.Editing.MathEditor
 SharpEquations.Editing.MathEditor.Anchor.get -> SharpEquations.Editing.MathPosition!
+SharpEquations.Editing.MathEditor.AutoCorrect.get -> SharpEquations.Editing.MathAutoCorrect?
+SharpEquations.Editing.MathEditor.AutoCorrect.set -> void
 SharpEquations.Editing.MathEditor.Backspace() -> void
 SharpEquations.Editing.MathEditor.BuildDown() -> void
 SharpEquations.Editing.MathEditor.BuildUpAll() -> void
@@ -97,6 +104,7 @@ override SharpEquations.Editing.MathNode.ToString() -> string!
 override SharpEquations.Editing.MathPosition.Equals(object? obj) -> bool
 override SharpEquations.Editing.MathPosition.GetHashCode() -> int
 override SharpEquations.Editing.MathPosition.ToString() -> string!
+static SharpEquations.Editing.MathAutoCorrect.Defaults.get -> System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>!
 static SharpEquations.Editing.MathNode.Element(string! name, System.Collections.Generic.IEnumerable<SharpEquations.Editing.MathNode!>! children, System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>? attributes = null) -> SharpEquations.Editing.MathNode!
 static SharpEquations.Editing.MathNode.FromMathML(System.Xml.Linq.XElement! element) -> SharpEquations.Editing.MathNode!
 static SharpEquations.Editing.MathNode.Row(System.Collections.Generic.IEnumerable<SharpEquations.Editing.MathNode!>! children, System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>? attributes = null) -> SharpEquations.Editing.MathNode!

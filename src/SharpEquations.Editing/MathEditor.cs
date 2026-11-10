@@ -23,6 +23,7 @@ namespace SharpEquations.Editing
         private readonly History redo = new History();
         private EquationFormat inputFormat = EquationFormat.UnicodeMath;
         private MathPosition? typingAt;
+        private MathPosition? deferredAt;
 
         /// <summary>An editor of the equation, or of an empty equation.</summary>
         public MathEditor(Equation? equation = null)
@@ -60,6 +61,13 @@ namespace SharpEquations.Editing
                 inputFormat = value;
             }
         }
+
+        /// <summary>
+        /// The math autocorrect, which replaces sequences by their symbols as they are typed (<c>-&gt;</c> by →,
+        /// <c>\alpha</c> and a space by α), with the entries of Word by default; null for none. An undo right after a
+        /// replacement gives back what was typed.
+        /// </summary>
+        public MathAutoCorrect? AutoCorrect { get; set; } = new MathAutoCorrect();
 
         /// <summary>The equation is shown as linear text (one run) rather than built up.</summary>
         public bool IsLinear { get; private set; }
@@ -159,10 +167,14 @@ namespace SharpEquations.Editing
                 SetLinear(false);
                 return;
             }
+            var state = Snapshot();
+            var corrected = FinishAutoCorrect();
             var built = Built();
-            if (ReferenceEquals(built, Root))
+            if (!corrected && ReferenceEquals(built, Root))
                 return;
-            PushUndo();
+            undo.Push(state);
+            redo.Clear();
+            typingAt = deferredAt = null;
             Root = built;
             SetCaretAtEnd();
             OnChanged(true);
@@ -216,9 +228,11 @@ namespace SharpEquations.Editing
                 }
                 if (Selection != null)
                     RemoveSelection();
+                var resumes = deferredAt != null && deferredAt.Equals(Caret);
+                deferredAt = null;
                 InsertRune(rune);
-                if (!IsLinear && BuildUp.IsTrigger(rune, InputFormat))
-                    built |= TryBuildUpAtCaret(rune.Value == ' ');
+                if (!IsLinear)
+                    built |= TypedAtCaret(rune, resumes);
             }
             typingAt = built ? null : Caret;
             OnChanged(true);
@@ -675,7 +689,7 @@ namespace SharpEquations.Editing
         {
             Anchor = new MathPosition(MathTree.RootRow, 0);
             Caret = new MathPosition(MathTree.RootRow, RootRow.Children.Count);
-            typingAt = null;
+            typingAt = deferredAt = null;
             OnChanged(false);
         }
 
@@ -851,8 +865,111 @@ namespace SharpEquations.Editing
             }
         }
 
-        /// <summary>Builds up the argument before the caret, in the run of the caret, after a trigger was typed.</summary>
-        private bool TryBuildUpAtCaret(bool space)
+        /// <summary>
+        /// Corrects and builds up what the character just typed ends: the autocorrect first, then the build up of a
+        /// trigger, as one edit with the autocorrect, so that an undo gives back what was typed. A trigger that starts a
+        /// sequence of the autocorrect (the <c>+</c> of <c>+-</c>) waits for the next character, which builds up what the
+        /// trigger would have (<paramref name="resumes"/>) when it does not continue the sequence. Returns whether the
+        /// equation changed.
+        /// </summary>
+        private bool TypedAtCaret(Rune rune, bool resumes)
+        {
+            var corrected = TryAutoCorrect(rune, out var consumesSpace);
+            var trigger = BuildUp.IsTrigger(rune, InputFormat);
+            if (!trigger && !resumes)
+                return corrected;
+
+            var space = rune.Value == ' ';
+            // a character that is no trigger waits with the trigger only if they start a sequence together
+            if (!space && AutoCorrect != null && MathTree.Get(Root, Caret.Path) is { IsRun: true } run
+                && AutoCorrect.Pending(CodePointText.Substring(run.Text, 0, Caret.Offset), InputFormat) > (trigger ? 0 : 1))
+            {
+                deferredAt = Caret;
+                return corrected;
+            }
+
+            var built = trigger ? TryBuildUpAtCaret(space, recordUndo: !corrected) : TryBuildUpAtCaret(false, held: 1, recordUndo: !corrected);
+            if (!built && consumesSpace)
+                RemoveSpaceBeforeCaret();
+            return corrected || built;
+        }
+
+        /// <summary>
+        /// Replaces the sequence of the autocorrect that ends before the character just typed, in the run of the caret,
+        /// and the one the character ends when nothing can continue it (<c>!=</c> as soon as the <c>=</c> is typed), as
+        /// an edit of its own: an undo gives back what was typed. <paramref name="consumesSpace"/>: the character is a
+        /// space that ended a command or a shortcut, which is not kept unless it builds up.
+        /// </summary>
+        private bool TryAutoCorrect(Rune typed, out bool consumesSpace)
+        {
+            consumesSpace = false;
+            var caret = Caret;
+            if (AutoCorrect == null || MathTree.Get(Root, caret.Path) is not { IsRun: true } run)
+                return false;
+
+            var state = Snapshot();
+            var replaced = false;
+            var before = CodePointText.Substring(run.Text, 0, caret.Offset - 1);
+            var entry = AutoCorrect.Match(before, typed.ToString(), InputFormat);
+            if (entry == null && typed.Value == ' ')
+                entry = AutoCorrect.MatchCommand(before, InputFormat);
+            if (entry is { } e)
+            {
+                ApplyAutoCorrect(caret, run, caret.Offset - 1, e, 1);
+                consumesSpace = typed.Value == ' ';
+                replaced = true;
+            }
+
+            caret = Caret;
+            run = MathTree.Get(Root, caret.Path);
+            if (AutoCorrect.Match(CodePointText.Substring(run.Text, 0, caret.Offset), string.Empty, InputFormat) is { } complete)
+            {
+                ApplyAutoCorrect(caret, run, caret.Offset, complete, 0);
+                replaced = true;
+            }
+            if (replaced)
+            {
+                undo.Push(state);
+                redo.Clear();
+            }
+            return replaced;
+        }
+
+        /// <summary>Replaces the sequence that ends at the caret, when nothing more is typed (Enter, the end of the input).</summary>
+        private bool FinishAutoCorrect()
+        {
+            var caret = Canonical(Caret);
+            if (AutoCorrect == null || MathTree.Get(Root, caret.Path) is not { IsRun: true } run)
+                return false;
+            if (AutoCorrect.Match(CodePointText.Substring(run.Text, 0, caret.Offset), string.Empty, InputFormat, final: true) is not { } entry)
+                return false;
+            ApplyAutoCorrect(caret, run, caret.Offset, entry, 0);
+            return true;
+        }
+
+        /// <summary>Replaces the sequence of an entry that ends at an offset of the run, with the caret after the replacement and <paramref name="after"/> code points.</summary>
+        private void ApplyAutoCorrect(MathPosition caret, MathNode run, int end, KeyValuePair<string, string> entry, int after)
+        {
+            var start = end - CodePointText.Length(entry.Key);
+            var text = CodePointText.Insert(CodePointText.Remove(run.Text, start, end - start), start, entry.Value);
+            Root = MathTree.Replace(Root, caret.Path, run.WithText(text));
+            Caret = Anchor = new MathPosition(caret.Path, start + CodePointText.Length(entry.Value) + after);
+        }
+
+        private void RemoveSpaceBeforeCaret()
+        {
+            var caret = Caret;
+            if (MathTree.Get(Root, caret.Path) is not { IsRun: true } run || caret.Offset == 0
+                || CodePointText.Substring(run.Text, caret.Offset - 1, 1) != " ")
+                return;
+            ReplaceRun(MathTree.Parent(caret.Path), caret.Path[caret.Path.Count - 1], CodePointText.Remove(run.Text, caret.Offset - 1, 1), caret.Offset - 1);
+        }
+
+        /// <summary>
+        /// Builds up the argument before the caret, in the run of the caret, after a trigger was typed; with
+        /// <paramref name="held"/>, the trigger was typed before the last code points, which stay in a run with the caret.
+        /// </summary>
+        private bool TryBuildUpAtCaret(bool space, int held = 0, bool recordUndo = true)
         {
             var caret = Caret;
             var run = MathTree.Get(Root, caret.Path);
@@ -865,7 +982,13 @@ namespace SharpEquations.Editing
             var runes = CodePointText.Runes(run.Text);
             var before = runes.Take(caret.Offset).ToList();
             var after = CodePointText.Join(runes.Skip(caret.Offset));
-            var argument = space ? before.Take(before.Count - 1).ToList() : before;
+            var argument = space ? before.Take(before.Count - 1).ToList() : before.Take(before.Count - held).ToList();
+            if (held > 0)
+            {
+                after = CodePointText.Join(before.Skip(argument.Count)) + after;
+                if (argument.All(r => r.Value == ' '))
+                    return false;
+            }
 
             if (argument.All(r => r.Value == ' '))
             {
@@ -889,14 +1012,19 @@ namespace SharpEquations.Editing
             if (nodes == null || space && BuildUp.EndsWithPendingCommand(text, nodes))
                 return false;
 
-            undo.Push(Snapshot());
-            redo.Clear();
+            if (recordUndo)
+            {
+                undo.Push(Snapshot());
+                redo.Clear();
+            }
             var children = nodes.ToList();
             if (after.Length > 0)
                 children.Add(MathNode.Run(after));
             children.AddRange(row.Children.Skip(j + 1));
             Root = MathTree.Replace(Root, rowPath, row.WithChildren(children));
-            Caret = Anchor = Canonical(new MathPosition(rowPath, nodes.Count));
+            Caret = Anchor = held > 0
+                ? new MathPosition(MathTree.Append(rowPath, nodes.Count), held)
+                : Canonical(new MathPosition(rowPath, nodes.Count));
             return true;
         }
 
@@ -973,7 +1101,7 @@ namespace SharpEquations.Editing
                     var item = owner.Item[owner.Item.Length - 1];
                     Anchor = new MathPosition(parent, item);
                     Caret = new MathPosition(parent, item + 1);
-                    typingAt = null;
+                    typingAt = deferredAt = null;
                     OnChanged(false);
                 }
                 return;
@@ -1013,7 +1141,7 @@ namespace SharpEquations.Editing
                 // a structure is selected first, and deleted the second time
                 Anchor = new MathPosition(rowPath, target);
                 Caret = new MathPosition(rowPath, target + 1);
-                typingAt = null;
+                typingAt = deferredAt = null;
                 OnChanged(false);
             }
         }
@@ -1202,7 +1330,7 @@ namespace SharpEquations.Editing
             Caret = position;
             if (!extend)
                 Anchor = position;
-            typingAt = null;
+            typingAt = deferredAt = null;
             OnChanged(false);
         }
 
@@ -1310,7 +1438,7 @@ namespace SharpEquations.Editing
         {
             undo.Push(Snapshot());
             redo.Clear();
-            typingAt = null;
+            typingAt = deferredAt = null;
         }
 
         private void Restore(State state)
@@ -1319,7 +1447,7 @@ namespace SharpEquations.Editing
             Caret = state.Caret;
             Anchor = state.Anchor;
             IsLinear = state.IsLinear;
-            typingAt = null;
+            typingAt = deferredAt = null;
             OnChanged(true);
         }
 

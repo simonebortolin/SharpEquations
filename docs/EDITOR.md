@@ -70,6 +70,11 @@ The behaviour is the one of the equations of Word and of `RichEditBox` in math m
   the commands of the core (`EquationCommands`: the control words of UnicodeMath, the commands of LaTeX, each with its
   symbol); a command with a symbol becomes the symbol, as Word's math autocorrect does, a LaTeX structure its text with
   the caret in its first argument (`\frac{|}{}`).
+- **Math AutoCorrect** (`MathAutoCorrect`; `AutoCorrect` and `IsAutoCorrectEnabled` of `MathEditBox`): as in Word,
+  `\alpha␣` becomes α (the commands of `EquationCommands` with a symbol) and `->`, `<=`, `!=`, `+-`, `...` become
+  → ≤ ≠ ± … as they are typed; `Entries` is the list the application changes (`\R` → ℝ). An operator that starts a
+  sequence waits for the next character to build up; in LaTeX only the backslash shortcuts apply; Ctrl+Z right after
+  a replacement gives back what was typed.
 - **Floating bar** (`MathQuickBar`, `IsQuickBarEnabled`): under the equation, at the caret, it offers the completions of
   the command being typed (Up and Down choose, Tab or Enter take, Esc closes), the structures that take the selection
   (fraction, root, scripts, brackets, bar, box, build down), the commands of the table of the caret, and quick symbols

@@ -19,7 +19,7 @@ namespace SharpEquations.Avalonia.Tests.Editing
 
         [Test]
         [Arguments("a/b ", "a/b")]
-        [Arguments("x^2+", "x^2+")]
+        [Arguments("x^2+1 ", "x^2+1")]
         [Arguments("\\alpha ", "α")]
         [Arguments("(a+b)/c ", "(a+b)/c")]
         [Arguments("\\sqrt(x) ", "√x")]

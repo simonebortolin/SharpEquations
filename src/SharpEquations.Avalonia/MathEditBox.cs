@@ -100,6 +100,10 @@ namespace SharpEquations.Avalonia
         public static readonly StyledProperty<bool> IsQuickBarEnabledProperty =
             AvaloniaProperty.Register<MathEditBox, bool>(nameof(IsQuickBarEnabled), true);
 
+        /// <summary>Whether the math autocorrect (<see cref="AutoCorrect"/>) replaces sequences by their symbols as they are typed.</summary>
+        public static readonly StyledProperty<bool> IsAutoCorrectEnabledProperty =
+            AvaloniaProperty.Register<MathEditBox, bool>(nameof(IsAutoCorrectEnabled), true);
+
         /// <summary>The gesture that switches between the built up and the linear view.</summary>
         public static readonly StyledProperty<KeyGesture?> ToggleViewModeGestureProperty =
             AvaloniaProperty.Register<MathEditBox, KeyGesture?>(nameof(ToggleViewModeGesture), new KeyGesture(Key.L, KeyModifiers.Control | KeyModifiers.Shift));
@@ -112,6 +116,7 @@ namespace SharpEquations.Avalonia
         private bool caretVisible = true;
         private bool selecting;
         private bool updatingEquation;
+        private MathAutoCorrect autoCorrect;
 
         static MathEditBox()
         {
@@ -127,6 +132,7 @@ namespace SharpEquations.Avalonia
             Editor = new MathEditor { IsDisplay = true };
             Editor.Changed += OnEditorChanged;
             Editor.ContentChanged += OnEditorContentChanged;
+            autoCorrect = Editor.AutoCorrect ?? new MathAutoCorrect();
             inputClient = new InputClient(this);
             TextInputMethodClientRequested += (_, e) => e.Client = inputClient;
             QuickBar = new MathQuickBar(this);
@@ -326,6 +332,28 @@ namespace SharpEquations.Avalonia
         /// <summary>The equation in a format; for LaTeX, the LaTeX of Word.</summary>
         public string GetText(EquationFormat format) => Editor.GetText(format);
 
+        /// <summary>
+        /// The rules of the math autocorrect (<see cref="MathEditor.AutoCorrect"/>): <c>-&gt;</c> becomes → and
+        /// <c>\alpha</c> and a space α as they are typed, with the entries of Word by default and those the application
+        /// adds or removes; <see cref="IsAutoCorrectEnabled"/> turns it off.
+        /// </summary>
+        public MathAutoCorrect AutoCorrect
+        {
+            get => autoCorrect;
+            set
+            {
+                autoCorrect = value ?? throw new ArgumentNullException(nameof(value));
+                Editor.AutoCorrect = IsAutoCorrectEnabled ? value : null;
+            }
+        }
+
+        /// <summary>Whether the math autocorrect (<see cref="AutoCorrect"/>) replaces sequences as they are typed; true by default.</summary>
+        public bool IsAutoCorrectEnabled
+        {
+            get => GetValue(IsAutoCorrectEnabledProperty);
+            set => SetValue(IsAutoCorrectEnabledProperty, value);
+        }
+
         /// <summary>The number of the equation, shown at the right of its line; null without one (<see cref="MathEditor.EquationNumber"/>).</summary>
         public string? EquationNumber
         {
@@ -442,6 +470,10 @@ namespace SharpEquations.Avalonia
             else if (change.Property == IsQuickBarEnabledProperty)
             {
                 UpdateQuickBar();
+            }
+            else if (change.Property == IsAutoCorrectEnabledProperty)
+            {
+                Editor.AutoCorrect = IsAutoCorrectEnabled ? autoCorrect : null;
             }
         }
 
