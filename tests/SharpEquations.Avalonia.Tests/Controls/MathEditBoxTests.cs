@@ -182,5 +182,22 @@ namespace SharpEquations.Avalonia.Tests.Controls
             }));
             await Assert.That(caret.Path).IsEquivalentTo(new[] { 0, 0, 1 });
         }
+
+        [Test]
+        public async Task AutoCorrectCanBeTurnedOff()
+        {
+            var (on, off) = await Headless.Run(() => WithEditor((window, editor) =>
+            {
+                editor.AutoCorrect.Entries["\\R"] = "ℝ";
+                window.KeyTextInput("a<=b\\R ");
+                var corrected = editor.Equation;
+                editor.Equation = null;
+                editor.IsAutoCorrectEnabled = false;
+                window.KeyTextInput("\\R ");
+                return (corrected, editor.Editor.AutoCorrect == null ? editor.GetText(EquationFormat.UnicodeMath) : null);
+            }));
+            await Assert.That(on).IsEqualTo(Display("a≤bℝ"));
+            await Assert.That(off).IsNotNull().And.DoesNotContain("ℝ");
+        }
     }
 }

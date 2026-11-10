@@ -26,6 +26,8 @@ SharpEquations.Avalonia.MathCopyingEventArgs.Equation.get -> SharpEquations.Equa
 SharpEquations.Avalonia.MathCopyingEventArgs.Item.get -> Avalonia.Input.DataTransferItem!
 SharpEquations.Avalonia.MathCopyingEventArgs.MathCopyingEventArgs(SharpEquations.Equation! equation, Avalonia.Input.DataTransferItem! item) -> void
 SharpEquations.Avalonia.MathEditBox
+SharpEquations.Avalonia.MathEditBox.AutoCorrect.get -> SharpEquations.Editing.MathAutoCorrect!
+SharpEquations.Avalonia.MathEditBox.AutoCorrect.set -> void
 SharpEquations.Avalonia.MathEditBox.Background.get -> Avalonia.Media.IBrush?
 SharpEquations.Avalonia.MathEditBox.Background.set -> void
 SharpEquations.Avalonia.MathEditBox.BorderBrush.get -> Avalonia.Media.IBrush?
@@ -62,6 +64,8 @@ SharpEquations.Avalonia.MathEditBox.IsContextMenuEnabled.get -> bool
 SharpEquations.Avalonia.MathEditBox.IsContextMenuEnabled.set -> void
 SharpEquations.Avalonia.MathEditBox.IsDisplay.get -> bool
 SharpEquations.Avalonia.MathEditBox.IsDisplay.set -> void
+SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabled.get -> bool
+SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabled.set -> void
 SharpEquations.Avalonia.MathEditBox.IsQuickBarEnabled.get -> bool
 SharpEquations.Avalonia.MathEditBox.IsQuickBarEnabled.set -> void
 SharpEquations.Avalonia.MathEditBox.IsQuickBarOpen.get -> bool
@@ -158,6 +162,7 @@ static readonly SharpEquations.Avalonia.MathEditBox.ForegroundProperty -> Avalon
 static readonly SharpEquations.Avalonia.MathEditBox.InputFormatProperty -> Avalonia.StyledProperty<SharpEquations.EquationFormat>!
 static readonly SharpEquations.Avalonia.MathEditBox.IsContextMenuEnabledProperty -> Avalonia.StyledProperty<bool>!
 static readonly SharpEquations.Avalonia.MathEditBox.IsDisplayProperty -> Avalonia.StyledProperty<bool>!
+static readonly SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabledProperty -> Avalonia.StyledProperty<bool>!
 static readonly SharpEquations.Avalonia.MathEditBox.IsQuickBarEnabledProperty -> Avalonia.StyledProperty<bool>!
 static readonly SharpEquations.Avalonia.MathEditBox.IsReadOnlyProperty -> Avalonia.StyledProperty<bool>!
 static readonly SharpEquations.Avalonia.MathEditBox.MathFontFamilyProperty -> Avalonia.StyledProperty<Avalonia.Media.FontFamily?>!
