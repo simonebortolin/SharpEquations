@@ -192,36 +192,6 @@ namespace SharpEquations.Tests.LaTeX
             await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX)).IsEqualTo(Equation.Parse(latex, EquationFormat.LaTeX)).Because("the LaTeX written reads back");
         }
 
-        // operator names with nothing after them, and the names of amsmath that are two words, one name whose words a
-        // six-per-em space parts (as MathML writes them); the forms with a bar or an arrow (\varinjlim) are read as the names
-        [Test]
-        [Arguments(@"\lg x", false, @"\lg x", "lg⁡𝑥")]
-        [Arguments(@"\lg", false, @"\lg", "lg")]
-        [Arguments(@"\liminf_{n\to\infty} a_n", false, @"\liminf_{n\to\infty}a_n", "lim\u2006inf⁡_(𝑛→∞) 𝑎_𝑛")]
-        [Arguments(@"\liminf_{n\to\infty} a_n", true, @"\liminf_{n\to\infty}a_n", "lim\u2006inf⁡_(𝑛→∞) 𝑎_𝑛")]
-        [Arguments(@"\limsup x_n", false, @"\limsup x_n", "lim\u2006sup⁡𝑥_𝑛")]
-        [Arguments(@"\injlim A_i", false, @"\injlim A_i", "inj\u2006lim⁡𝐴_𝑖")]
-        [Arguments(@"\projlim_i A_i", true, @"\projlim_iA_i", "proj\u2006lim⁡_𝑖 𝐴_𝑖")]
-        [Arguments(@"\liminf", false, @"\liminf", "lim\u2006inf⁡")]
-        [Arguments(@"\varinjlim", false, @"\injlim", "inj\u2006lim⁡")]
-        [Arguments(@"\varprojlim A_i", false, @"\projlim A_i", "proj\u2006lim⁡𝐴_𝑖")]
-        [Arguments(@"\varliminf + \varlimsup", false, @"\liminf+\limsup", "lim\u2006inf⁡+lim\u2006sup⁡")]
-        [Arguments(@"\operatorname*{argmax}_{x}", true, @"\operatorname{argmax}_x", "argmax⁡_𝑥")]
-        [Arguments(@"\operatorname{argmax}_x + 1", false, @"\operatorname{argmax}_x+1", "argmax⁡_𝑥+1")]
-        [Arguments(@"\operatornamewithlimits{lim}_{x}", true, @"\lim_x", "lim_𝑥")]
-        [Arguments(@"\operatorname{lim}_{x} f + \operatorname*{max}x", true, @"\lim_xf+\max x", "lim_𝑥 ⁡𝑓+max⁡𝑥")]
-        public async Task ReadsOperatorNames(string latex, bool display, string expectedLaTeX, string expectedUnicodeMath)
-        {
-            var options = new EquationOptions { Display = display };
-            var equation = Equation.Parse(latex, EquationFormat.LaTeX, options);
-            await Assert.That(equation.ToString(EquationFormat.LaTeX)).IsEqualTo(expectedLaTeX);
-            await Assert.That(equation.ToString(EquationFormat.UnicodeMath)).IsEqualTo(expectedUnicodeMath);
-            var word = new EquationOptions { Display = display, LaTeXFlavor = LaTeXFlavor.Word };
-            await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX, options)).IsEqualTo(equation).Because("the standard LaTeX reads back");
-            await Assert.That(Equation.Parse(equation.ToString(EquationFormat.LaTeX, word), EquationFormat.LaTeX, word)).IsEqualTo(equation).Because("Word's LaTeX reads back");
-            await Assert.That(Equation.Parse(expectedUnicodeMath, EquationFormat.UnicodeMath, options)).IsEqualTo(equation).Because("the UnicodeMath reads back");
-        }
-
         // the demos of math.webc.site, whose LaTeX and UnicodeMath read back to the same equation
         [Test]
         [Arguments(@"\left. \frac{df}{dx} \right| _0", @"{\left.\frac{df}{dx}\right|}_0", @"├𝑑𝑓/𝑑𝑥 ┤|₀")]
@@ -386,6 +356,39 @@ namespace SharpEquations.Tests.LaTeX
             await Assert.That(Equation.Parse(@"\half x\in\R", EquationFormat.LaTeX, options).ToString(EquationFormat.LaTeX)).IsEqualTo(@"\frac{1}{2}x\in\mathbb{R}");
         }
 
+        // the operator names of amsmath, alone or with their limits, which go under them in a display equation; the LaTeX
+        // and the UnicodeMath written for them read back as the same equation
+        [Test]
+        [Arguments(@"\lg", false, "<mi>lg</mi><mo>\u2061</mo>")]
+        [Arguments(@"\lg x", false, "<mi>lg</mi><mo>\u2061</mo><mi>x</mi>")]
+        [Arguments(@"\operatorname{lg}", true, "<mi>lg</mi><mo>\u2061</mo>")]
+        [Arguments(@"\liminf", true, "<mi>lim\u2009inf</mi><mo>\u2061</mo>")]
+        [Arguments(@"\limsup_{n} a_n", true, "<munder><mi>lim\u2009sup</mi><mi>n</mi></munder><mo>\u2061</mo><msub><mi>a</mi><mi>n</mi></msub>")]
+        [Arguments(@"\limsup_{n} a_n", false, "<msub><mi>lim\u2009sup</mi><mi>n</mi></msub><mo>\u2061</mo><msub><mi>a</mi><mi>n</mi></msub>")]
+        [Arguments(@"\injlim", true, "<mi>inj\u2009lim</mi><mo>\u2061</mo>")]
+        [Arguments(@"\projlim", true, "<mi>proj\u2009lim</mi><mo>\u2061</mo>")]
+        [Arguments(@"\varinjlim", true, "<munder><mi>lim</mi><mo>→</mo></munder>")]
+        [Arguments(@"\varprojlim", true, "<munder><mi>lim</mi><mo>←</mo></munder>")]
+        [Arguments(@"\varliminf", true, "<menclose notation=\"bottom\"><mi>lim</mi></menclose>")]
+        [Arguments(@"\varlimsup", true, "<mover><mi>lim</mi><mo>¯</mo></mover>")]
+        [Arguments(@"\operatorname*{argmax}_{x}", true, "<munder><mi>argmax</mi><mi>x</mi></munder>")]
+        [Arguments(@"\operatorname*{argmax}_{x}", false, "<msub><mi>argmax</mi><mi>x</mi></msub>")]
+        [Arguments(@"\operatorname*{argmax}_{x} f(x)", true, "<munder><mi>argmax</mi><mi>x</mi></munder><mo>\u2061</mo><mi>f</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow>")]
+        [Arguments(@"\operatornamewithlimits{lim}_{x}", true, "<munder><mi>lim</mi><mi>x</mi></munder>")]
+        [Arguments(@"\lim_{x}", true, "<munder><mi>lim</mi><mi>x</mi></munder>")]
+        [Arguments(@"\operatorname*{max}x", true, "<mi>max</mi><mo>\u2061</mo><mi>x</mi>")]
+        [Arguments(@"\operatorname*{argmax}x", false, "<mi>argmax</mi><mo>\u2061</mo><mi>x</mi>")]
+        public async Task ReadsOperatorNamesOfAmsmath(string latex, bool display, string expected)
+        {
+            var options = new EquationOptions { Display = display };
+            var equation = Equation.Parse(latex, EquationFormat.LaTeX, options);
+            var mathML = string.Concat(equation.ToMathML().Elements().Select(e => e.ToString(System.Xml.Linq.SaveOptions.DisableFormatting)))
+                .Replace(" xmlns=\"http://www.w3.org/1998/Math/MathML\"", "");
+            await Assert.That(mathML).IsEqualTo(expected);
+            await Assert.That(Equation.Parse(equation.ToString(EquationFormat.LaTeX), EquationFormat.LaTeX, options)).IsEqualTo(equation);
+            await Assert.That(Equation.Parse(equation.ToString(EquationFormat.UnicodeMath), EquationFormat.UnicodeMath, options)).IsEqualTo(equation);
+        }
+
         [Test]
         [Arguments(@"\newenvironment{wrapper}{a +}{+ c} \begin{wrapper} b \end{wrapper}", @"a+b+c")]
         [Arguments(@"\newenvironment{paren}[1]{\left( #1 +}{\right)} \begin{paren}{x} y \end{paren}", @"\left(x+y\right)")]
@@ -411,6 +414,8 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\foo x", @"Unknown control word \foo in the LaTeX.")]
         [Arguments(@"a+\undefinedcommand", @"Unknown control word \undefinedcommand in the LaTeX.")]
         [Arguments(@"\sgn r", @"Unknown control word \sgn in the LaTeX.")]
+        [Arguments(@"\tr d", @"Unknown control word \tr in the LaTeX.")]
+        [Arguments(@"\Var v", @"Unknown control word \Var in the LaTeX.")]
         [Arguments(@"a \backslash b", @"Unknown control word \backslash in the LaTeX.")]
         [Arguments(@"\sgn2", @"Unknown control word \sgn in the LaTeX.")]
         public async Task RejectsUnknownControlWordsWhenStrict(string latex, string message)
@@ -421,6 +426,8 @@ namespace SharpEquations.Tests.LaTeX
 
         [Test]
         [Arguments(@"\sgn r", @"\sgn", "r")]
+        [Arguments(@"\tr d", @"\tr", "d")]
+        [Arguments(@"\Var v", @"\Var", "v")]
         [Arguments(@"a \backslash b", @"\backslash", "b")]
         [Arguments(@"\sgn  r", @"\sgn", "r")]
         [Arguments(@"\sgn{r}", @"\sgn", "r")]

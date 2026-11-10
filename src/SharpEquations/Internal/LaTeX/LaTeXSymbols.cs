@@ -140,29 +140,6 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>Whether a character is written as a command (α as \alpha, □ as \square).</summary>
         public static bool IsCommand(string ch) => Commands.ContainsKey(ch);
 
-        // the operator names of amsmath that are two words, with their words parted by a six-per-em space, as MathML
-        // writes them (MathJax, latex2mathml)
-        private static readonly Dictionary<string, string> NamesOfTwoWords = new Dictionary<string, string>
-        {
-            ["liminf"] = "lim\u2006inf", ["limsup"] = "lim\u2006sup", ["injlim"] = "inj\u2006lim", ["projlim"] = "proj\u2006lim",
-        };
-
-        // the forms of amsmath that write them as lim with a bar or an arrow under or over it, read as the names, as
-        // latex2mathml reads them
-        private static readonly Dictionary<string, string> VariantsOfTwoWords = new Dictionary<string, string>
-        {
-            ["varliminf"] = "liminf", ["varlimsup"] = "limsup", ["varinjlim"] = "injlim", ["varprojlim"] = "projlim",
-        };
-
-        private static readonly Dictionary<string, string> CommandsOfTwoWords = NamesOfTwoWords.ToDictionary(entry => entry.Value, entry => entry.Key);
-
-        /// <summary>The operator name of two words of a command (liminf and varliminf: lim inf).</summary>
-        public static bool TryGetNameOfTwoWords(string command, out string name) =>
-            NamesOfTwoWords.TryGetValue(VariantsOfTwoWords.TryGetValue(command, out var plain) ? plain : command, out name);
-
-        /// <summary>The command of an operator name of two words (lim inf: liminf).</summary>
-        public static bool TryGetCommandOfTwoWords(string name, out string command) => CommandsOfTwoWords.TryGetValue(name, out command);
-
         /// <summary>The LaTeX of a run of text in math: each character as a letter, a command or itself.</summary>
         public static string Math(string text)
         {

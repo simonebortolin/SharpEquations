@@ -122,10 +122,9 @@ namespace SharpEquations.Tests
                     case "mo" when text != null && Accents.TryGetValue(text, out var mark) && e.Parent!.Name.LocalName is "mover" && e.ElementsBeforeSelf().Any():
                         e.Value = mark;
                         break;
-                    // a name of two words (lim inf) has its words parted by a six-per-em space
-                    case "mi" or "mo" when text != null && text.Length > 1 && text.All(c => char.IsLetter(c) || c == '\u2006'):
+                    case "mi" or "mo" when text != null && text.Length > 1 && text.All(char.IsLetter):
                     case "mi" when text != null && text.Length > 0 && text.All(c => c is '′' or '″' or '‴' or '⁗'):
-                        e.Name = M + (text.All(c => char.IsLetter(c) || c == '\u2006') ? "mi" : "mo");
+                        e.Name = M + (text.All(char.IsLetter) ? "mi" : "mo");
                         break;
                     case "mi" when text is { Length: 1 } && text[0] is >= 'Α' and <= 'Ω' && e.Attribute("mathvariant") == null:
                         e.SetAttributeValue("mathvariant", "normal");
@@ -180,7 +179,7 @@ namespace SharpEquations.Tests
             "spaces", "middle", "mathstrut",
         };
 
-        // what the reader does not read as latex2mathml does, in three groups; a case that starts to pass must leave its
+        // what the reader does not read as latex2mathml does, in four groups; a case that starts to pass must leave its
         // group, and the union of the groups is what LaTeXReadsAsLatex2MathMLReadsIt allows
 
         // commands of MathJax, KaTeX, plain TeX or packages that Word's LaTeX, which the reader follows, does not have:
@@ -201,6 +200,9 @@ namespace SharpEquations.Tests
             "argmax", "widecheck",
         };
 
+        // LaTeX and amsmath that the reader does not read yet: none left
+        private static readonly HashSet<string> NotReadYet = new HashSet<string>();
+
         // the same equation, which SharpEquations holds otherwise: an equation number as the label of its row (\tag),
         // and none for aligned equations, whose numbers latex2mathml writes as cells; the alignment of align, split and
         // cases as marks in one cell; ... as an ellipsis and * as the operator ∗, as Word reads them; a letter of \text
@@ -218,7 +220,7 @@ namespace SharpEquations.Tests
         // a macro is # in its expansion, which TeX rejects there)
         private static readonly HashSet<string> NotLaTeX = new HashSet<string> { "backslash-e", "issue-125-1-overset", "newcommand-escaped-hash" };
 
-        private static readonly HashSet<string> ReadOtherwise = new HashSet<string>(NotInWordLaTeX.Concat(HeldOtherwise).Concat(NotLaTeX));
+        private static readonly HashSet<string> ReadOtherwise = new HashSet<string>(NotInWordLaTeX.Concat(NotReadYet).Concat(HeldOtherwise).Concat(NotLaTeX));
 
         // the macros that latex2mathml expands otherwise than LaTeX: \greeting{world}, whose one argument is optional,
         // which LaTeX gives its default (Hello), leaving {world} after it, where latex2mathml takes world as the argument
@@ -254,7 +256,7 @@ namespace SharpEquations.Tests
             await Assert.That(Conversions()).Count().IsEqualTo(327);
             await Assert.That(Macros()).Count().IsEqualTo(10);
             // a case is in one group of what the reader reads otherwise
-            await Assert.That(ReadOtherwise.Count).IsEqualTo(NotInWordLaTeX.Count + HeldOtherwise.Count + NotLaTeX.Count);
+            await Assert.That(ReadOtherwise.Count).IsEqualTo(NotInWordLaTeX.Count + NotReadYet.Count + HeldOtherwise.Count + NotLaTeX.Count);
         }
 
         // the MathML of latex2mathml writes LaTeX that, once read back, reads back to itself

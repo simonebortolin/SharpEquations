@@ -261,7 +261,8 @@ namespace SharpEquations.Internal.UnicodeMath
             operand.Parser = OneOrMany(factor).Then(x => (object)x.ToList());
             var trigName = Opt(L("a")).And(OneOf(L("sin"), L("cos"), L("tan"), L("sec"), L("csc"), L("cot"))).And(Opt(L("h")))
                 .Then(t => (object)A(t.Item1, t.Item2, t.Item3));
-            var limName = OneOf(L("lim"), L("log"), L("lg"));
+            // the names of two words that TeX parts with a thin space (\liminf), before the name of their first word
+            var limName = OneOf(L("lim\u2009inf"), L("lim\u2009sup"), L("inj\u2009lim"), L("proj\u2009lim"), L("lim"), L("log"), L("lg"));
 
             // scripts
             var subU = unicodeSub.Then(b => (object)O("low", b));
@@ -413,21 +414,15 @@ namespace SharpEquations.Internal.UnicodeMath
                 L("∜").SkipAnd(operand).Then(o => (object)O("root", O(("degree", O("number", "4")), ("of", o)))),
                 opRoot.Then(o => (object)ColoredOperator(o)));
 
-            // the letters of a name marked as a function, its words parted by a six-per-em space (lim inf⁡, as MathML
-            // writes \liminf)
-            var markedName = OneOrMany(alphaN).And(ZeroOrMany(L("\u2006").And(OneOrMany(alphaN))))
-                .Then(t => (object)t.Item1.Concat(t.Item2.SelectMany(w => new[] { w.Item1 }.Concat(w.Item2))).ToList());
             var arctrigName = OneOf(L("arcsin"), L("arcsec"), L("arctan"), L("arccot"), L("arccos"), L("arccsc")).And(Opt(L("h")))
                 .Then(t => (object)A(t.Item1, t.Item2));
-            // a function name that UnicodeMath knows, not the first word of a name marked as a function (lim inf⁡)
             var knownFunctionName = OneOf(trigName, arctrigName, limName,
-                L("arg"), L("def"), L("deg"), L("det"), L("dim"), L("erf"), L("exp"), L("gcd"), L("ker"), L("hom"),
-                L("Im"), L("inf"), L("ln"), L("max"), L("min"), L("mod"), L("Pr"), L("Re"), L("sup"), L("tg"),
-                L("lcm"), L("lub"), L("glb"), L("lim\u00A0inf"), L("lim\u00A0sup"))
-                .AndSkip(Not(alphaAscii)).AndSkip(Not(L("\u2006").And(alphaN)));
-            functionName.Parser = OneOf(
-                knownFunctionName,
-                markedName.AndSkip(L("\u2061")));
+                    L("arg"), L("def"), L("deg"), L("det"), L("dim"), L("erf"), L("exp"), L("gcd"), L("ker"), L("hom"),
+                    L("Im"), L("inf"), L("ln"), L("max"), L("min"), L("mod"), L("Pr"), L("Re"), L("sup"), L("tg"),
+                    L("lcm"), L("lub"), L("glb"), L("lim\u00A0inf"), L("lim\u00A0sup"))
+                .AndSkip(Not(alphaAscii));
+            var appliedFunctionName = OneOrMany(alphaN).AndSkip(L("\u2061")).Then(t => (object)t.ToList());
+            functionName.Parser = OneOf(knownFunctionName, appliedFunctionName);
             var function = OneOf(
                 functionName.AndSkip(Opt(__)).AndSkip(Opt(OneOf(L("\u2061"), opNaryand))).And(Opt(script)).AndSkip(Opt(__)).And(operand).AndSkip(Opt(_))
                     .Then(t =>
@@ -441,22 +436,35 @@ namespace SharpEquations.Internal.UnicodeMath
                         }
                         return (object)O("function", O(("f", O("atoms", c)), ("of", t.Item3)));
                     }),
-                // a name marked as a function with scripts but without an operand (argmax⁡_𝑥 alone) is the name with its
-                // scripts, and not its letters before a script of the function apply sign (but not a function name that
-                // UnicodeMath knows, lim⁡_(𝑎→∞), read as UnicodeMathML reads it)
-                Not(knownFunctionName).SkipAnd(markedName).AndSkip(L("\u2061")).And(script).AndSkip(Opt(_))
+                // a function name that UnicodeMath does not know, with the function apply sign, scripts and nothing to apply
+                // it to (argmax⁡┬𝑥): the name with its scripts, not the letters of the name applied to the sign and its scripts
+                OneOf(knownFunctionName.AndSkip(Opt(__)).AndSkip(L("\u2061")), appliedFunctionName)
+                    .When((context, name) => !UnicodeMathText.IsFunctionName(FunctionName(name, false))).And(OneOf(script, abscript)).AndSkip(Not(Opt(__).SkipAnd(operand)))
                     .Then(t =>
                     {
                         var s = (JsObject)t.Item2;
-                        s["base"] = O("atoms", O(("chars", Join((List<object>)t.Item1)), ("funct", true)));
+                        s["base"] = O("atoms", O(("chars", FunctionName(t.Item1, false)), ("funct", true)));
                         return (object)O("script", s);
+                    }),
+                // a name that UnicodeMath knows but would read as letters, with the function apply sign, a limit under or
+                // over it and its argument (lim inf⁡┬𝑛 𝑎)
+                knownFunctionName.When((context, name) => !UnicodeMathText.IsFunctionName(FunctionName(name, false)))
+                    .AndSkip(Opt(__)).AndSkip(L("\u2061")).And(abscript).AndSkip(Opt(__)).And(operand).AndSkip(Opt(_))
+                    .Then(t =>
+                    {
+                        var s = (JsObject)t.Item2;
+                        s["base"] = O("atoms", O(("chars", FunctionName(t.Item1, false)), ("funct", true)));
+                        return (object)O("function", O(("f", O("script", s)), ("of", t.Item3)));
                     }),
                 functionName.AndSkip(Opt(__)).And(operand).AndSkip(Opt(_))
                     .Then(t => (object)O("function", O(("f", O("atoms", O("chars", FunctionName(t.Item1, false)))), ("of", t.Item2)))),
                 // a name marked as a function without an operand (NaN⁡,) is one name, as a function name is (sin⁡,), and not
-                // its letters; the function apply sign is read after it (but not one with scripts after the sign, argmax⁡┬(𝑥∈𝑆))
-                markedName.AndSkip(Not(Not(L("⁡").And(Not(opScript)))))
-                    .Then(t => (object)O("atoms", O(("chars", Join((List<object>)t)), ("funct", true)))));
+                // its letters; the function apply sign is read after it (but not one with scripts after the sign, argmax⁡┬(𝑥∈𝑆));
+                // so is a name UnicodeMath knows but would read as letters (lg⁡, lim inf⁡)
+                OneOf(knownFunctionName.When((context, name) => !UnicodeMathText.IsFunctionName(FunctionName(name, false))).Then(n => (object)FunctionName(n, false)),
+                        OneOrMany(alphaN).Then(t => (object)Join(t.ToList())))
+                    .AndSkip(Not(Not(L("⁡").And(Not(opScript)))))
+                    .Then(t => (object)O("atoms", O(("chars", t), ("funct", true)))));
 
             // text, overrides, colors, comments, typewriter
             text.Parser = L("\"").SkipAnd(OneOrMany(OneOf(L("\\\"").Then(x => (object)"\""), Not(L("\"")).SkipAnd(anyChar)))).AndSkip(L("\""))

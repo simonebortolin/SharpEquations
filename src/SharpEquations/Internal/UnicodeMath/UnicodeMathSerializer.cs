@@ -692,12 +692,6 @@ namespace SharpEquations.Internal.UnicodeMath
             return "(" + text + ")";
         }
 
-        /// <summary>A name of several letters, not a function's, as the base of scripts: argmax in argmax_𝑥.</summary>
-        private static bool IsScriptedName(XElement mi) =>
-            !mi.HasElements && mi.Parent != null && Name(mi.Parent) is "msub" or "msup" or "msubsup" or "munder" or "mover" or "munderover" &&
-            First(mi.Parent) == mi && Len(Text(mi)) > 1 && !IsFunctionName(Text(mi)) && !HasAttr(mi, "mathvariant") &&
-            CodePoints.Of(Text(mi)).All(c => c.Value == 0x2006 || System.Text.Rune.IsLetter(c));
-
         /// <summary>The name of a function with scripts that is written with the function apply sign after it, or null.</summary>
         private static XElement FunctionName(XElement head)
         {
@@ -713,6 +707,23 @@ namespace SharpEquations.Internal.UnicodeMath
             if (Name(name) != "mi" || Len(Text(name)) < 2 || name.HasElements)
                 return null;
             return nested || !IsFunctionName(Text(name)) ? name : null;
+        }
+
+        // the names of two words of TeX, with the thin space of \liminf, which UnicodeMath reads as it reads lim
+        private static readonly string[] TwoWordNames = { "lim\u2009inf", "lim\u2009sup", "inj\u2009lim", "proj\u2009lim" };
+
+        /// <summary>
+        /// The name of a function, alone or with scripts, that is written with the function apply sign after it when
+        /// nothing follows it, or null: a name of letters that UnicodeMath does not know, which it would read as letters
+        /// (lg, argmax, the lim inf of \liminf, with a thin space).
+        /// </summary>
+        private static XElement LoneFunctionName(XElement node)
+        {
+            var name = node;
+            while (Name(name) is "msub" or "msup" or "msubsup" or "munder" or "mover" or "munderover")
+                name = First(name);
+            return Name(name) == "mi" && !name.HasElements && Len(Text(name)) >= 2 && !IsFunctionName(Text(name)) &&
+                Characters(Text(name)).All(c => c == "\u2009" || char.IsLetter(c, 0)) ? name : null;
         }
 
         /// <summary>The operand of an n-ary operator that does not grow it (∫64), an mpadded of no height.</summary>
@@ -1036,9 +1047,8 @@ namespace SharpEquations.Internal.UnicodeMath
                         break;
                     }
                     op = HasAttr(value, "accentunder") || Attr(value, "accent") == "true" || IsCombining(Text(Last(value))) ? "" : "┬";
-                    // lim_ is under lim (and lim inf, lim sup) in a function of a display equation only
-                    if ((Text(First(value)) == "lim" && !First(value).HasElements ||
-                         functionName != null && (IsFunctionName(Text(functionName)) || UnicodeMathTranslator.EulerFunctions.Contains(Text(functionName)))) && display &&
+                    // lim_ is under lim in a function of a display equation only
+                    if ((Text(First(value)) == "lim" && !First(value).HasElements || functionName != null && IsFunctionName(Text(functionName))) && display &&
                         Role(parent) == ":function")
                         op = "_";
                     ret = Binary(value, op);
@@ -1203,9 +1213,7 @@ namespace SharpEquations.Internal.UnicodeMath
                     break;
 
                 case "mi":
-                    // a name as the base of its scripts is marked as a function, without which it would be read as its
-                    // letters (argmax⁡_𝑥)
-                    if (value == functionName || IsScriptedName(value))
+                    if (value == functionName)
                     {
                         ret = Text(value) + "\u2061";
                         break;
@@ -1354,10 +1362,20 @@ namespace SharpEquations.Internal.UnicodeMath
                 {
                     // a function name with scripts that is not one UnicodeMath knows (argmax), or whose scripts are not
                     // where they go (lim²_(𝑥→0)): the function apply sign follows the name, as in argmax⁡┬(𝑥∈𝑆) 𝑓(𝑥)
-                    functionName = name;
+                    // (not the names of two words, which UnicodeMath reads as lim: lim inf┬𝑛 𝑎)
+                    functionName = TwoWordNames.Contains(Text(name)) && name == node.Elements().FirstOrDefault() ? null : name;
                     dumped = Dump(node);
                     functionName = null;
                     functionMarked = true;
+                }
+                else if ((i + 1 == nodes.Count || Name(nodes[i + 1]) == "mo" && Text(nodes[i + 1]) != "\u2061" && !IsOpenDelimiter(Text(nodes[i + 1]))) &&
+                    LoneFunctionName(node) is { } lone)
+                {
+                    // a function name with nothing to apply it to, which UnicodeMath would read as letters without the
+                    // function apply sign after it: lg⁡, argmax⁡_𝑥
+                    functionName = lone;
+                    dumped = Dump(node);
+                    functionName = null;
                 }
                 else if (functionMarked && Name(node) == "mo" && Text(node) == "\u2061")
                 {
