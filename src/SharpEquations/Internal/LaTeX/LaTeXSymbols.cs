@@ -36,8 +36,9 @@ namespace SharpEquations.Internal.LaTeX
             // letterlike and miscellaneous
             ["∞"] = "infty", ["∂"] = "partial", ["∇"] = "nabla", ["ℏ"] = "hbar", ["ℓ"] = "ell", ["℘"] = "wp", ["ℜ"] = "Re", ["ℑ"] = "Im",
             ["ℵ"] = "aleph", ["∅"] = "emptyset", ["∀"] = "forall", ["∃"] = "exists", ["∄"] = "nexists", ["¬"] = "neg",
-            ["…"] = "ldots", ["⋯"] = "cdots", ["⋮"] = "vdots", ["⋱"] = "ddots", ["°"] = "circ", ["†"] = "dagger", ["‡"] = "ddagger",
+            ["…"] = "ldots", ["⋯"] = "cdots", ["⋮"] = "vdots", ["⋱"] = "ddots", ["°"] = "degree", ["†"] = "dagger", ["‡"] = "ddagger",
             ["∠"] = "angle", ["△"] = "triangle", ["□"] = "square", ["◊"] = "lozenge", ["⊤"] = "top", ["⊥"] = "perp", ["⊺"] = "intercal",
+            ["Ⓢ"] = "circledS",
             // large operators
             ["∑"] = "sum", ["∏"] = "prod", ["∐"] = "coprod", ["∫"] = "int", ["∬"] = "iint", ["∭"] = "iiint", ["∮"] = "oint",
             ["⋃"] = "bigcup", ["⋂"] = "bigcap", ["⋁"] = "bigvee", ["⋀"] = "bigwedge", ["⨁"] = "bigoplus", ["⨂"] = "bigotimes", ["⨀"] = "bigodot",
@@ -64,7 +65,25 @@ namespace SharpEquations.Internal.LaTeX
             ["↩"] = "hookleftarrow", ["↪"] = "hookrightarrow", ["⇌"] = "rightleftharpoons", ["↼"] = "leftharpoonup", ["⇀"] = "rightharpoonup",
             // delimiters
             ["⟨"] = "langle", ["⟩"] = "rangle", ["⌈"] = "lceil", ["⌉"] = "rceil", ["⌊"] = "lfloor", ["⌋"] = "rfloor", ["‖"] = "|",
-            ["{"] = "{", ["}"] = "}", ["〈"] = "langle", ["〉"] = "rangle",
+            ["{"] = "{", ["}"] = "}", ["〈"] = "langle", ["〉"] = "rangle", ["〈"] = "langle", ["〉"] = "rangle",
+            // the symbols of amssymb, from the table of entities.xsl of the XSLT MathML Library (Vasil Yaroshevich)
+            ["¥"] = "yen", ["®"] = "circledR", ["§"] = "S", ["¶"] = "P", ["℧"] = "mho", ["ℶ"] = "beth", ["ℷ"] = "gimel", ["ℸ"] = "daleth",
+            ["∁"] = "complement", ["∡"] = "measuredangle", ["∢"] = "sphericalangle", ["■"] = "blacksquare", ["√"] = "surd",
+            ["↚"] = "nleftarrow", ["↛"] = "nrightarrow", ["↮"] = "nleftrightarrow", ["⇍"] = "nLeftarrow", ["⇏"] = "nRightarrow",
+            ["⇎"] = "nLeftrightarrow", ["↝"] = "rightsquigarrow", ["↭"] = "leftrightsquigarrow", ["↞"] = "twoheadleftarrow",
+            ["↠"] = "twoheadrightarrow", ["↢"] = "leftarrowtail", ["↣"] = "rightarrowtail", ["↫"] = "looparrowleft", ["↬"] = "looparrowright",
+            ["↰"] = "Lsh", ["↱"] = "Rsh", ["↶"] = "curvearrowleft", ["↷"] = "curvearrowright", ["↺"] = "circlearrowleft",
+            ["↻"] = "circlearrowright", ["↽"] = "leftharpoondown", ["⇁"] = "rightharpoondown", ["↾"] = "upharpoonright",
+            ["↿"] = "upharpoonleft", ["⇂"] = "downharpoonright", ["⇃"] = "downharpoonleft", ["⇄"] = "rightleftarrows",
+            ["⇆"] = "leftrightarrows", ["⇇"] = "leftleftarrows", ["⇈"] = "upuparrows", ["⇉"] = "rightrightarrows",
+            ["⇊"] = "downdownarrows", ["⇋"] = "leftrightharpoons", ["⇕"] = "Updownarrow", ["⇚"] = "Lleftarrow", ["⇛"] = "Rrightarrow",
+            ["∔"] = "dotplus", ["⊟"] = "boxminus", ["⋇"] = "divideontimes", ["⋈"] = "bowtie",
+            ["∌"] = "not\\ni", ["≄"] = "not\\simeq", ["≭"] = "not\\asymp", ["⊅"] = "not\\supset", ["≸"] = "not\\lessgtr", ["≹"] = "not\\gtrless",
+            ["∽"] = "backsim", ["⋍"] = "backsimeq", ["≂"] = "eqsim", ["≊"] = "approxeq", ["≎"] = "Bumpeq", ["≏"] = "bumpeq",
+            ["≑"] = "doteqdot", ["≒"] = "fallingdotseq", ["≓"] = "risingdotseq", ["≖"] = "eqcirc", ["≗"] = "circeq", ["≜"] = "triangleq",
+            ["≦"] = "leqq", ["≧"] = "geqq", ["≨"] = "lneqq", ["≩"] = "gneqq", ["≬"] = "between", ["≶"] = "lessgtr", ["≷"] = "gtrless",
+            ["≼"] = "preccurlyeq", ["≽"] = "succcurlyeq", ["≾"] = "precsim", ["≿"] = "succsim", ["⊀"] = "nprec", ["⊁"] = "nsucc",
+            ["⊪"] = "Vvdash",
         };
 
         private static readonly Dictionary<string, string> FontCommands = new Dictionary<string, string>
@@ -106,6 +125,20 @@ namespace SharpEquations.Internal.LaTeX
             (style, plain) = found ? styled : (null, null);
             return found;
         }
+
+        // command → a character written as it, for the reader (several characters can share a command: ° and ∘ are \circ)
+        private static readonly Dictionary<string, string> Characters = Commands
+            .GroupBy(entry => entry.Value, entry => entry.Key)
+            .ToDictionary(group => group.Key, group => group.First());
+
+        /// <summary>The characters written as commands, with their commands (α: alpha, ≤: le).</summary>
+        public static IReadOnlyDictionary<string, string> CharacterCommands => Commands;
+
+        /// <summary>A character the command is written for (geqslant: ⩾).</summary>
+        public static bool TryGetCharacter(string command, out string ch) => Characters.TryGetValue(command, out ch);
+
+        /// <summary>Whether a character is written as a command (α as \alpha, □ as \square).</summary>
+        public static bool IsCommand(string ch) => Commands.ContainsKey(ch);
 
         /// <summary>The LaTeX of a run of text in math: each character as a letter, a command or itself.</summary>
         public static string Math(string text)
@@ -178,7 +211,8 @@ namespace SharpEquations.Internal.LaTeX
             if (Alphanumerics.TryGetValue(ch, out var styled))
             {
                 var letter = Commands.TryGetValue(styled.Plain, out var greek) ? "\\" + greek + " " : styled.Plain;
-                var font = FontCommands[styled.Style];
+                // a capital Greek letter is upright in TeX (\Gamma): italic, it is \mathit{\Gamma}
+                var font = styled.Style == "mit" && IsCapitalGreek(styled.Plain) && greek != null ? "mathit" : FontCommands[styled.Style];
                 return font.Length == 0 ? letter : "\\" + font + "{" + letter.TrimEnd() + "}";
             }
             if (Commands.TryGetValue(ch, out var command))
@@ -189,11 +223,14 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>Upright text in math: \mathrm{x} for a letter, \text{...} for words.</summary>
         public static string Upright(string text)
         {
-            // an upright Greek letter is text: \alpha is italic, and \mathrm does not change it
+            // an upright Greek letter is text: \alpha is italic, and \mathrm does not change it; a capital one (\Gamma) is
+            // upright already
             if (Js.Len(text) == 1 && Commands.ContainsKey(text))
-                return char.IsLetter(text, 0) ? Text(text) : Math(text);
+                return char.IsLetter(text, 0) && !IsCapitalGreek(text) ? Text(text) : Math(text);
             return Js.Len(text) == 1 ? "\\mathrm{" + Math(text) + "}" : Text(text);
         }
+
+        private static bool IsCapitalGreek(string ch) => Js.Len(ch) == 1 && ch[0] is (>= 'Α' and <= 'Ω') or 'ϴ';
 
         /// <summary>\text{...}, with the characters that are special in LaTeX escaped.</summary>
         public static string Text(string text)

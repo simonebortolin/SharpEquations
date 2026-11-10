@@ -161,6 +161,12 @@ also regroups an n-ary operation or a function application that normalization fl
 ### MathML (`Internal/MathML/`)
 
 `ParseXml` reads the XML with DTDs prohibited and no resolver (no external entities), the undeclared prefixes `mml:`, `m:` and `w:` known; in strict mode `Validate` accepts presentation MathML only.
+Content MathML (`<apply><plus/><ci>x</ci><cn>1</cn></apply>`), alone or inside presentation MathML, is rewritten
+first as the presentation MathML it is written as, by `ctop.xsl` (David Carlisle's stylesheet; the changes made
+to it are in its header): the white space between the elements and around the text
+of `ci` and `cn` goes before, and the limits it leaves empty (an integral without bounds) after. The Content MathML of
+an `annotation-xml` is left alone, and a `semantics` whose first child is Content MathML is read from its
+`MathML-Presentation` annotation when it has one. `tests/data/contentmathml` holds the test equations of ctop.
 `MathMLSerializer` writes the normalized MathML as it is.
 
 ### OMML (`Internal/Omml/`)

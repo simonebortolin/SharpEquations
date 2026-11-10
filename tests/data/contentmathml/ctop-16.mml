@@ -1,0 +1,20 @@
+<math display="block">
+<apply><csymbol cd="arith1">root</csymbol>
+  <ci>x</ci>
+  <cn type="integer">2</cn>
+</apply>
+<mo>&#x27f6;</mo>
+<apply><root/>
+  <ci>a</ci>
+</apply>
+<mo>&#x27f6;</mo>
+<apply><root/>
+  <degree><ci type="integer">n</ci></degree>
+  <ci>a</ci>
+</apply>
+<mo>&#x27f6;</mo>
+<apply><root/>
+  <degree><cn>2</cn></degree>
+  <ci>a</ci>
+</apply>
+</math>

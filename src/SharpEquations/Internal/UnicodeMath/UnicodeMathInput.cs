@@ -128,7 +128,9 @@ namespace SharpEquations.Internal.UnicodeMath
 
         /// <summary>resolveCW: replaces control words (\alpha) with the characters they stand for.</summary>
         /// <param name="unknown">Called with each control word that is not one (as \foo), which is kept as text.</param>
-        public static string ResolveControlWords(string unicodemath, Action<string> unknown = null)
+        /// <param name="tex">Whether the text was read from LaTeX, where the space after a control word only ends it and
+        /// is not kept in the text of one not known.</param>
+        public static string ResolveControlWords(string unicodemath, Action<string> unknown = null, bool tex = false)
         {
             string previous = "";
             return ControlWord().Replace(unicodemath, match =>
@@ -215,7 +217,7 @@ namespace SharpEquations.Internal.UnicodeMath
                     return GetUnicodeFraction(Js.Ch(cw, 4), Js.Ch(cw, 5));
                 // not a control word: upright text
                 unknown?.Invoke("\\" + cw);
-                return "\"" + match.Value + "\"";
+                return "\"" + (tex ? "\\" + cw : match.Value) + "\"";
             });
         }
 

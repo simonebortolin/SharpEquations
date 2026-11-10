@@ -114,7 +114,7 @@ namespace SharpEquations.Tests.Xslt
 
         private static async Task AssertNoDifferences((List<string> Differences, int Astral) result, int inputs)
         {
-            await Assert.That(inputs).IsGreaterThan(100);
+            await Assert.That(inputs).IsGreaterThan(30);
             Console.WriteLine(result.Astral + " of " + inputs + " differ, with characters outside the basic plane");
             await Assert.That(result.Differences.Count).IsEqualTo(0).Because(string.Join("\n", result.Differences.Take(10)));
         }
@@ -131,6 +131,16 @@ namespace SharpEquations.Tests.Xslt
         {
             var inputs = Equations().Select(e => (e.Label, e.Equation.ToMathML())).ToList();
             await AssertNoDifferences(Differences("mml2omml.xsl", Mml2ommlStylesheet.Transform, inputs), inputs.Count);
+        }
+
+        [Test]
+        public async Task ContentMathML2MathML()
+        {
+            var inputs = Directory.GetFiles(TestData.Path("contentmathml"), "*.mml")
+                .OrderBy(f => f, StringComparer.Ordinal)
+                .SelectMany(f => XElement.Load(f, LoadOptions.PreserveWhitespace).DescendantsAndSelf().Where(e => e.Name.LocalName == "math").Select((e, i) => (Path.GetFileName(f) + "#" + i, e)))
+                .ToList();
+            await AssertNoDifferences(Differences("ctop.xsl", CtopStylesheet.Transform, inputs), inputs.Count);
         }
 
         [Test]

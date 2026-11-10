@@ -28,6 +28,8 @@ namespace SharpEquations.Internal
                     return Omml2mmlStylesheet.Transform(input);
                 case "mml2omml.xsl":
                     return Mml2ommlStylesheet.Transform(input);
+                case "ctop.xsl":
+                    return CtopStylesheet.Transform(input);
                 case "mtef2mml.xsl":
                     return Mtef2mmlStylesheet.Transform(input);
                 default:

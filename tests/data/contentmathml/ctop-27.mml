@@ -1,0 +1,15 @@
+<math display="block">
+<piecewise>
+  <piece>
+    <cn>0</cn>
+    <apply><lt/><ci>x</ci><cn>0</cn></apply>
+  </piece>
+  <piece>
+    <cn>1</cn>
+    <apply><gt/><ci>x</ci><cn>1</cn></apply>
+  </piece>
+  <otherwise>
+    <ci>x</ci>
+  </otherwise>
+</piecewise>
+</math>

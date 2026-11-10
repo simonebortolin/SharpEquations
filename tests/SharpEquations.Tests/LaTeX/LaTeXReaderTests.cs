@@ -25,13 +25,14 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\left\lfloor x \right\rfloor", @"\lfloor x\rfloor", @"⌊𝑥⌋")]
         [Arguments(@"\bigl( x \bigr)", @"(x)", @"(𝑥)")]
         [Arguments(@"\Big( x \Big)", @"(x)", @"(𝑥)")]
-        [Arguments(@"\hat{x}\widehat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"\hat{x}\hat{xy}\overline{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"𝑥̂(𝑥𝑦)̂̄𝑥 𝑣⃗𝑥̇𝑥̈𝑥̃𝑥̌𝑥̆𝑥́𝑥̀")]
+        [Arguments(@"\hat{x}\widehat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"\hat{x}\hat{xy}\bar{x}\vec{v}\dot{x}\ddot{x}\tilde{x}\check{x}\breve{x}\acute{x}\grave{x}", @"𝑥̂(𝑥𝑦)̂̄𝑥 𝑣⃗𝑥̇𝑥̈𝑥̃𝑥̌𝑥̆𝑥́𝑥̀")]
         [Arguments(@"\overline{x+y}\underline{z}", @"\overline{x+y}\underline{z}", @"¯(𝑥+𝑦)▁𝑧")]
         [Arguments(@"\overbrace{a+b}^{n}", @"\overset{n}{\overbrace{a+b}}", @"⏞(𝑎+𝑏)┴𝑛")]
         [Arguments(@"\underbrace{a+b}_{n}", @"\underset{n}{\underbrace{a+b}}", @"⏟(𝑎+𝑏)┬𝑛")]
         [Arguments(@"\operatorname{rank} A", @"\operatorname{rank}A", @"rank⁡𝐴")]
-        [Arguments(@"\sum\limits_{i=1}^n i", @"\sum_{i=1}^ni", @"∑_(𝑖=1)^𝑛 𝑖")]
-        [Arguments(@"\int\limits_0^1 f", @"\int_0^1f", @"∫₀¹ 𝑓")]
+        [Arguments(@"\sum\limits_{i=1}^n i", @"\sum\limits_{i=1}^ni", @"∑1_(𝑖=1)^𝑛 𝑖")]
+        [Arguments(@"\int\limits_0^1 f", @"\int\limits_0^1f", @"∫1₀¹ 𝑓")]
+        [Arguments(@"\sum\nolimits_{i=1}^n i", @"\sum_{i=1}^ni", @"∑_(𝑖=1)^𝑛 𝑖")]
         [Arguments(@"\iint_D f\,dA + \oint_C F", @"\iint_Df\,dA+\oint_CF", @"∬_𝐷 〖𝑓 〗𝑑𝐴+∮_𝐶 𝐹")]
         [Arguments(@"\prod_{i} a_i \coprod \bigcup_i A_i \bigcap_j B_j", @"\prod_ia_i\coprod\bigcup_iA_i\bigcap_jB_j", @"∏_𝑖 𝑎_𝑖 ∐⋃_𝑖 𝐴_𝑖 ⋂_𝑗 𝐵_𝑗")]
         [Arguments(@"a \pmod{n}", @"a\;(\mod\,n)", @"𝑎 (mod⁡ 𝑛)")]
@@ -67,8 +68,27 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\begin{alignat}{2}a&=b\end{alignat}", @"\begin{aligned}a&=b\end{aligned}", @"█(𝑎&=𝑏)")]
         [Arguments(@"\xrightarrow{f}", @"\overset{f}{\to}", @"→┴𝑓")]
         [Arguments(@"\mathop{\mathrm{argmin}}_x f", @"\operatorname{argmin}_xf", @"argmin⁡_𝑥 𝑓")]
-        [Arguments(@"x\in\left\{1,2\right\}", @"x\in\{1,2\}", @"𝑥∈{1,2}")]
+        [Arguments(@"x\in\left\{1,2\right\}", @"x\in\{1,2\}", @"𝑥∈{1, 2}")]
         [Arguments(@"\{x\mid x>0\}", @"\{x\mid x>0\}", @"{𝑥∣𝑥>0}")]
+        [Arguments(@"a\mid b", @"a\mid b", @"𝑎\∣𝑏")]
+        [Arguments(@"\langle\psi\mid", @"\langle\psi\mid", @"⟨𝜓\∣")]
+        [Arguments(@"\mid\psi\rangle", @"\mid\psi\rangle", @"\∣𝜓\⟩")]
+        [Arguments(@"\overset{\to}{a}\overset{\to}{b}", @"\overset{\to}{a}\overset{\to}{b}", @"𝑎┴→ 𝑏┴→")]
+        [Arguments(@"\mathring{a}\overleftarrow{b}", @"\mathring{a}\overleftarrow{b}", @"𝑎┴˚ 𝑏┴←")]
+        [Arguments(@"\vphantom{\sum}_1^2\sum_3^4", @"\vphantom{\sum}_1^2\sum_3^4", @"⇳∑₁²∑₃⁴")]
+        [Arguments(@"\_\{\}", @"\_\{\}", @"\_{}")]
+        [Arguments(@"\Gamma=\mathit{\Gamma}", @"\Gamma=\mathit{\Gamma}", @"Γ=𝛤")]
+        [Arguments(@"\xrightarrow[y]{x} \xleftarrow x", @"\underset{y}{\overset{x}{\to}}\overset{x}{\leftarrow}", @"→┬𝑦┴𝑥 ←┴𝑥")]
+        [Arguments(@"\underset ab+\underleftarrow{c}", @"\underset{a}{b}+\underset{\leftarrow}{c}", @"𝑏┬𝑎+𝑐┬←")]
+        [Arguments(@"\sideset{_1^2}{_3^4}\sum", @"\vphantom{\sum}_1^2\sum_3^4", @"⇳∑₁²∑₃⁴")]
+        [Arguments(@"\prescript{14}{6}{C}+\prescript{}{2}{x}", @"{}_6^{14}C+{}_2x", @"_6^14 𝐶+(_2)𝑥")]
+        [Arguments(@"\genfrac\{]{0pt}{}{a}{b}+\dbinom a b", @"\{\genfrac{}{}{0pt}{}{a}{b}]+\binom{a}{b}", @"{𝑎¦𝑏]+𝑎⒞𝑏")]
+        [Arguments(@"a \pod{n}+\not a", @"a\quad(n)+\overset{̸}{a}", @"𝑎 (𝑛)+𝑎̸")]
+        [Arguments(@"^3+{'x}", @"{}^3+{}'x", @"⬚³+⬚′𝑥")]
+        [Arguments(@"a_{m,1}+\color{}b", @"a_{m,1}+b", @"𝑎_(𝑚, 1)+𝑏")]
+        [Arguments(@"\begin{pmatrix*}[r]1&2\end{pmatrix*}", @"\begin{pmatrix}1&2\end{pmatrix}", @"⒨(1&2)")]
+        [Arguments(@"x ^ { 2 } _ i", @"x_i^2", @"𝑥_𝑖^2")]
+        [Arguments(@"\sum_{\substack{i<n\\i\ne j}} a_i", @"\sum_{\begin{matrix}i<n\\i\ne j\end{matrix}}a_i", @"∑_■(𝑖<𝑛@𝑖≠𝑗) 𝑎_𝑖")]
         [Arguments(@"a\cdot b\times c\div d", @"a\cdot b\times c\div d", @"𝑎⋅𝑏×𝑐÷𝑑")]
         [Arguments(@"\hbar\ell\Re\Im\aleph", @"\hbar\ell  \Re\Im\aleph", @"ℏℓ Re⁡Im⁡ℵ")]
         [Arguments(@"\langle a, b\rangle", @"\langle a,b\rangle", @"⟨𝑎,𝑏⟩")]
@@ -118,12 +138,24 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\langle a \vert b \rangle", @"\langle a|b\rangle", @"⟨𝑎│𝑏⟩")]
         [Arguments(@"\left. x \right. ", @"x", @"𝑥")]
         [Arguments(@"\mathop{\sum}_i", @"\sum_i", @"∑_𝑖")]
+        [Arguments(@"\mathop{x}\limits_0^1", @"\underset{0}{\overset{1}{x}}", @"𝑥┬0┴1")]
+        [Arguments(@"\underset{0}{\overset{1}{x}}", @"\underset{0}{\overset{1}{x}}", @"𝑥┬0┴1")]
+        [Arguments(@"\overbrace3^a_x", @"\underset{x}{\overset{a}{\overbrace{3}}}", @"⏞3┬𝑥┴𝑎")]
+        [Arguments(@"\underset{x}{\overset{a}{\overbrace{3}}}", @"\underset{x}{\overset{a}{\overbrace{3}}}", @"⏞3┬𝑥┴𝑎")]
+        [Arguments(@"\underbrace{a+b}_n^x+c", @"\underset{n}{\overset{x}{\underbrace{a+b}}}+c", @"⏟(𝑎+𝑏)┬𝑛┴𝑥+𝑐")]
+        [Arguments(@"\underset{n}{\overset{x}{\underbrace{a+b}}}+c", @"\underset{n}{\overset{x}{\underbrace{a+b}}}+c", @"⏟(𝑎+𝑏)┬𝑛┴𝑥+𝑐")]
         [Arguments(@"\xleftarrow{g}", @"\overset{g}{\leftarrow}", @"←┴𝑔")]
         [Arguments(@"\pmod n", @"(\mod\,n)", @"(mod⁡ 𝑛)")]
         [Arguments(@"\hspace*{2cm}x", @"x", @"𝑥")]
         [Arguments(@"a\;b\:c\,d\!e\ f", @"a\;b\:c\,de~f", @"𝑎 𝑏 𝑐 𝑑𝑒 𝑓")]
         [Arguments(@"\mathrm{d}\mathbf{d}\mathit{d}\mathsf{d}\mathtt{d}\mathcal{D}\mathfrak{d}\mathbb{D}", @"\mathrm{d}\mathbf{d}d\mathsf{d}\mathtt{d}\mathcal{D}\mathfrak{d}\mathbb{D}", @"""d""𝐝𝑑𝖽𝚍𝒟𝔡𝔻")]
-        [Arguments(@"\mathrm{x_1}", @"x_1", @"𝑥₁")]
+        [Arguments(@"\mathrm{x_1}", @"\mathrm{x}_1", @"""x""₁")]
+        [Arguments(@"\mathrm{A \{b\}}", @"\mathrm{A}\{\mathrm{b}\}", @"""A""{""b""}")]
+        [Arguments(@"\mathsf{\text{var} = 1+\{b\}}", @"\text{var}=\mathsf{1}+\{\mathsf{b}\}", @"""var""=𝟣+{𝖻}")]
+        [Arguments(@"\mathbf{\text{var}+x}", @"\text{var}+\mathbf{x}", @"""var""+𝐱")]
+        [Arguments(@"\boldsymbol{1}\boldsymbol{x1\alpha}", @"\mathbf{1}\boldsymbol{x}\mathbf{1}\boldsymbol{\alpha}", @"𝟏𝒙𝟏𝜶")]
+        [Arguments(@"\mathbf{\mathrm{x}y}", @"\mathrm{x}\mathbf{y}", @"""x""𝐲")]
+        [Arguments(@"\mathbf{\Gamma+\sin x}", @"\mathbf{\Gamma}+\sin\mathbf{x}", @"𝚪+sin⁡𝐱")]
         [Arguments(@"\mathbf{\alpha}", @"\mathbf{\alpha}", @"𝛂")]
         [Arguments(@"\tag*{A}", @"\tag{A}", @"#A")]
         [Arguments(@"{\color{blue} a \{ b} + c", @"a\{b+c", @"𝑎\{𝑏+𝑐")]
@@ -138,6 +170,11 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"(a+b)/2", @"(a+b)/2", @"(𝑎+𝑏)\/2")]
         [Arguments(@"\left( a \middle/ b \right)", @"(a/b)", @"(𝑎\/𝑏)")]
         [Arguments(@"\left( a \middle\| b \right)", @"(a\|b)", @"(𝑎\‖𝑏)")]
+        [Arguments(@"\left\{\middle|\right\}", @"\{{}|{}\}", @"{⬚│⬚}")]
+        [Arguments(@"\left( a \middle| \right)", @"(a|{})", @"(𝑎│⬚)")]
+        [Arguments(@"|a|\\|b|", @"|a||b|", @"|𝑎||𝑏|")]
+        [Arguments(@"|\,|\\|\!|\,|", @"|\,||\!|\,|", "|\u2009|\\||\u2009|")]
+        [Arguments(@"|a|~|b|", @"|a|~|b|", "|𝑎|\u00A0|𝑏|")]
         [Arguments(@"\langle a | b \rangle | c", @"\langle a|b\rangle|c", @"⟨𝑎│𝑏⟩\|𝑐")]
         [Arguments(@"a|b", @"a|b", @"𝑎\|𝑏")]
         [Arguments(@"(a\|b)", @"(a\|b)", @"(𝑎\‖𝑏)")]
@@ -155,8 +192,35 @@ namespace SharpEquations.Tests.LaTeX
             await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX)).IsEqualTo(Equation.Parse(latex, EquationFormat.LaTeX)).Because("the LaTeX written reads back");
         }
 
+        // the demos of math.webc.site, whose LaTeX and UnicodeMath read back to the same equation
+        [Test]
+        [Arguments(@"\left. \frac{df}{dx} \right| _0", @"{\left.\frac{df}{dx}\right|}_0", @"├𝑑𝑓/𝑑𝑥 ┤|₀")]
+        [Arguments(@"\sum _{i=1} ^n i", @"\sum_{i=1}^ni", @"∑_(𝑖=1)^𝑛 𝑖")]
+        [Arguments(@"a \lt 1 \gt b", @"a<1>b", @"𝑎<1>𝑏")]
+        [Arguments(@"y \lt 1 \tag{1}", @"y<1\tag{1}", @"𝑦<1#(1)")]
+        [Arguments(@"{\rm rxn}", @"\text{rxn}", @"""rxn""")]
+        [Arguments(@"{\rm d} x", @"\mathrm{d}x", @"""d""𝑥")]
+        [Arguments(@"{\bf x} + {\it ab} + {\cal F} + {\sf s} + {\tt t}", @"\mathbf{x}+ab+\mathcal{F}+\mathsf{s}+\mathtt{t}", @"𝐱+𝑎𝑏+ℱ+𝗌+𝚝")]
+        [Arguments(@"\Delta H_{\rm rxn}^\circ = -R T \ln K", @"\Delta H_{\text{rxn}}^\circ=-RT \ln K", @"Δ𝐻_""rxn""^∘ =−𝑅𝑇 ln⁡𝐾")]
+        [Arguments(@"\Gamma=\Omega", @"\Gamma=\Omega", @"Γ=Ω")]
+        [Arguments(@"\theta = 45\degree", @"\theta=45\degree", @"𝜃=45°")]
+        [Arguments(@"f \circ g", @"f\circ g", @"𝑓∘𝑔")]
+        [Arguments(@"\bar{x} = \frac{1}{n} \cdot \sum_{i=1}^n x_i", @"\bar{x}=\frac{1}{n}\cdot\sum_{i=1}^nx_i", @"̄𝑥=1/𝑛 ⋅∑_(𝑖=1)^𝑛 𝑥_𝑖")]
+        [Arguments(@"\bar{A\cup B}+\overline{A\cup B}", @"\bar{A\cup B}+\overline{A\cup B}", @"̄(𝐴∪𝐵)+¯(𝐴∪𝐵)")]
+        [Arguments(@"a\stackrel{n\to\infty}{\longrightarrow}b", @"a\overset{n\to\infty}{\longrightarrow}b", @"𝑎⟶┴(𝑛→∞) 𝑏")]
+        [Arguments(@"x\xrightarrow{f}y", @"x\overset{f}{\to}y", @"𝑥→┴𝑓 𝑦")]
+        [Arguments(@"{\overset{a}{b}}c", @"\overset{a}{b}c", @"𝑏┴𝑎 𝑐")]
+        public async Task ReadsLaTeXThatWritesBack(string latex, string expectedLaTeX, string expectedUnicodeMath)
+        {
+            await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);
+            var equation = Equation.Parse(latex, EquationFormat.LaTeX);
+            await Assert.That(Equation.Parse(expectedLaTeX, EquationFormat.LaTeX)).IsEqualTo(equation).Because("the LaTeX written reads back");
+            await Assert.That(Equation.Parse(expectedUnicodeMath, EquationFormat.UnicodeMath)).IsEqualTo(equation).Because("the UnicodeMath written reads back");
+        }
+
         [Test]
         [Arguments(@"{x}^2", @"x^2")]
+        [Arguments(@"\overset{a}{b}^2", @"\overset{a}{b}^2")]
         [Arguments(@"{a+b}^2", @"{a+b}^2")]
         [Arguments(@"{a+b}_n", @"{a+b}_n")]
         [Arguments(@"x_\text{ab}", @"x_{\text{ab}}")]
@@ -209,6 +273,15 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"a\!b", "ab")]
         [Arguments(@"a\>b", @"a\:b")]
         [Arguments(@"\hspace{1em}x", "x")]
+        [Arguments(@"a\hspace1em b", @"a\quad b")]
+        [Arguments(@"a\hspace{2cm}b", @"a\quad\quad b")]
+        [Arguments(@"a\kern-1.5pt b", "ab")]
+        [Arguments(@"a\mkern10mu b", @"a\enspace b")]
+        [Arguments(@"a\mspace{18mu}b", @"a\quad b")]
+        [Arguments(@"a\hskip 1em plus 1fil b", @"a\quad b")]
+        [Arguments(@"a\thinspace b\negthinspace c\nobreakspace d\space e", @"a\,bc~d~e")]
+        [Arguments(@"a\\b", "ab")]
+        [Arguments(@"(a)~b", @"(a)~b")]
         public async Task ReadsSpaces(string latex, string expected)
         {
             await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX).ToString(EquationFormat.LaTeX)).IsEqualTo(expected);
@@ -274,13 +347,86 @@ namespace SharpEquations.Tests.LaTeX
             await Assert.That(Equation.Parse(@"\half x\in\R", EquationFormat.LaTeX, options).ToString(EquationFormat.LaTeX)).IsEqualTo(@"\frac{1}{2}x\in\mathbb{R}");
         }
 
+        // the operator names of amsmath, alone or with their limits, which go under them in a display equation; the LaTeX
+        // and the UnicodeMath written for them read back as the same equation
         [Test]
-        [Arguments(@"\foo x", @"Unknown control word \foox in the LaTeX.")]
+        [Arguments(@"\lg", false, "<mi>lg</mi><mo>\u2061</mo>")]
+        [Arguments(@"\lg x", false, "<mi>lg</mi><mo>\u2061</mo><mi>x</mi>")]
+        [Arguments(@"\operatorname{lg}", true, "<mi>lg</mi><mo>\u2061</mo>")]
+        [Arguments(@"\liminf", true, "<mi>lim\u2009inf</mi><mo>\u2061</mo>")]
+        [Arguments(@"\limsup_{n} a_n", true, "<munder><mi>lim\u2009sup</mi><mi>n</mi></munder><mo>\u2061</mo><msub><mi>a</mi><mi>n</mi></msub>")]
+        [Arguments(@"\limsup_{n} a_n", false, "<msub><mi>lim\u2009sup</mi><mi>n</mi></msub><mo>\u2061</mo><msub><mi>a</mi><mi>n</mi></msub>")]
+        [Arguments(@"\injlim", true, "<mi>inj\u2009lim</mi><mo>\u2061</mo>")]
+        [Arguments(@"\projlim", true, "<mi>proj\u2009lim</mi><mo>\u2061</mo>")]
+        [Arguments(@"\varinjlim", true, "<munder><mi>lim</mi><mo>→</mo></munder>")]
+        [Arguments(@"\varprojlim", true, "<munder><mi>lim</mi><mo>←</mo></munder>")]
+        [Arguments(@"\varliminf", true, "<menclose notation=\"bottom\"><mi>lim</mi></menclose>")]
+        [Arguments(@"\varlimsup", true, "<mover><mi>lim</mi><mo>¯</mo></mover>")]
+        [Arguments(@"\operatorname*{argmax}_{x}", true, "<munder><mi>argmax</mi><mi>x</mi></munder>")]
+        [Arguments(@"\operatorname*{argmax}_{x}", false, "<msub><mi>argmax</mi><mi>x</mi></msub>")]
+        [Arguments(@"\operatorname*{argmax}_{x} f(x)", true, "<munder><mi>argmax</mi><mi>x</mi></munder><mo>\u2061</mo><mi>f</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow>")]
+        [Arguments(@"\operatornamewithlimits{lim}_{x}", true, "<munder><mi>lim</mi><mi>x</mi></munder>")]
+        [Arguments(@"\lim_{x}", true, "<munder><mi>lim</mi><mi>x</mi></munder>")]
+        public async Task ReadsOperatorNamesOfAmsmath(string latex, bool display, string expected)
+        {
+            var options = new EquationOptions { Display = display };
+            var equation = Equation.Parse(latex, EquationFormat.LaTeX, options);
+            var mathML = string.Concat(equation.ToMathML().Elements().Select(e => e.ToString(System.Xml.Linq.SaveOptions.DisableFormatting)))
+                .Replace(" xmlns=\"http://www.w3.org/1998/Math/MathML\"", "");
+            await Assert.That(mathML).IsEqualTo(expected);
+            await Assert.That(Equation.Parse(equation.ToString(EquationFormat.LaTeX), EquationFormat.LaTeX, options)).IsEqualTo(equation);
+            await Assert.That(Equation.Parse(equation.ToString(EquationFormat.UnicodeMath), EquationFormat.UnicodeMath, options)).IsEqualTo(equation);
+        }
+
+        [Test]
+        [Arguments(@"\newenvironment{wrapper}{a +}{+ c} \begin{wrapper} b \end{wrapper}", @"a+b+c")]
+        [Arguments(@"\newenvironment{paren}[1]{\left( #1 +}{\right)} \begin{paren}{x} y \end{paren}", @"\left(x+y\right)")]
+        [Arguments(@"\newenvironment{e}[2][1]{#1+#2}{} \begin{e}{a} b\end{e}", @"1+ab")]
+        [Arguments(@"\newenvironment{e}[2][1]{#1+#2}{} \begin{e}[2]{a}\end{e}", @"2+a")]
+        [Arguments(@"\newenvironment{g}{(}{)} \begin{g} a \begin{g} b \end{g} \end{g}", @"(a(b))")]
+        [Arguments(@"\newenvironment{al}{\alpha}{\beta}\begin{al}x\end{al}y", @"\alpha x\beta y")]
+        [Arguments(@"\newenvironment{e}{a}{} \renewenvironment{e}{b}{} \begin{e}\end{e}", @"b")]
+        [Arguments(@"\newenvironment{m}{\begin{pmatrix}}{\end{pmatrix}} \begin{m} 1 & 2 \end{m}", @"\begin{pmatrix}1&2\end{pmatrix}")]
+        [Arguments(@"\newenvironment{h}{\newcommand{\f}[1]{##1^2}}{} \begin{h}\f{x}\end{h}", @"x^2")]
+        public async Task ExpandsEnvironments(string latex, string equivalent)
+        {
+            await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX)).IsEqualTo(Equation.Parse(equivalent, EquationFormat.LaTeX));
+        }
+
+        [Test]
+        public async Task RejectsEnvironmentsThatExpandForever()
+        {
+            await Assert.That(Equation.TryParse(@"\newenvironment{r}{\begin{r}}{\end{r}} \begin{r} x \end{r}", EquationFormat.LaTeX, out _)).IsFalse();
+        }
+
+        [Test]
+        [Arguments(@"\foo x", @"Unknown control word \foo in the LaTeX.")]
         [Arguments(@"a+\undefinedcommand", @"Unknown control word \undefinedcommand in the LaTeX.")]
+        [Arguments(@"\sgn r", @"Unknown control word \sgn in the LaTeX.")]
+        [Arguments(@"\tr d", @"Unknown control word \tr in the LaTeX.")]
+        [Arguments(@"\Var v", @"Unknown control word \Var in the LaTeX.")]
+        [Arguments(@"a \backslash b", @"Unknown control word \backslash in the LaTeX.")]
+        [Arguments(@"\sgn2", @"Unknown control word \sgn in the LaTeX.")]
         public async Task RejectsUnknownControlWordsWhenStrict(string latex, string message)
         {
             await Assert.That(() => Equation.Parse(latex, EquationFormat.LaTeX, Strict)).Throws<FormatException>().WithMessage(message);
             await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX).ToMathML().Descendants(MathMLNamespaces.MathML + "mtext")).IsNotEmpty();
+        }
+
+        [Test]
+        [Arguments(@"\sgn r", @"\sgn", "r")]
+        [Arguments(@"\tr d", @"\tr", "d")]
+        [Arguments(@"\Var v", @"\Var", "v")]
+        [Arguments(@"a \backslash b", @"\backslash", "b")]
+        [Arguments(@"\sgn  r", @"\sgn", "r")]
+        [Arguments(@"\sgn{r}", @"\sgn", "r")]
+        [Arguments(@"\text{\sgn} r", @"\sgn", "r")]
+        [Arguments(@"\sgn2", @"\sgn", "2")]
+        public async Task EndsUnknownControlWordsAtTheirLetters(string latex, string text, string after)
+        {
+            var math = Equation.Parse(latex, EquationFormat.LaTeX).ToMathML();
+            await Assert.That(math.Descendants(MathMLNamespaces.MathML + "mtext").Select(e => e.Value).ToList()).IsEquivalentTo(new[] { text });
+            await Assert.That(math.Descendants().Where(e => e.Name.LocalName is "mi" or "mn").Select(e => e.Value).Last()).IsEqualTo(after);
         }
 
         [Test]
@@ -290,13 +436,62 @@ namespace SharpEquations.Tests.LaTeX
         }
 
         [Test]
-        [Arguments(@"a\\b")]
         [Arguments(@"\frac{a}")]
         [Arguments(@"x_\frac{1}")]
         [Arguments(@"\text{unclosed")]
         public async Task RejectsLaTeXThatIsNotAnEquation(string latex)
         {
             await Assert.That(() => Equation.Parse(latex, EquationFormat.LaTeX)).ThrowsExactly<FormatException>();
+        }
+
+        [Test]
+        [Arguments(@"a\square b", "□")]
+        [Arguments(@"a\blacksquare b", "■")]
+        [Arguments(@"a\surd b", "√")]
+        [Arguments(@"a\triangleq b", "≜")]
+        [Arguments(@"a\eqsim b", "≂")]
+        [Arguments(@"a\doteqdot b", "≑")]
+        [Arguments(@"a\rightsquigarrow b", "↝")]
+        [Arguments(@"a\leftrightsquigarrow b", "↭")]
+        [Arguments(@"a\measuredangle b", "∡")]
+        [Arguments(@"a\sphericalangle b", "∢")]
+        [Arguments(@"a\mho b", "℧")]
+        [Arguments(@"a\yen b", "¥")]
+        [Arguments(@"a\circledR b", "®")]
+        [Arguments(@"a\S b", "§")]
+        [Arguments(@"a\P b", "¶")]
+        [Arguments(@"a\geqslant b", "⩾")]
+        [Arguments(@"a\leqslant b", "⩽")]
+        [Arguments(@"a\therefore b", "∴")]
+        [Arguments(@"a\coloneqq b", "≔")]
+        [Arguments(@"a\dblcolon b", "∷")]
+        [Arguments(@"a\ngtr b", "≯")]
+        [Arguments(@"a\lozenge b", "◊")]
+        [Arguments(@"a\oslash b", "⊘")]
+        [Arguments(@"a\succeq b", "⪰")]
+        [Arguments(@"a\mid b", "∣")]
+        public async Task ReadsSymbolsThatUnicodeMathHasNoControlWordFor(string latex, string symbol)
+        {
+            var math = Equation.Parse(latex, EquationFormat.LaTeX, Strict).ToMathML();
+            await Assert.That(math.Elements().Select(e => e.Value).ToList()).IsEquivalentTo(new[] { "a", symbol, "b" });
+        }
+
+        [Test]
+        [Arguments("□", @"a\square b")]
+        [Arguments("√", @"a{\surd}b")]
+        [Arguments("≦", @"a\leqq b")]
+        [Arguments("↠", @"a\twoheadrightarrow b")]
+        [Arguments("⇄", @"a\rightleftarrows b")]
+        [Arguments("≼", @"a\preccurlyeq b")]
+        [Arguments("∌", @"a\not\ni b")]
+        [Arguments("〈", @"a\langle b")]
+        public async Task WritesTheSymbolsOfAmssymbAsCommands(string symbol, string latex)
+        {
+            var equation = Equation.Parse("<math><mi>a</mi><mo>" + symbol + "</mo><mi>b</mi></math>", EquationFormat.MathML);
+            var written = equation.ToString(EquationFormat.LaTeX);
+            await Assert.That(written).IsEqualTo(latex);
+            var back = Equation.Parse(written, EquationFormat.LaTeX, Strict);
+            await Assert.That(Equation.Parse(back.ToString(EquationFormat.LaTeX), EquationFormat.LaTeX)).IsEqualTo(back);
         }
     }
 }

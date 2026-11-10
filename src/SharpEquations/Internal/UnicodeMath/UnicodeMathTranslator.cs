@@ -64,7 +64,7 @@ namespace SharpEquations.Internal.UnicodeMath
                 if (end > start + 1 && chars[end - 2] == "\\" && (chars[end - 1] == "]" || chars[end - 1] == ")"))
                     end -= 2;
             }
-            var unicodemath = LaTeXReader.ToUnicodeMath(string.Concat(chars.Skip(start).Take(end - start)), macros);
+            var unicodemath = LaTeXReader.ToUnicodeMath(string.Concat(chars.Skip(start).Take(end - start)), macros, display);
             var umChars = UnicodeMathText.Characters(unicodemath);
             if (umChars.Count > 0 && umChars[0] == "ⓓ" && umChars.Skip(1).FirstOrDefault(c => c != " ") != "{")
             {
@@ -79,7 +79,7 @@ namespace SharpEquations.Internal.UnicodeMath
             unicodemath = unicodemath.Trim();
             var resolved = UnicodeMathInput.ResolveControlWords(unicodemath, strict
                 ? unknown => throw new FormatException("Unknown control word " + unknown + (tex ? " in the LaTeX." : "."))
-                : null);
+                : null, tex);
             // macros (\def, \newcommand: ⓜ) apply in the equation that defines them
             if (!tex && LaTeXReader.HasMacros(resolved))
                 resolved = LaTeXReader.ExpandMacros(resolved);
