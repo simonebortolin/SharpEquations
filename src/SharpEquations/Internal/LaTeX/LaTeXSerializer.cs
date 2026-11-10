@@ -574,11 +574,16 @@ namespace SharpEquations.Internal.LaTeX
                         ret = "\\$";
                         break;
                     }
-                    // a bar alone before another bar parted from it by \!, a zero space: the reader pairs bars with
-                    // nothing between them, which UnicodeMath reads as one double bar
+                    // a bar alone before the bar of an absolute value parted from it by \!, a zero space: the reader
+                    // pairs bars with nothing between them, which UnicodeMath reads as one double bar
                     if (val == "|" && Attr(value, "intent") == ":text" &&
-                        value.ElementsAfterSelf().FirstOrDefault()?.DescendantsAndSelf().FirstOrDefault(d => !d.HasElements) is { } nextLeaf && IsBar(nextLeaf) && Text(nextLeaf) == "|")
+                        value.ElementsAfterSelf().FirstOrDefault()?.DescendantsAndSelf().FirstOrDefault(d => !d.HasElements) is { } nextLeaf && IsBar(nextLeaf) &&
+                        Text(nextLeaf) == "|" && Attr(nextLeaf, "intent") != ":text")
                         return "|\\!";
+                    // a bar alone before other bars, which the reader would pair it with: {|}, the ordinary bar of TeX
+                    if (val == "|" && Attr(value, "intent") == ":text" && value.ElementsAfterSelf().Concat(value.Ancestors().SelectMany(a => a.ElementsAfterSelf()))
+                        .SelectMany(e => e.DescendantsAndSelf()).Any(d => IsBar(d) && Text(d) == "|"))
+                        return "{|}";
                     if (Attr(value, "intent") == ":text" && !standard)
                     {
                         // a bracket or a bar that pairs with nothing: the reader escapes the brackets that close nothing and
