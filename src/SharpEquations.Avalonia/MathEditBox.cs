@@ -27,7 +27,7 @@ namespace SharpEquations.Avalonia
     /// <see cref="SharpEquations.Equation"/>.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001", Justification = "The drawing is released when the equation is laid out again and when the control leaves the visual tree.")]
-    public class MathEditBox : Control
+    public partial class MathEditBox : Control
     {
         /// <summary>The equation edited; null when the editor is empty. Two-way by default.</summary>
         public static readonly StyledProperty<Equation?> EquationProperty =
@@ -140,6 +140,7 @@ namespace SharpEquations.Avalonia
             };
             LogicalChildren.Add(popup);
             VisualChildren.Add(popup);
+            AddHandler(ContextRequestedEvent, OnContextRequested);
             blink = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(530) };
             blink.Tick += (_, _) =>
             {
@@ -515,6 +516,14 @@ namespace SharpEquations.Avalonia
                 return;
 
             var shift = (e.KeyModifiers & KeyModifiers.Shift) != 0;
+
+            // Shift+F10 opens the context menu, as the Menu key does (which Avalonia turns into ContextRequested)
+            if (e.Key == Key.F10 && e.KeyModifiers == KeyModifiers.Shift)
+            {
+                e.Handled = ShowContextMenu();
+                return;
+            }
+
             if (popup.IsOpen && QuickBar.Mode == MathQuickBarMode.Completions && e.KeyModifiers == KeyModifiers.None)
             {
                 switch (e.Key)
