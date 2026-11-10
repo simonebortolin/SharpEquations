@@ -10,11 +10,11 @@ Job=ShortRun  IterationCount=3  LaunchCount=1
 WarmupCount=3  
 
 ```
-| Method                          | Mean     | Error     | StdDev   | Gen0      | Allocated |
-|-------------------------------- |---------:|----------:|---------:|----------:|----------:|
-| Omml2MathML                     | 20.82 ms |  19.34 ms | 1.060 ms |  250.0000 |  35.68 MB |
-| Omml2MathMLXslCompiledTransform | 70.62 ms | 160.12 ms | 8.777 ms | 1000.0000 | 156.37 MB |
-| MathML2Omml                     | 31.03 ms |  50.63 ms | 2.775 ms |         - |  30.23 MB |
-| MathML2OmmlXslCompiledTransform | 74.67 ms |  25.59 ms | 1.403 ms | 1000.0000 | 136.31 MB |
-| Mtef2MathML                     | 17.46 ms |  20.56 ms | 1.127 ms |   93.7500 |  15.71 MB |
-| Mtef2MathMLXslCompiledTransform | 41.98 ms |  24.75 ms | 1.356 ms |   83.3333 |  20.89 MB |
+| Method                          | Mean      | Error      | StdDev    | Gen0      | Allocated |
+|-------------------------------- |----------:|-----------:|----------:|----------:|----------:|
+| Omml2MathML                     |  9.995 ms |   8.776 ms | 0.4810 ms |   62.5000 |   9.59 MB |
+| Omml2MathMLXslCompiledTransform | 83.120 ms | 102.319 ms | 5.6084 ms | 1000.0000 | 156.37 MB |
+| MathML2Omml                     | 15.615 ms |  23.374 ms | 1.2812 ms |  125.0000 |  16.51 MB |
+| MathML2OmmlXslCompiledTransform | 75.872 ms |  79.438 ms | 4.3543 ms | 1000.0000 | 136.31 MB |
+| Mtef2MathML                     | 23.969 ms | 115.622 ms | 6.3376 ms |         - |   15.6 MB |
+| Mtef2MathMLXslCompiledTransform | 45.099 ms |   5.842 ms | 0.3202 ms |   90.9091 |  20.89 MB |

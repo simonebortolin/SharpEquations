@@ -405,6 +405,22 @@ namespace SharpEquations.Internal.Xslt
 
         public static List<XObject> ListOf(XObject? node) => node == null ? Empty : Single(node);
 
+        /// <summary>The string value of the first child of the element with the name, and whether it has none, one or more.</summary>
+        public static string? KeyValue(XElement element, XName name, out int count)
+        {
+            string? value = null;
+            count = 0;
+            for (var node = element.FirstNode; node != null; node = node.NextNode)
+            {
+                if (!(node is XElement child) || child.Name != name)
+                    continue;
+                if (++count > 1)
+                    break;
+                value = child.Value;
+            }
+            return value;
+        }
+
         public static XObject? First(List<XObject> nodes) => nodes.Count == 0 ? null : nodes[0];
 
         public static XObject RootNode(XObject node)

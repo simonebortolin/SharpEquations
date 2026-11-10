@@ -925,17 +925,17 @@ namespace SharpEquations.XsltGenerator
                     w.Line("case " + i + ":").Open();
                     var candidates = ordered.Where(r => generic.Contains(r)
                         || (named.Contains(r) && XName.Get(r.Last!.Test.Local!, Namespace(r.Last.Test.Prefix, r.Template)) == name));
-                    EmitCandidates(candidates, w);
+                    EmitCandidates(candidates, w, true);
                     w.Line("break;").Close();
                 }
                 w.Line("default:").Open();
-                EmitCandidates(generic, w);
+                EmitCandidates(generic, w, true);
                 w.Line("break;").Close();
                 w.Close();
             }
             else
             {
-                EmitCandidates(generic, w);
+                EmitCandidates(generic, w, true);
             }
             w.Line("ApplyChildren" + mode + "(node, null);").Line("return;").Close();
 
@@ -963,9 +963,47 @@ namespace SharpEquations.XsltGenerator
             members.Append(w);
         }
 
-        private static void EmitCandidates(IEnumerable<Rule> candidates, CodeWriter w)
+        /// <summary>
+        /// The child and the text a rule asks of an element, if its pattern starts its first predicate with
+        /// <c>child = 'text'</c>: the rule can only match an element that has such a child.
+        /// </summary>
+        private static (XName Child, string Text)? KeyOf(Rule rule)
         {
-            foreach (var rule in candidates)
+            var last = rule.Last;
+            if (last == null || last.Axis != "child" || last.Predicates.Count == 0)
+                return null;
+            var condition = last.Predicates[0];
+            while (condition is BinaryExpr and && and.Op == "and")
+                condition = and.Left;
+            if (!(condition is BinaryExpr equal) || equal.Op != "=")
+                return null;
+            var path = equal.Left as PathExpr ?? equal.Right as PathExpr;
+            var literal = equal.Left as LiteralExpr ?? equal.Right as LiteralExpr;
+            if (path == null || literal == null || path.Start != null || path.Absolute || path.Steps.Count != 1)
+                return null;
+            var step = path.Steps[0];
+            if (step.Axis != "child" || step.Test.Kind != TestKind.Name || step.Predicates.Count != 0)
+                return null;
+            return (XName.Get(step.Test.Local!, Namespace(step.Test.Prefix, rule.Template)), literal.Value);
+        }
+
+        /// <summary>
+        /// The rules tried in order. Among those of an element, the many that ask for a child with a text (the
+        /// characters of MTEF, each with its code) are found by the text of that child, when the element has one.
+        /// </summary>
+        private void EmitCandidates(IEnumerable<Rule> candidates, CodeWriter w, bool ofElement = false)
+        {
+            var rules = candidates.ToList();
+            var always = rules.FindIndex(r => r.Always);
+            if (always >= 0)
+                rules = rules.Take(always + 1).ToList();
+            var keyed = ofElement
+                ? rules.Where(r => KeyOf(r) != null).GroupBy(r => KeyOf(r)!.Value.Child).OrderByDescending(g => g.Count()).FirstOrDefault()
+                : null;
+            var child = keyed != null && keyed.Count() >= 8 ? keyed.Key : null;
+            bool Keyed(Rule rule) => child != null && KeyOf(rule)?.Child == child;
+
+            void Try(Rule rule)
             {
                 if (rule.Always)
                 {
@@ -974,6 +1012,36 @@ namespace SharpEquations.XsltGenerator
                 }
                 w.Open("if (Match" + rule.Index + "(node))");
                 w.Line(rule.Method + "(node, position, size, args);").Line("return;");
+                w.Close();
+            }
+
+            var key = NewName("key");
+            var count = NewName("keys");
+            if (child != null)
+                w.Line("var " + key + " = KeyValue(element, " + Name(child) + ", out var " + count + ");");
+            for (var i = 0; i < rules.Count;)
+            {
+                if (!Keyed(rules[i]))
+                {
+                    Try(rules[i++]);
+                    continue;
+                }
+                var run = rules.Skip(i).TakeWhile(Keyed).ToList();
+                i += run.Count;
+                w.Open("if (" + count + " == 1)");
+                w.Open("switch (" + key + ")");
+                foreach (var group in run.GroupBy(r => KeyOf(r)!.Value.Text))
+                {
+                    w.Line("case " + XPathCompiler.Literal(group.Key) + ":").Open();
+                    foreach (var rule in group)
+                        Try(rule);
+                    w.Line("break;").Close();
+                }
+                w.Close().Close();
+                // with more than one such child, any of them may have the text
+                w.Open("else if (" + count + " > 1)");
+                foreach (var rule in run)
+                    Try(rule);
                 w.Close();
             }
         }

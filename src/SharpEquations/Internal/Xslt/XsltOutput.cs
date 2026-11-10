@@ -156,7 +156,13 @@ namespace SharpEquations.Internal.Xslt
         {
             if (!hasText)
                 return;
-            if (hasMarkup)
+            if (hasMarkup && Decode(markup!) is string decoded)
+            {
+                if (decoded.Length > 0)
+                    top.Add(new XText(decoded));
+                markup!.Clear();
+            }
+            else if (hasMarkup)
             {
                 var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
                 using (var reader = XmlReader.Create(new StringReader("<r>" + markup + "</r>"), settings))
@@ -173,6 +179,98 @@ namespace SharpEquations.Internal.Xslt
             text?.Clear();
             hasText = false;
             hasMarkup = false;
+        }
+
+        /// <summary>
+        /// The text of markup that is only text and references to characters, as most is (a character reference
+        /// written as text): what a parser reads it as. Null for any other markup, which a parser reads.
+        /// </summary>
+        private static string? Decode(StringBuilder markup)
+        {
+            var result = new StringBuilder(markup.Length);
+            for (var i = 0; i < markup.Length; i++)
+            {
+                var c = markup[i];
+                switch (c)
+                {
+                    case '&':
+                    {
+                        var end = i + 1;
+                        while (end < markup.Length && end - i <= 10 && markup[end] != ';')
+                            end++;
+                        if (end >= markup.Length || markup[end] != ';')
+                            return null;
+                        var reference = Reference(markup.ToString(i + 1, end - i - 1));
+                        if (reference == null)
+                            return null;
+                        result.Append(reference);
+                        i = end;
+                        break;
+                    }
+                    // markup, the end of a CDATA section, the ends of lines a parser normalizes, the characters XML
+                    // does not allow and the surrogates, whose pairs a parser checks
+                    case '<':
+                    case '>':
+                    case '\r':
+                    case var _ when c < 0x20 && c != '\t' && c != '\n':
+                    case var _ when c >= 0xD800 && c <= 0xDFFF:
+                    case var _ when c >= 0xFFFE:
+                        return null;
+                    default:
+                        result.Append(c);
+                        break;
+                }
+            }
+            return result.ToString();
+        }
+
+        // the character of a reference to a character or to one of the entities of XML, or null if it is not one
+        private static string? Reference(string name)
+        {
+            switch (name)
+            {
+                case "amp":
+                    return "&";
+                case "lt":
+                    return "<";
+                case "gt":
+                    return ">";
+                case "quot":
+                    return "\"";
+                case "apos":
+                    return "'";
+            }
+            if (name.Length < 2 || name[0] != '#')
+                return null;
+            var hexadecimal = name[1] == 'x';
+            var value = 0;
+            for (var i = hexadecimal ? 2 : 1; i < name.Length; i++)
+            {
+                var c = name[i];
+                int digit;
+                switch (c)
+                {
+                    case >= '0' and <= '9':
+                        digit = c - '0';
+                        break;
+                    case >= 'a' and <= 'f' when hexadecimal:
+                        digit = c - 'a' + 10;
+                        break;
+                    case >= 'A' and <= 'F' when hexadecimal:
+                        digit = c - 'A' + 10;
+                        break;
+                    default:
+                        return null;
+                }
+                value = value * (hexadecimal ? 16 : 10) + digit;
+                if (value > 0x10FFFF)
+                    return null;
+            }
+            if (name.Length == (hexadecimal ? 2 : 1))
+                return null;
+            // the characters of XML but the ends of lines
+            var allowed = value == 0x9 || (value >= 0x20 && value <= 0xD7FF) || (value >= 0xE000 && value <= 0xFFFD) || value >= 0x10000;
+            return allowed ? char.ConvertFromUtf32(value) : null;
         }
 
         public void Comment(string value)
