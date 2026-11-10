@@ -305,6 +305,11 @@ namespace SharpEquations.Internal.LaTeX
                         while (tex[i] == " ")
                             i++;
                     }
+                    else if (IsAsciiAlphabetic(tex[i]))
+                    {
+                        // a name followed by a letter (\operatorname*{max}x): a space parts them, which would otherwise be one word
+                        result.Append(' ');
+                    }
                     summation = -1;
                     continue;
                 }

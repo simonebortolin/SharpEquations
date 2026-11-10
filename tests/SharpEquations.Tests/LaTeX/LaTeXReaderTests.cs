@@ -367,6 +367,8 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\operatorname*{argmax}_{x} f(x)", true, "<munder><mi>argmax</mi><mi>x</mi></munder><mo>\u2061</mo><mi>f</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow>")]
         [Arguments(@"\operatornamewithlimits{lim}_{x}", true, "<munder><mi>lim</mi><mi>x</mi></munder>")]
         [Arguments(@"\lim_{x}", true, "<munder><mi>lim</mi><mi>x</mi></munder>")]
+        [Arguments(@"\operatorname*{max}x", true, "<mi>max</mi><mo>\u2061</mo><mi>x</mi>")]
+        [Arguments(@"\operatorname*{argmax}x", false, "<mi>argmax</mi><mo>\u2061</mo><mi>x</mi>")]
         public async Task ReadsOperatorNamesOfAmsmath(string latex, bool display, string expected)
         {
             var options = new EquationOptions { Display = display };
