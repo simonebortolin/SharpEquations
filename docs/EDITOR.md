@@ -33,6 +33,13 @@ The behaviour is the one of the equations of Word and of `RichEditBox` in math m
   typed in a row are one step, and a build up another, so that an undo after a build up gives back the text as it was
   typed; Ctrl+A selects all; Enter builds up all the runs. The shortcuts of copy,
   paste, undo... are those of the platform (`PlatformHotkeyConfiguration`).
+- **Context menu**: right click, a long press on touch, the Menu key or Shift+F10 open it (under the caret from the
+  keyboard): undo, redo, cut, copy, paste, *copy as* MathML, UnicodeMath, LaTeX or OMML (the selection, or the whole
+  equation: `CopyAsAsync`), select all, linear or professional, build up and down, new line, the number of the
+  equation, and the rows and columns of the table of the caret. A right click outside the selection moves the caret
+  there first; a read-only editor has only the copy commands and select all. An application changes it in
+  `ContextMenuOpening` (its items have a tag that names their command), overrides `CreateContextMenu`, or turns it off
+  with `IsContextMenuEnabled`.
 - **Mouse**: a click places the caret at the nearest position of the deepest row under the pointer; a drag selects.
 - **Clipboard**: copy puts the selection as text in `CopyTextFormat` (the input format by default; MathML pastes as an
   equation into Word) and as MathML (`MathML` on Windows, `application/mathml+xml` elsewhere), as UTF-8 bytes, as Word writes and reads
