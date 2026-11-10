@@ -49,7 +49,10 @@ namespace SharpEquations.XsltGenerator
         {
             if (left == XType.None)
                 return right;
-            return right == XType.None || left == right ? left : XType.Any;
+            if (right == XType.None || left == right)
+                return left;
+            // a node is a node-set too
+            return (left == XType.Node && right == XType.NodeSet) || (left == XType.NodeSet && right == XType.Node) ? XType.NodeSet : XType.Any;
         }
 
         public void Give(string parameter, XType type) =>
@@ -67,7 +70,7 @@ namespace SharpEquations.XsltGenerator
         }
 
         // every fact moves one way, so the count tells whether one moved
-        private int Count => Sets.Sum(s => s.Count) + ParameterTypes.Values.Sum(t => t == XType.None ? 0 : t == XType.Any ? 2 : 1);
+        private int Count => Sets.Sum(s => s.Count) + ParameterTypes.Values.Sum(t => t == XType.None ? 0 : t == XType.Any ? 3 : t == XType.NodeSet ? 2 : 1);
     }
 
     /// <summary>
@@ -504,6 +507,10 @@ namespace SharpEquations.XsltGenerator
                     return XPathCompiler.Box(value);
                 case var _ when type == value.Type:
                     return value.Code;
+                case XType.NodeSet when value.Type == XType.Node:
+                    return "ListOf(" + value.Code + ")";
+                case XType.Node:
+                    return "null";
                 // no value of another type reaches a parameter whose type is known
                 case XType.Number:
                     return "0D";
@@ -573,9 +580,17 @@ namespace SharpEquations.XsltGenerator
 
                 if (select != null)
                 {
-                    var value = xpath.Compile(select, paramContext);
+                    var value = xpath.Compile(select, paramContext).Bound();
                     Default(value.Type);
-                    w.Line("var " + id + " = " + argument(i) + " ?? " + Convert(value, type(i)) + ";");
+                    // a node that is null is an empty node-set, not a parameter left to its default
+                    w.Line(type(i) == XType.Node
+                        ? "var " + id + " = ReferenceEquals(" + argument(i) + ", Omitted) ? " + Convert(value, type(i)) + " : " + argument(i) + ";"
+                        : "var " + id + " = " + argument(i) + " ?? " + Convert(value, type(i)) + ";");
+                }
+                else if (type(i) == XType.Node)
+                {
+                    Default(content ? XType.Fragment : XType.String);
+                    w.Line("var " + id + " = ReferenceEquals(" + argument(i) + ", Omitted) ? null : " + argument(i) + ";");
                 }
                 else if (content && !valueType)
                 {
@@ -591,7 +606,7 @@ namespace SharpEquations.XsltGenerator
                     Default(content ? XType.Fragment : XType.String);
                     w.Line("var " + id + " = " + argument(i) + " ?? " + Convert(new Compiled("\"\"", XType.String), type(i)) + ";");
                 }
-                scope.Add(name, new Variable(id, type(i)));
+                scope.Add(name, new Variable(id, type(i), type(i) == XType.Node ? NodeOrder.Single : NodeOrder.Ordered));
             }
             CompileSequence(template.Nodes().Where(n => !(n is XElement e && parameters.Contains(e))), context, w);
         }
@@ -1150,7 +1165,7 @@ namespace SharpEquations.XsltGenerator
                         else
                         {
                             Learnt.Omitted.Add(key);
-                            args.Add("null");
+                            args.Add(ParameterType(template, parameter) == XType.Node ? "Omitted" : "null");
                         }
                     }
                     w.Line(Call(template, context, args));
@@ -1247,7 +1262,7 @@ namespace SharpEquations.XsltGenerator
                     if (select != null)
                     {
                         var expr = XPathParser.Parse(select);
-                        value = xpath.Compile(expr, context);
+                        value = xpath.Compile(expr, context).Bound();
                         if (value.Type == XType.NodeSet)
                             order = xpath.OrderOf(expr, context);
                     }
@@ -1350,8 +1365,7 @@ namespace SharpEquations.XsltGenerator
                 if (select != null)
                 {
                     // compiled here, before the statements of the parameters after it
-                    var value = xpath.Compile(select, paramContext);
-                    parameters[name] = value.IsNodeSet ? new Compiled(value.Code, XType.NodeSet) : value;
+                    parameters[name] = xpath.Compile(select, paramContext).Bound();
                 }
                 else if (HasContent(child))
                 {

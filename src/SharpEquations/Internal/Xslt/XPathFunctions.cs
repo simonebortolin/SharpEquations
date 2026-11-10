@@ -216,9 +216,22 @@ namespace SharpEquations.Internal.Xslt
         public static bool Compare(object left, object right, Comparison comparison)
         {
             if (IsNodes(left))
-                return IsNodes(right) ? CompareNodes(left, right, comparison) : CompareNodes(left, right, comparison, false);
+            {
+                if (!IsNodes(right))
+                    return CompareNodes(left, right, comparison);
+                for (int i = 0, leftCount = ValueCount(left); i < leftCount; i++)
+                {
+                    var value = ValueAt(left, i);
+                    for (int j = 0, rightCount = ValueCount(right); j < rightCount; j++)
+                    {
+                        if (CompareStrings(value, ValueAt(right, j), comparison))
+                            return true;
+                    }
+                }
+                return false;
+            }
             if (IsNodes(right))
-                return CompareNodes(right, left, comparison, true);
+                return CompareNodes(right, left, Swap(comparison));
             if (comparison == Comparison.Equal || comparison == Comparison.NotEqual)
             {
                 bool equal;
@@ -232,6 +245,43 @@ namespace SharpEquations.Internal.Xslt
             }
             return Compare(Num(left), Num(right), comparison);
         }
+
+        public static bool Compare(object left, string right, Comparison comparison)
+        {
+            if (!IsNodes(left))
+                return Compare(left, (object)right, comparison);
+            for (int i = 0, count = ValueCount(left); i < count; i++)
+            {
+                if (CompareStrings(ValueAt(left, i), right, comparison))
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool Compare(string left, object right, Comparison comparison) => Compare(right, left, Swap(comparison));
+
+        public static bool Compare(object left, double right, Comparison comparison)
+        {
+            switch (left)
+            {
+                case double number:
+                    return Compare(number, right, comparison);
+                case string text when comparison != Comparison.Equal && comparison != Comparison.NotEqual:
+                    return Compare(Num(text), right, comparison);
+                case string text:
+                    return (Num(text) == right) == (comparison == Comparison.Equal);
+                case bool _:
+                    return Compare(left, (object)right, comparison);
+            }
+            for (int i = 0, count = ValueCount(left); i < count; i++)
+            {
+                if (Compare(Num(ValueAt(left, i)), right, comparison))
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool Compare(double left, object right, Comparison comparison) => Compare(right, left, Swap(comparison));
 
         public static bool Compare(double left, double right, Comparison comparison)
         {
@@ -254,27 +304,14 @@ namespace SharpEquations.Internal.Xslt
 
         private static bool IsNodes(object value) => value is List<XObject> || value is ResultFragment;
 
-        private static IEnumerable<string> StringValues(object value) =>
-            value is ResultFragment fragment ? new[] { fragment.Value } : ((List<XObject>)value).Select(StringValue);
+        // the string values of a node-set: those of its nodes, or that of a result tree fragment
+        private static int ValueCount(object nodes) => nodes is List<XObject> list ? list.Count : 1;
 
-        private static bool CompareNodes(object left, object right, Comparison comparison)
-        {
-            var rightValues = StringValues(right).ToList();
-            foreach (var l in StringValues(left))
-            {
-                foreach (var r in rightValues)
-                {
-                    if (CompareStrings(l, r, comparison))
-                        return true;
-                }
-            }
-            return false;
-        }
+        private static string ValueAt(object nodes, int index) => nodes is List<XObject> list ? StringValue(list[index]) : ((ResultFragment)nodes).Value;
 
-        private static bool CompareNodes(object nodes, object other, Comparison comparison, bool swapped)
+        // a node-set compared with a value that is not one
+        private static bool CompareNodes(object nodes, object other, Comparison comparison)
         {
-            if (swapped)
-                comparison = Swap(comparison);
             if (other is bool b)
             {
                 var value = Bool(nodes);
@@ -282,10 +319,23 @@ namespace SharpEquations.Internal.Xslt
                     ? (value == b) == (comparison == Comparison.Equal)
                     : Compare(value ? 1 : 0, b ? 1 : 0, comparison);
             }
+            var count = ValueCount(nodes);
             if (other is double d)
-                return StringValues(nodes).Any(s => Compare(Num(s), d, comparison));
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    if (Compare(Num(ValueAt(nodes, i)), d, comparison))
+                        return true;
+                }
+                return false;
+            }
             var text = Str(other);
-            return StringValues(nodes).Any(s => CompareStrings(s, text, comparison));
+            for (var i = 0; i < count; i++)
+            {
+                if (CompareStrings(ValueAt(nodes, i), text, comparison))
+                    return true;
+            }
+            return false;
         }
 
         private static bool CompareStrings(string left, string right, Comparison comparison)
@@ -350,6 +400,11 @@ namespace SharpEquations.Internal.Xslt
             return result;
         }
 
+        /// <summary>What a template is given for a parameter that is a node, when the call leaves it to its default.</summary>
+        public static readonly XObject Omitted = new XComment("");
+
+        public static List<XObject> ListOf(XObject? node) => node == null ? Empty : Single(node);
+
         public static XObject? First(List<XObject> nodes) => nodes.Count == 0 ? null : nodes[0];
 
         public static XObject RootNode(XObject node)
@@ -400,6 +455,8 @@ namespace SharpEquations.Internal.Xslt
 
         public static void SortUnique(List<XObject> nodes)
         {
+            if (nodes.Count < 2)
+                return;
             nodes.Sort(DocumentOrder);
             var write = 0;
             for (var read = 0; read < nodes.Count; read++)

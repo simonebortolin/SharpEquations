@@ -17,6 +17,9 @@ namespace SharpEquations.XsltGenerator
         String,
         Number,
         Boolean,
+
+        /// <summary>A node-set of at most one node, kept as the node or null.</summary>
+        Node,
         NodeSet,
         Text,
         Fragment,
@@ -49,6 +52,14 @@ namespace SharpEquations.XsltGenerator
         Element,
         Attribute,
         Text,
+    }
+
+    /// <summary>A node-set the generated code holds as a list, in a path that starts from it.</summary>
+    internal sealed class ListExpr : Expr
+    {
+        public ListExpr(string code) => Code = code;
+
+        public string Code { get; }
     }
 
     /// <summary>A node the generated code holds in a variable.</summary>
@@ -99,6 +110,19 @@ namespace SharpEquations.XsltGenerator
         public XPathCompiler Owner => owner!;
 
         public bool IsNodeSet => Expr != null;
+
+        /// <summary>
+        /// The value as a variable or a parameter holds it: a node-set compiled here, to the node when it has at most
+        /// one, to the list of its nodes otherwise.
+        /// </summary>
+        public Compiled Bound()
+        {
+            if (!IsNodeSet)
+                return this;
+            return owner!.OrderOf(Expr!, Context!) == NodeOrder.Single
+                ? new Compiled(owner.FirstNodeCode(Expr!, Context!), XType.Node)
+                : new Compiled(Code, XType.NodeSet);
+        }
     }
 
     internal sealed class Variable
@@ -286,7 +310,7 @@ namespace SharpEquations.XsltGenerator
                 case VariableExpr variable:
                 {
                     var found = Find(variable, context);
-                    return found.Type == XType.NodeSet ? new Compiled(this, expr, context) : new Compiled(found.Id, found.Type);
+                    return found.Type == XType.NodeSet || found.Type == XType.Node ? new Compiled(this, expr, context) : new Compiled(found.Id, found.Type);
                 }
                 case NegateExpr negate:
                     return new Compiled("(-" + Num(Compile(negate.Operand, context)) + ")", XType.Number);
@@ -323,7 +347,10 @@ namespace SharpEquations.XsltGenerator
                 case NegateExpr _:
                     return XType.Number;
                 case VariableExpr variable:
-                    return Find(variable, context).Type;
+                {
+                    var type = Find(variable, context).Type;
+                    return type == XType.Node ? XType.NodeSet : type;
+                }
                 case BinaryExpr binary:
                     switch (binary.Op)
                     {
@@ -400,7 +427,7 @@ namespace SharpEquations.XsltGenerator
             if (right.IsNodeSet && !left.IsNodeSet && !IsUnknown(left.Type))
                 return new Compiled(CompareNodes(right, op, left, true), XType.Boolean);
             if (left.IsNodeSet || right.IsNodeSet || IsUnknown(left.Type) || IsUnknown(right.Type))
-                return new Compiled("Compare(" + Box(left) + ", " + Box(right) + ", Comparison." + ComparisonName(op) + ")", XType.Boolean);
+                return new Compiled("Compare(" + Operand(left) + ", " + Operand(right) + ", Comparison." + ComparisonName(op) + ")", XType.Boolean);
             var csharp = op == "=" ? "==" : op;
             string code;
             if (op != "=" && op != "!=")
@@ -444,6 +471,9 @@ namespace SharpEquations.XsltGenerator
                 w.Line("return false;");
             }, numeric ? "double" : "string", argument);
         }
+
+        // a string or a number is compared with a value of unknown type as it is
+        private static string Operand(Compiled value) => value.Type == XType.String || value.Type == XType.Number ? value.Code : Box(value);
 
         private static string ComparisonName(string op)
         {
@@ -578,6 +608,8 @@ namespace SharpEquations.XsltGenerator
                     var found = Find(variable, context);
                     return found.Type == XType.NodeSet ? found.Id : Nodes(new Compiled(found.Id, found.Type));
                 }
+                case ListExpr list:
+                    return list.Code;
                 case BinaryExpr union when union.Op == "|":
                     return "Union(" + NodesCode(union.Left, context) + ", " + NodesCode(union.Right, context) + ")";
                 case FilterExpr _:
@@ -587,6 +619,17 @@ namespace SharpEquations.XsltGenerator
                     var order = OrderOf(expr, context);
                     return Helper("List<XObject>", context, (inner, w) =>
                     {
+                        // the nodes reached from one node are in order when those from more are not
+                        if (order == NodeOrder.Unordered && expr is PathExpr path && path.Start != null
+                            && IsStreamed(Steps(path, inner).Aggregate(NodeOrder.Single, (o, step) => After(o, step, inner))))
+                        {
+                            w.Line("var start = " + NodesCode(path.Start, inner) + ";");
+                            w.Line("var list = new List<XObject>();");
+                            EmitNodes(new PathExpr(new ListExpr("start"), false, path.Steps), inner, w, cursor => w.Line("list.Add(" + cursor.Var + ");"));
+                            w.Line("if (start.Count > 1)").Line("    SortUnique(list);");
+                            w.Line("return list;");
+                            return;
+                        }
                         if (order == NodeOrder.Single)
                         {
                             EmitNodes(expr, inner, w, cursor => w.Line("return Single(" + cursor.Var + ");"));
@@ -621,6 +664,8 @@ namespace SharpEquations.XsltGenerator
         {
             switch (expr)
             {
+                case VariableExpr variable when Find(variable, context).Type == XType.Node:
+                    return "(" + Find(variable, context).Id + " != null)";
                 case VariableExpr _:
                     return "(" + NodesCode(expr, context) + ".Count > 0)";
                 case BinaryExpr union when union.Op == "|":
@@ -635,9 +680,13 @@ namespace SharpEquations.XsltGenerator
         }
 
         /// <summary>The first node in document order, or null.</summary>
-        private string FirstNodeCode(Expr expr, Context context)
+        public string FirstNodeCode(Expr expr, Context context)
         {
             var order = OrderOf(expr, context);
+            if (IsNode(expr, context, out var node))
+                return node;
+            if (expr is PathExpr self && self.Start == null && !self.Absolute && Steps(self, context).Count == 0)
+                return context.Node;
             if (expr is VariableExpr || expr is BinaryExpr || order == NodeOrder.Unordered)
                 return "First(" + NodesCode(expr, context) + ")";
             return Helper("XObject?", context, (inner, w) =>
@@ -658,6 +707,8 @@ namespace SharpEquations.XsltGenerator
         private string FirstStringCode(Expr expr, Context context)
         {
             var order = OrderOf(expr, context);
+            if (IsNode(expr, context, out var node))
+                return "StringValue(" + node + ")";
             if (expr is VariableExpr || expr is BinaryExpr || order == NodeOrder.Unordered)
                 return "Str(" + NodesCode(expr, context) + ")";
             return Helper("string", context, (inner, w) =>
@@ -674,8 +725,21 @@ namespace SharpEquations.XsltGenerator
             });
         }
 
+        // a variable that holds a node-set as its node
+        private bool IsNode(Expr expr, Context context, out string node)
+        {
+            node = "";
+            if (!(expr is VariableExpr variable))
+                return false;
+            var found = Find(variable, context);
+            node = found.Id;
+            return found.Type == XType.Node;
+        }
+
         private string CountCode(Expr expr, Context context)
         {
+            if (IsNode(expr, context, out var node))
+                return "(" + node + " == null ? 0 : 1)";
             if (expr is VariableExpr || expr is BinaryExpr || OrderOf(expr, context) == NodeOrder.Unordered)
                 return NodesCode(expr, context) + ".Count";
             return Helper("int", context, (inner, w) =>
@@ -743,6 +807,8 @@ namespace SharpEquations.XsltGenerator
                 case VariableExpr variable:
                 {
                     var found = Find(variable, context);
+                    if (found.Type == XType.Node)
+                        return NodeOrder.Single;
                     return found.Type == XType.NodeSet ? found.Order : NodeOrder.Ordered;
                 }
                 case FunctionExpr _ when IsCurrent(expr):
@@ -935,6 +1001,11 @@ namespace SharpEquations.XsltGenerator
                     break;
                 case FunctionExpr _ when IsCurrent(expr):
                     inner(new Cursor(context.Current, context.CurrentKind));
+                    break;
+                case VariableExpr _ when IsNode(expr, context, out var node):
+                    w.Open("if (" + node + " != null)");
+                    inner(new Cursor(node, NodeKind.Object));
+                    w.Close();
                     break;
                 default:
                     EmitList(NodesCode(expr, context), context, w, inner);
@@ -1392,6 +1463,8 @@ namespace SharpEquations.XsltGenerator
             {
                 case XType.Text:
                     return "new ResultFragment(" + value.Code + ")";
+                case XType.Node:
+                    return "ListOf(" + value.Code + ")";
                 case XType.Any:
                 case XType.None:
                     return value.Code;
@@ -1406,6 +1479,8 @@ namespace SharpEquations.XsltGenerator
             {
                 case XType.NodeSet:
                     return value.Code;
+                case XType.Node:
+                    return "ListOf(" + value.Code + ")";
                 case XType.Any:
                 case XType.None:
                     return "Nodes(" + value.Code + ")";
@@ -1428,6 +1503,8 @@ namespace SharpEquations.XsltGenerator
                     return "double";
                 case XType.Boolean:
                     return "bool";
+                case XType.Node:
+                    return "XObject";
                 case XType.NodeSet:
                     return "List<XObject>";
                 case XType.Fragment:
