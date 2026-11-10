@@ -19,7 +19,7 @@ namespace SharpEquations.Internal.Xslt
     /// </summary>
     internal sealed class XsltOutput
     {
-        private static readonly XName Container = XName.Get("fragment");
+        public static readonly XName Container = XName.Get("fragment");
 
         private readonly Stack<XContainer> open = new Stack<XContainer>();
         private readonly Stack<XElement> roots = new Stack<XElement>();
@@ -30,6 +30,11 @@ namespace SharpEquations.Internal.Xslt
         private readonly StringBuilder markup = new StringBuilder();
         private bool hasText;
         private bool hasMarkup;
+
+        // the text captured as strings, one capture after the other, and where the one in progress starts (-1: none)
+        private readonly StringBuilder captured = new StringBuilder();
+        private readonly Stack<int> captures = new Stack<int>();
+        private int capture = -1;
 
         public XsltOutput()
         {
@@ -65,6 +70,11 @@ namespace SharpEquations.Internal.Xslt
 
         public void Text(string value)
         {
+            if (capture >= 0)
+            {
+                captured.Append(value);
+                return;
+            }
             hasText = true;
             text.Append(value);
             foreach (var c in value)
@@ -137,11 +147,23 @@ namespace SharpEquations.Internal.Xslt
 
         public void CopyOf(ResultFragment fragment)
         {
+            if (fragment.Text != null)
+            {
+                CopyOfText(fragment.Text);
+                return;
+            }
             foreach (var node in fragment.Root.Nodes())
                 Copy(node);
         }
 
         public void CopyOf(string value) => Text(value);
+
+        /// <summary>The copy of a result tree fragment that is only text: its text node, if it has one.</summary>
+        public void CopyOfText(string value)
+        {
+            if (value.Length > 0)
+                Text(value);
+        }
 
         public void CopyOf(object value)
         {
@@ -159,7 +181,7 @@ namespace SharpEquations.Internal.Xslt
             }
         }
 
-        private void Copy(XObject node)
+        public void Copy(XObject node)
         {
             switch (node)
             {
@@ -202,8 +224,25 @@ namespace SharpEquations.Internal.Xslt
             }
         }
 
+        /// <summary>Starts keeping the text written as a string: only text is written until <see cref="EndText"/>.</summary>
+        public void BeginText()
+        {
+            captures.Push(capture);
+            capture = captured.Length;
+        }
+
+        public string EndText()
+        {
+            var value = captured.ToString(capture, captured.Length - capture);
+            captured.Length = capture;
+            capture = captures.Pop();
+            return value;
+        }
+
         public void BeginCapture()
         {
+            captures.Push(capture);
+            capture = -1;
             Flush();
             var root = new XElement(Container);
             open.Push(root);
@@ -214,6 +253,7 @@ namespace SharpEquations.Internal.Xslt
         {
             Flush();
             open.Pop();
+            capture = captures.Pop();
             return new ResultFragment(roots.Pop());
         }
 
@@ -223,6 +263,7 @@ namespace SharpEquations.Internal.Xslt
             hasMarkup = false;
             Flush();
             open.Pop();
+            capture = captures.Pop();
             return roots.Pop().Value;
         }
 
