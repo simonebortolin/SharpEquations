@@ -1,0 +1,436 @@
+// Validating benchmarks:
+// ***** BenchmarkRunner: Start   *****
+// ***** Found 6 benchmark(s) in total *****
+// ***** Building 1 exe(s) in Parallel: Start   *****
+// start dotnet  restore --nodeReuse:false /p:UseSharedCompilation=false /p:Deterministic=true /p:Optimize=true /p:ArtifactsPath="/home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/" /p:OutDir="/home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0/" /p:OutputPath="/home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0/" /p:PublishDir="/home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/publish/" in /home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1
+// command took 1.83 sec and exited with 0
+// start dotnet  build -c Release --no-restore --nodeReuse:false /p:UseSharedCompilation=false /p:Deterministic=true /p:Optimize=true /p:ArtifactsPath="/home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/" /p:OutDir="/home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0/" /p:OutputPath="/home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0/" /p:PublishDir="/home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/publish/" --output "/home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0/" in /home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1
+// command took 37.27 sec and exited with 0
+// ***** Done, took 00:00:39 (39.16 sec)   *****
+// Found 6 benchmarks:
+//   StylesheetBenchmarks.Omml2MathML: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+//   StylesheetBenchmarks.Omml2MathMLXslCompiledTransform: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+//   StylesheetBenchmarks.MathML2Omml: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+//   StylesheetBenchmarks.MathML2OmmlXslCompiledTransform: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+//   StylesheetBenchmarks.Mtef2MathML: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+//   StylesheetBenchmarks.Mtef2MathMLXslCompiledTransform: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+
+// **************************
+// Benchmark: StylesheetBenchmarks.Omml2MathML: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet SharpEquations.Benchmarks-ShortRun-1.dll --anonymousPipes 135 136 --benchmarkName SharpEquations.Benchmarks.StylesheetBenchmarks.Omml2MathML --job ShortRun --benchmarkId 0 in /home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX10v1,AVX512 BF16+FP16,AVX512 BITALG+VBMI2+VNNI+VPOPCNTDQ,AVX512 IFMA+VBMI,AVX512 F+BW+CD+DQ+VL,AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL,AvxVnni,SERIALIZE VectorSize=256
+// Job: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 292054.00 ns, 292.0540 us/op
+WorkloadJitting  1: 1 op, 231231522.00 ns, 231.2315 ms/op
+
+WorkloadPilot    1: 2 op, 455599533.00 ns, 227.7998 ms/op
+WorkloadPilot    2: 3 op, 695063096.00 ns, 231.6877 ms/op
+
+WorkloadWarmup   1: 3 op, 621705966.00 ns, 207.2353 ms/op
+WorkloadWarmup   2: 3 op, 556036705.00 ns, 185.3456 ms/op
+WorkloadWarmup   3: 3 op, 555496024.00 ns, 185.1653 ms/op
+
+// BeforeActualRun
+WorkloadActual   1: 3 op, 558002451.00 ns, 186.0008 ms/op
+WorkloadActual   2: 3 op, 623287962.00 ns, 207.7627 ms/op
+WorkloadActual   3: 3 op, 674103043.00 ns, 224.7010 ms/op
+
+// AfterActualRun
+WorkloadResult   1: 3 op, 558002451.00 ns, 186.0008 ms/op
+WorkloadResult   2: 3 op, 623287962.00 ns, 207.7627 ms/op
+WorkloadResult   3: 3 op, 674103043.00 ns, 224.7010 ms/op
+// GC:  5 0 0 1451610648 3
+// Threading:  0 0 3
+
+// AfterAll
+// Benchmark Process 4317 has exited with code 0.
+
+Mean = 206.155 ms, StdErr = 11.201 ms (5.43%), N = 3, StdDev = 19.400 ms
+Min = 186.001 ms, Q1 = 196.882 ms, Median = 207.763 ms, Q3 = 216.232 ms, Max = 224.701 ms
+IQR = 19.350 ms, LowerFence = 167.857 ms, UpperFence = 245.257 ms
+ConfidenceInterval = [-147.776 ms; 560.085 ms] (CI 99.9%), Margin = 353.931 ms (171.68% of Mean)
+Skewness = -0.08, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 5 (83.3 %) benchmark(s) to run. Estimated finish 2026-11-10 12:41 (0h 0m from now) **
+// **************************
+// Benchmark: StylesheetBenchmarks.Omml2MathMLXslCompiledTransform: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet SharpEquations.Benchmarks-ShortRun-1.dll --anonymousPipes 135 136 --benchmarkName SharpEquations.Benchmarks.StylesheetBenchmarks.Omml2MathMLXslCompiledTransform --job ShortRun --benchmarkId 1 in /home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX10v1,AVX512 BF16+FP16,AVX512 BITALG+VBMI2+VNNI+VPOPCNTDQ,AVX512 IFMA+VBMI,AVX512 F+BW+CD+DQ+VL,AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL,AvxVnni,SERIALIZE VectorSize=256
+// Job: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 220122.00 ns, 220.1220 us/op
+WorkloadJitting  1: 1 op, 190172543.00 ns, 190.1725 ms/op
+
+WorkloadPilot    1: 2 op, 328405869.00 ns, 164.2029 ms/op
+WorkloadPilot    2: 3 op, 256877052.00 ns, 85.6257 ms/op
+WorkloadPilot    3: 4 op, 368455554.00 ns, 92.1139 ms/op
+WorkloadPilot    4: 5 op, 430513027.00 ns, 86.1026 ms/op
+WorkloadPilot    5: 6 op, 486881107.00 ns, 81.1469 ms/op
+WorkloadPilot    6: 7 op, 441889534.00 ns, 63.1271 ms/op
+WorkloadPilot    7: 8 op, 512115907.00 ns, 64.0145 ms/op
+
+WorkloadWarmup   1: 8 op, 504718724.00 ns, 63.0898 ms/op
+WorkloadWarmup   2: 8 op, 512098176.00 ns, 64.0123 ms/op
+WorkloadWarmup   3: 8 op, 520952182.00 ns, 65.1190 ms/op
+
+// BeforeActualRun
+WorkloadActual   1: 8 op, 512111776.00 ns, 64.0140 ms/op
+WorkloadActual   2: 8 op, 507543132.00 ns, 63.4429 ms/op
+WorkloadActual   3: 8 op, 547562612.00 ns, 68.4453 ms/op
+
+// AfterActualRun
+WorkloadResult   1: 8 op, 512111776.00 ns, 64.0140 ms/op
+WorkloadResult   2: 8 op, 507543132.00 ns, 63.4429 ms/op
+WorkloadResult   3: 8 op, 547562612.00 ns, 68.4453 ms/op
+// GC:  4 0 0 1312345024 8
+// Threading:  0 0 8
+
+// AfterAll
+// Benchmark Process 4328 has exited with code 0.
+
+Mean = 65.301 ms, StdErr = 1.581 ms (2.42%), N = 3, StdDev = 2.738 ms
+Min = 63.443 ms, Q1 = 63.728 ms, Median = 64.014 ms, Q3 = 66.230 ms, Max = 68.445 ms
+IQR = 2.501 ms, LowerFence = 59.977 ms, UpperFence = 69.981 ms
+ConfidenceInterval = [15.345 ms; 115.256 ms] (CI 99.9%), Margin = 49.955 ms (76.50% of Mean)
+Skewness = 0.37, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 4 (66.7 %) benchmark(s) to run. Estimated finish 2026-11-10 12:42 (0h 0m from now) **
+// **************************
+// Benchmark: StylesheetBenchmarks.MathML2Omml: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet SharpEquations.Benchmarks-ShortRun-1.dll --anonymousPipes 135 136 --benchmarkName SharpEquations.Benchmarks.StylesheetBenchmarks.MathML2Omml --job ShortRun --benchmarkId 2 in /home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX10v1,AVX512 BF16+FP16,AVX512 BITALG+VBMI2+VNNI+VPOPCNTDQ,AVX512 IFMA+VBMI,AVX512 F+BW+CD+DQ+VL,AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL,AvxVnni,SERIALIZE VectorSize=256
+// Job: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 213430.00 ns, 213.4300 us/op
+WorkloadJitting  1: 1 op, 393625252.00 ns, 393.6253 ms/op
+
+OverheadJitting  2: 1 op, 2417.00 ns, 2.4170 us/op
+WorkloadJitting  2: 1 op, 269815324.00 ns, 269.8153 ms/op
+
+WorkloadPilot    1: 2 op, 347592572.00 ns, 173.7963 ms/op
+WorkloadPilot    2: 3 op, 581683560.00 ns, 193.8945 ms/op
+
+WorkloadWarmup   1: 3 op, 516453475.00 ns, 172.1512 ms/op
+WorkloadWarmup   2: 3 op, 421037320.00 ns, 140.3458 ms/op
+WorkloadWarmup   3: 3 op, 416767505.00 ns, 138.9225 ms/op
+
+// BeforeActualRun
+WorkloadActual   1: 3 op, 424876905.00 ns, 141.6256 ms/op
+WorkloadActual   2: 3 op, 421670986.00 ns, 140.5570 ms/op
+WorkloadActual   3: 3 op, 420468251.00 ns, 140.1561 ms/op
+
+// AfterActualRun
+WorkloadResult   1: 3 op, 424876905.00 ns, 141.6256 ms/op
+WorkloadResult   2: 3 op, 421670986.00 ns, 140.5570 ms/op
+WorkloadResult   3: 3 op, 420468251.00 ns, 140.1561 ms/op
+// GC:  3 0 0 821526216 3
+// Threading:  0 0 3
+
+// AfterAll
+// Benchmark Process 4340 has exited with code 0.
+
+Mean = 140.780 ms, StdErr = 0.439 ms (0.31%), N = 3, StdDev = 0.760 ms
+Min = 140.156 ms, Q1 = 140.357 ms, Median = 140.557 ms, Q3 = 141.091 ms, Max = 141.626 ms
+IQR = 0.735 ms, LowerFence = 139.254 ms, UpperFence = 142.193 ms
+ConfidenceInterval = [126.921 ms; 154.638 ms] (CI 99.9%), Margin = 13.859 ms (9.84% of Mean)
+Skewness = 0.27, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 3 (50.0 %) benchmark(s) to run. Estimated finish 2026-11-10 12:41 (0h 0m from now) **
+// **************************
+// Benchmark: StylesheetBenchmarks.MathML2OmmlXslCompiledTransform: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet SharpEquations.Benchmarks-ShortRun-1.dll --anonymousPipes 135 136 --benchmarkName SharpEquations.Benchmarks.StylesheetBenchmarks.MathML2OmmlXslCompiledTransform --job ShortRun --benchmarkId 3 in /home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX10v1,AVX512 BF16+FP16,AVX512 BITALG+VBMI2+VNNI+VPOPCNTDQ,AVX512 IFMA+VBMI,AVX512 F+BW+CD+DQ+VL,AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL,AvxVnni,SERIALIZE VectorSize=256
+// Job: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 322189.00 ns, 322.1890 us/op
+WorkloadJitting  1: 1 op, 418743150.00 ns, 418.7432 ms/op
+
+OverheadJitting  2: 1 op, 1308.00 ns, 1.3080 us/op
+WorkloadJitting  2: 1 op, 188410738.00 ns, 188.4107 ms/op
+
+WorkloadPilot    1: 2 op, 364929316.00 ns, 182.4647 ms/op
+WorkloadPilot    2: 3 op, 455696347.00 ns, 151.8988 ms/op
+WorkloadPilot    3: 4 op, 538115179.00 ns, 134.5288 ms/op
+
+WorkloadWarmup   1: 4 op, 449686903.00 ns, 112.4217 ms/op
+WorkloadWarmup   2: 4 op, 264506948.00 ns, 66.1267 ms/op
+WorkloadWarmup   3: 4 op, 279975809.00 ns, 69.9940 ms/op
+
+// BeforeActualRun
+WorkloadActual   1: 4 op, 272145855.00 ns, 68.0365 ms/op
+WorkloadActual   2: 4 op, 317243695.00 ns, 79.3109 ms/op
+WorkloadActual   3: 4 op, 275855346.00 ns, 68.9638 ms/op
+
+// AfterActualRun
+WorkloadResult   1: 4 op, 272145855.00 ns, 68.0365 ms/op
+WorkloadResult   2: 4 op, 317243695.00 ns, 79.3109 ms/op
+WorkloadResult   3: 4 op, 275855346.00 ns, 68.9638 ms/op
+// GC:  2 0 0 571892736 4
+// Threading:  0 0 4
+
+// AfterAll
+// Benchmark Process 4354 has exited with code 0.
+
+Mean = 72.104 ms, StdErr = 3.614 ms (5.01%), N = 3, StdDev = 6.259 ms
+Min = 68.036 ms, Q1 = 68.500 ms, Median = 68.964 ms, Q3 = 74.137 ms, Max = 79.311 ms
+IQR = 5.637 ms, LowerFence = 60.044 ms, UpperFence = 82.593 ms
+ConfidenceInterval = [-42.080 ms; 186.288 ms] (CI 99.9%), Margin = 114.184 ms (158.36% of Mean)
+Skewness = 0.38, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 2 (33.3 %) benchmark(s) to run. Estimated finish 2026-11-10 12:41 (0h 0m from now) **
+// **************************
+// Benchmark: StylesheetBenchmarks.Mtef2MathML: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet SharpEquations.Benchmarks-ShortRun-1.dll --anonymousPipes 135 136 --benchmarkName SharpEquations.Benchmarks.StylesheetBenchmarks.Mtef2MathML --job ShortRun --benchmarkId 4 in /home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX10v1,AVX512 BF16+FP16,AVX512 BITALG+VBMI2+VNNI+VPOPCNTDQ,AVX512 IFMA+VBMI,AVX512 F+BW+CD+DQ+VL,AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL,AvxVnni,SERIALIZE VectorSize=256
+// Job: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 231703.00 ns, 231.7030 us/op
+WorkloadJitting  1: 1 op, 77134240.00 ns, 77.1342 ms/op
+
+WorkloadPilot    1: 2 op, 150578499.00 ns, 75.2892 ms/op
+WorkloadPilot    2: 3 op, 207345795.00 ns, 69.1153 ms/op
+WorkloadPilot    3: 4 op, 274145277.00 ns, 68.5363 ms/op
+WorkloadPilot    4: 5 op, 320507335.00 ns, 64.1015 ms/op
+WorkloadPilot    5: 6 op, 392906736.00 ns, 65.4845 ms/op
+WorkloadPilot    6: 7 op, 451918692.00 ns, 64.5598 ms/op
+WorkloadPilot    7: 8 op, 493632993.00 ns, 61.7041 ms/op
+WorkloadPilot    8: 9 op, 612434056.00 ns, 68.0482 ms/op
+
+WorkloadWarmup   1: 9 op, 665683902.00 ns, 73.9649 ms/op
+WorkloadWarmup   2: 9 op, 725019983.00 ns, 80.5578 ms/op
+WorkloadWarmup   3: 9 op, 748641880.00 ns, 83.1824 ms/op
+
+// BeforeActualRun
+WorkloadActual   1: 9 op, 754521066.00 ns, 83.8357 ms/op
+WorkloadActual   2: 9 op, 757873546.00 ns, 84.2082 ms/op
+WorkloadActual   3: 9 op, 785871016.00 ns, 87.3190 ms/op
+
+// AfterActualRun
+WorkloadResult   1: 9 op, 754521066.00 ns, 83.8357 ms/op
+WorkloadResult   2: 9 op, 757873546.00 ns, 84.2082 ms/op
+WorkloadResult   3: 9 op, 785871016.00 ns, 87.3190 ms/op
+// GC:  2 0 0 754003800 9
+// Threading:  0 0 9
+
+// AfterAll
+// Benchmark Process 4365 has exited with code 0.
+
+Mean = 85.121 ms, StdErr = 1.104 ms (1.30%), N = 3, StdDev = 1.913 ms
+Min = 83.836 ms, Q1 = 84.022 ms, Median = 84.208 ms, Q3 = 85.764 ms, Max = 87.319 ms
+IQR = 1.742 ms, LowerFence = 81.409 ms, UpperFence = 88.376 ms
+ConfidenceInterval = [50.227 ms; 120.015 ms] (CI 99.9%), Margin = 34.894 ms (40.99% of Mean)
+Skewness = 0.37, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 1 (16.7 %) benchmark(s) to run. Estimated finish 2026-11-10 12:42 (0h 0m from now) **
+// **************************
+// Benchmark: StylesheetBenchmarks.Mtef2MathMLXslCompiledTransform: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet SharpEquations.Benchmarks-ShortRun-1.dll --anonymousPipes 135 136 --benchmarkName SharpEquations.Benchmarks.StylesheetBenchmarks.Mtef2MathMLXslCompiledTransform --job ShortRun --benchmarkId 5 in /home/user/SharpEquations/benchmarks/SharpEquations.Benchmarks/bin/Release/net10.0/SharpEquations.Benchmarks-ShortRun-1/bin/Release/net10.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX10v1,AVX512 BF16+FP16,AVX512 BITALG+VBMI2+VNNI+VPOPCNTDQ,AVX512 IFMA+VBMI,AVX512 F+BW+CD+DQ+VL,AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL,AvxVnni,SERIALIZE VectorSize=256
+// Job: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 257217.00 ns, 257.2170 us/op
+WorkloadJitting  1: 1 op, 997585070.00 ns, 997.5851 ms/op
+
+OverheadJitting  2: 1 op, 2672.00 ns, 2.6720 us/op
+WorkloadJitting  2: 1 op, 98796798.00 ns, 98.7968 ms/op
+
+WorkloadPilot    1: 2 op, 195365121.00 ns, 97.6826 ms/op
+WorkloadPilot    2: 3 op, 278141849.00 ns, 92.7139 ms/op
+WorkloadPilot    3: 4 op, 384161812.00 ns, 96.0405 ms/op
+WorkloadPilot    4: 5 op, 386366980.00 ns, 77.2734 ms/op
+WorkloadPilot    5: 6 op, 286018584.00 ns, 47.6698 ms/op
+WorkloadPilot    6: 7 op, 296156632.00 ns, 42.3081 ms/op
+WorkloadPilot    7: 8 op, 307450654.00 ns, 38.4313 ms/op
+WorkloadPilot    8: 9 op, 369228409.00 ns, 41.0254 ms/op
+WorkloadPilot    9: 10 op, 369923360.00 ns, 36.9923 ms/op
+WorkloadPilot   10: 11 op, 508794488.00 ns, 46.2540 ms/op
+
+WorkloadWarmup   1: 11 op, 391562015.00 ns, 35.5965 ms/op
+WorkloadWarmup   2: 11 op, 381543315.00 ns, 34.6858 ms/op
+WorkloadWarmup   3: 11 op, 381224150.00 ns, 34.6567 ms/op
+
+// BeforeActualRun
+WorkloadActual   1: 11 op, 382249299.00 ns, 34.7499 ms/op
+WorkloadActual   2: 11 op, 381096152.00 ns, 34.6451 ms/op
+WorkloadActual   3: 11 op, 400971440.00 ns, 36.4519 ms/op
+
+// AfterActualRun
+WorkloadResult   1: 11 op, 382249299.00 ns, 34.7499 ms/op
+WorkloadResult   2: 11 op, 381096152.00 ns, 34.6451 ms/op
+WorkloadResult   3: 11 op, 400971440.00 ns, 36.4519 ms/op
+// GC:  0 0 0 240904664 11
+// Threading:  0 0 11
+
+// AfterAll
+// Benchmark Process 4380 has exited with code 0.
+
+Mean = 35.282 ms, StdErr = 0.586 ms (1.66%), N = 3, StdDev = 1.014 ms
+Min = 34.645 ms, Q1 = 34.698 ms, Median = 34.750 ms, Q3 = 35.601 ms, Max = 36.452 ms
+IQR = 0.903 ms, LowerFence = 33.342 ms, UpperFence = 36.956 ms
+ConfidenceInterval = [16.778 ms; 53.786 ms] (CI 99.9%), Margin = 18.504 ms (52.45% of Mean)
+Skewness = 0.38, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 0 (0.0 %) benchmark(s) to run. Estimated finish 2026-11-10 12:42 (0h 0m from now) **
+// ***** BenchmarkRunner: Finish  *****
+
+// * Export *
+  BenchmarkDotNet.Artifacts/results/SharpEquations.Benchmarks.StylesheetBenchmarks-report.csv
+  BenchmarkDotNet.Artifacts/results/SharpEquations.Benchmarks.StylesheetBenchmarks-report-github.md
+  BenchmarkDotNet.Artifacts/results/SharpEquations.Benchmarks.StylesheetBenchmarks-report.html
+
+// * Detailed results *
+StylesheetBenchmarks.Omml2MathML: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+Runtime = .NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4; GC = Concurrent Workstation
+Mean = 206.155 ms, StdErr = 11.201 ms (5.43%), N = 3, StdDev = 19.400 ms
+Min = 186.001 ms, Q1 = 196.882 ms, Median = 207.763 ms, Q3 = 216.232 ms, Max = 224.701 ms
+IQR = 19.350 ms, LowerFence = 167.857 ms, UpperFence = 245.257 ms
+ConfidenceInterval = [-147.776 ms; 560.085 ms] (CI 99.9%), Margin = 353.931 ms (171.68% of Mean)
+Skewness = -0.08, Kurtosis = 0.67, MValue = 2
+-------------------- Histogram --------------------
+[168.346 ms ; 198.577 ms) | @
+[198.577 ms ; 233.887 ms) | @@
+---------------------------------------------------
+
+StylesheetBenchmarks.Omml2MathMLXslCompiledTransform: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+Runtime = .NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4; GC = Concurrent Workstation
+Mean = 65.301 ms, StdErr = 1.581 ms (2.42%), N = 3, StdDev = 2.738 ms
+Min = 63.443 ms, Q1 = 63.728 ms, Median = 64.014 ms, Q3 = 66.230 ms, Max = 68.445 ms
+IQR = 2.501 ms, LowerFence = 59.977 ms, UpperFence = 69.981 ms
+ConfidenceInterval = [15.345 ms; 115.256 ms] (CI 99.9%), Margin = 49.955 ms (76.50% of Mean)
+Skewness = 0.37, Kurtosis = 0.67, MValue = 2
+-------------------- Histogram --------------------
+[60.951 ms ; 66.220 ms) | @@
+[66.220 ms ; 70.937 ms) | @
+---------------------------------------------------
+
+StylesheetBenchmarks.MathML2Omml: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+Runtime = .NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4; GC = Concurrent Workstation
+Mean = 140.780 ms, StdErr = 0.439 ms (0.31%), N = 3, StdDev = 0.760 ms
+Min = 140.156 ms, Q1 = 140.357 ms, Median = 140.557 ms, Q3 = 141.091 ms, Max = 141.626 ms
+IQR = 0.735 ms, LowerFence = 139.254 ms, UpperFence = 142.193 ms
+ConfidenceInterval = [126.921 ms; 154.638 ms] (CI 99.9%), Margin = 13.859 ms (9.84% of Mean)
+Skewness = 0.27, Kurtosis = 0.67, MValue = 2
+-------------------- Histogram --------------------
+[139.465 ms ; 141.760 ms) | @@@
+---------------------------------------------------
+
+StylesheetBenchmarks.MathML2OmmlXslCompiledTransform: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+Runtime = .NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4; GC = Concurrent Workstation
+Mean = 72.104 ms, StdErr = 3.614 ms (5.01%), N = 3, StdDev = 6.259 ms
+Min = 68.036 ms, Q1 = 68.500 ms, Median = 68.964 ms, Q3 = 74.137 ms, Max = 79.311 ms
+IQR = 5.637 ms, LowerFence = 60.044 ms, UpperFence = 82.593 ms
+ConfidenceInterval = [-42.080 ms; 186.288 ms] (CI 99.9%), Margin = 114.184 ms (158.36% of Mean)
+Skewness = 0.38, Kurtosis = 0.67, MValue = 2
+-------------------- Histogram --------------------
+[67.978 ms ; 79.369 ms) | @@@
+---------------------------------------------------
+
+StylesheetBenchmarks.Mtef2MathML: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+Runtime = .NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4; GC = Concurrent Workstation
+Mean = 85.121 ms, StdErr = 1.104 ms (1.30%), N = 3, StdDev = 1.913 ms
+Min = 83.836 ms, Q1 = 84.022 ms, Median = 84.208 ms, Q3 = 85.764 ms, Max = 87.319 ms
+IQR = 1.742 ms, LowerFence = 81.409 ms, UpperFence = 88.376 ms
+ConfidenceInterval = [50.227 ms; 120.015 ms] (CI 99.9%), Margin = 34.894 ms (40.99% of Mean)
+Skewness = 0.37, Kurtosis = 0.67, MValue = 2
+-------------------- Histogram --------------------
+[82.095 ms ; 85.763 ms) | @@
+[85.763 ms ; 89.060 ms) | @
+---------------------------------------------------
+
+StylesheetBenchmarks.Mtef2MathMLXslCompiledTransform: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+Runtime = .NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4; GC = Concurrent Workstation
+Mean = 35.282 ms, StdErr = 0.586 ms (1.66%), N = 3, StdDev = 1.014 ms
+Min = 34.645 ms, Q1 = 34.698 ms, Median = 34.750 ms, Q3 = 35.601 ms, Max = 36.452 ms
+IQR = 0.903 ms, LowerFence = 33.342 ms, UpperFence = 36.956 ms
+ConfidenceInterval = [16.778 ms; 53.786 ms] (CI 99.9%), Margin = 18.504 ms (52.45% of Mean)
+Skewness = 0.38, Kurtosis = 0.67, MValue = 2
+-------------------- Histogram --------------------
+[34.625 ms ; 36.472 ms) | @@@
+---------------------------------------------------
+
+// * Summary *
+
+BenchmarkDotNet v0.15.8, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
+Intel Xeon Processor 2.30GHz, 1 CPU, 4 logical and 4 physical cores
+.NET SDK 10.0.114
+  [Host]   : .NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4
+  ShortRun : .NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4
+
+Job=ShortRun  IterationCount=3  LaunchCount=1  
+WarmupCount=3  
+
+| Method                          | Mean      | Error     | StdDev    | Gen0      | Allocated |
+|-------------------------------- |----------:|----------:|----------:|----------:|----------:|
+| Omml2MathML                     | 206.15 ms | 353.93 ms | 19.400 ms | 1666.6667 | 461.45 MB |
+| Omml2MathMLXslCompiledTransform |  65.30 ms |  49.96 ms |  2.738 ms |  500.0000 | 156.44 MB |
+| MathML2Omml                     | 140.78 ms |  13.86 ms |  0.760 ms | 1000.0000 | 261.16 MB |
+| MathML2OmmlXslCompiledTransform |  72.10 ms | 114.18 ms |  6.259 ms |  500.0000 | 136.35 MB |
+| Mtef2MathML                     |  85.12 ms |  34.89 ms |  1.913 ms |  222.2222 |   79.9 MB |
+| Mtef2MathMLXslCompiledTransform |  35.28 ms |  18.50 ms |  1.014 ms |         - |  20.89 MB |
+
+// * Legends *
+  Mean      : Arithmetic mean of all measurements
+  Error     : Half of 99.9% confidence interval
+  StdDev    : Standard deviation of all measurements
+  Gen0      : GC Generation 0 collects per 1000 operations
+  Allocated : Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)
+  1 ms      : 1 Millisecond (0.001 sec)
+
+// * Diagnostic Output - MemoryDiagnoser *
+
+
+// ***** BenchmarkRunner: End *****
+Run time: 00:01:07 (67.29 sec), executed benchmarks: 6
+
+Global total time: 00:01:46 (106.57 sec), executed benchmarks: 6
+// * Artifacts cleanup *
+Artifacts cleanup is finished

@@ -39,6 +39,11 @@ namespace SharpEquations.Benchmarks
             return json.RootElement.EnumerateArray().Select(example => example.GetProperty("input").GetString()!).ToArray();
         }
 
+        public static byte[][] MtefCorpus() =>
+            Directory.GetFiles(DataPath("mtef"), "*.*", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal).Select(File.ReadAllBytes).ToArray();
+
+        public static string Stylesheet(string name) => DataPath("xsl", name);
+
         public static XElement[] OmmlCorpus() =>
             Directory.GetFiles(DataPath("omml"), "*.omml").OrderBy(path => path, StringComparer.Ordinal).Select(path => XElement.Load(path)).ToArray();
     }
