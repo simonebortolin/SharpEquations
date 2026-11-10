@@ -64,7 +64,11 @@ namespace SharpEquations.Internal.MathML
         private static bool IsNaryHead(XElement head)
         {
             while (head.Name.LocalName is "msub" or "msup" or "msubsup" or "munder" or "mover" or "munderover")
-                head = head.Elements().First();
+            {
+                if (head.Elements().FirstOrDefault() is not { } scripted)
+                    return false;
+                head = scripted;
+            }
             return head.Name == Mml + "mo" && head.Value.Length == 1 && "∑∏∐∫∬∭∮∯∰∱∲∳⨌⨀⨁⨂⨃⨄⨅⨆⋀⋁⋂⋃".Contains(head.Value);
         }
 

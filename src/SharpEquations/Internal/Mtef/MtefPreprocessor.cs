@@ -4,6 +4,7 @@ namespace SharpEquations.Internal.Mtef
     using System.Globalization;
     using System.Linq;
     using System.Xml.Linq;
+    using SharpEquations.Internal.Text;
 
     /// <summary>
     /// Prepares the MTEF XML for mtef2mml.xsl, as the Mover and CharReplacer classes of
@@ -309,13 +310,19 @@ namespace SharpEquations.Internal.Mtef
                     c.ReplaceWith(new XText(" "));
                     continue;
                 }
+                // a code that is no character of XML (a surrogate, 0xFFFE, a number that is not one) is in no range
+                if (!CodePoints.IsXml(code))
+                {
+                    c.Remove();
+                    continue;
+                }
                 var index = System.Array.FindIndex(Replacements, r => code >= r.From && code <= r.To);
                 if (index < 0)
                     continue;
                 var token = textMode ? Replacements[index].Text : Replacements[index].Math;
                 if (token == Token.Default)
                     token = textMode ? Token.Text : Token.Mi;
-                if (token == Token.Unsupported || (code >= 0xD800 && code <= 0xDFFF))
+                if (token == Token.Unsupported)
                 {
                     c.Remove();
                     continue;

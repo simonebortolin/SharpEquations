@@ -5,6 +5,7 @@ namespace SharpEquations.Internal
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Threading;
     using System.Xml.Linq;
     using System.Xml.Xsl;
@@ -12,6 +13,7 @@ namespace SharpEquations.Internal
     using SharpEquations.Internal.MathML;
     using SharpEquations.Internal.Mtef;
     using SharpEquations.Internal.Omml;
+    using SharpEquations.Internal.Text;
     using SharpEquations.Internal.UnicodeMath;
 
     /// <summary>
@@ -38,6 +40,8 @@ namespace SharpEquations.Internal
                 throw new ArgumentNullException(nameof(source));
             CheckDefined(format);
             cancellationToken.ThrowIfCancellationRequested();
+            if (source is XElement xml && IsXml(format))
+                CheckCharacters(xml, format);
             var math = (format, source) switch
             {
                 (EquationFormat.MathML, XElement element) => element,
@@ -59,6 +63,27 @@ namespace SharpEquations.Internal
             if (format != EquationFormat.Mtef)
                 throw new ArgumentException(format + " equations are not binary: pass them as " + (IsXml(format) ? "text or XML." : "text."), nameof(format));
             return MathMLParser.Normalize(MtefParser.Parse(source), options, false);
+        }
+
+        /// <summary>
+        /// Rejects an element built with text that XML cannot hold (a control character, a surrogate without its pair),
+        /// which an XElement accepts and only fails to write.
+        /// </summary>
+        private static void CheckCharacters(XElement source, EquationFormat format)
+        {
+            foreach (var node in source.DescendantNodesAndSelf())
+            {
+                var valid = node switch
+                {
+                    XText text => CodePoints.IsXml(text.Value),
+                    XElement element => element.Attributes().All(a => CodePoints.IsXml(a.Value)),
+                    XComment comment => CodePoints.IsXml(comment.Value),
+                    XProcessingInstruction instruction => CodePoints.IsXml(instruction.Data),
+                    _ => true,
+                };
+                if (!valid)
+                    throw new FormatException("The " + format + " equation holds a character that XML does not allow.");
+            }
         }
 
         private static void CheckDefined(EquationFormat format)

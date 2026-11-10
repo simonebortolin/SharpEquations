@@ -81,6 +81,10 @@ namespace SharpEquations.Internal.Omml
                 throw new ArgumentException("Expected an m:oMath or m:oMathPara element, not " + omml.Name + ".", nameof(omml));
             }
 
+            // a paragraph without an equation is an empty display equation
+            if (equations.Count == 0)
+                return new XElement(Mml + "math", new XAttribute("display", "block"));
+
             var aligned = equations.Count > 1 && equations.Any(e => e.Descendants(M + "aln").Any(IsOn));
             if (aligned)
                 equations = new List<XElement> { AlignedLines(equations) };

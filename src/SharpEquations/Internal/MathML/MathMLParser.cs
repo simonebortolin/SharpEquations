@@ -113,6 +113,9 @@ namespace SharpEquations.Internal.MathML
             // comments, and the selection of an editor (UnicodeMath Ⓐ and Ⓕ), are not part of the equation
             math.DescendantNodes().OfType<XComment>().Remove();
             math.DescendantsAndSelf().Attributes().Where(a => a.Name == "selanchor" || a.Name == "selfocus").Remove();
+            // display="inline" is the default: the same equation as without it
+            if ((string?)math.Attribute("display") == "inline")
+                math.Attribute("display")!.Remove();
             foreach (var empty in math.DescendantsAndSelf().Where(e => !e.IsEmpty && !e.Nodes().Any(n => n is not XText t || t.Value.Length > 0)).ToList())
                 empty.RemoveNodes();
             // accent="false" over or under a script that is not an accent (an arrow over a letter, as OMML's groupChr),

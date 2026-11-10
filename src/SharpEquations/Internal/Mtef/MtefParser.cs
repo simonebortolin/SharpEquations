@@ -3,7 +3,9 @@ namespace SharpEquations.Internal.Mtef
     using System;
     using System.IO;
     using System.Linq;
+    using System.Xml;
     using System.Xml.Linq;
+    using System.Xml.Xsl;
 
     /// <summary>
     /// Converts MathType Equation Format (MTEF) equations, the binary format of Equation Editor 3.0
@@ -26,8 +28,16 @@ namespace SharpEquations.Internal.Mtef
             if (HasEquationNativeHeader(mtef))
                 return FromEquationNative(mtef);
             var xml = MtefReader.Read(mtef);
-            MtefPreprocessor.Prepare(xml);
-            var math = EquationStylesheets.Transform("mtef2mml.xsl", xml);
+            XElement math;
+            try
+            {
+                MtefPreprocessor.Prepare(xml);
+                math = EquationStylesheets.Transform("mtef2mml.xsl", xml);
+            }
+            catch (Exception e) when (e is XmlException or XsltException or ArgumentException)
+            {
+                throw new InvalidDataException("The MTEF equation could not be converted to MathML: " + e.Message, e);
+            }
             if (math == null || math.Name.LocalName != "math")
                 throw new InvalidDataException("The MTEF equation could not be converted to MathML.");
             foreach (var element in math.DescendantsAndSelf())

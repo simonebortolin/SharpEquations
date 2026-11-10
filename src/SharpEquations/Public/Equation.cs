@@ -184,9 +184,12 @@ namespace SharpEquations
                 case "W":
                     return ToString(EquationFormat.LaTeX, new EquationOptions { LaTeXFlavor = LaTeXFlavor.Word });
             }
-            if (Enum.TryParse<EquationFormat>(format, true, out var named) && Enum.IsDefined(typeof(EquationFormat), named)
-                && named != EquationFormat.Mtef && !char.IsDigit(format[0]))
-                return ToString(named);
+            // the name itself: Enum.TryParse would also take numbers, lists of names and the spaces around them
+            foreach (var name in Enum.GetNames(typeof(EquationFormat)))
+            {
+                if (string.Equals(name, format, StringComparison.OrdinalIgnoreCase) && name != nameof(EquationFormat.Mtef))
+                    return ToString((EquationFormat)Enum.Parse(typeof(EquationFormat), name));
+            }
             throw new FormatException("Unknown equation format: " + format + ".");
         }
 
