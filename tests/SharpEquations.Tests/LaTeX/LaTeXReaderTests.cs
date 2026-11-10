@@ -164,7 +164,8 @@ namespace SharpEquations.Tests.LaTeX
             await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);
         }
 
-        // a slash and a bar are ordinary characters of LaTeX, which UnicodeMath reads as a fraction and an absolute value
+        // a slash and a bar are ordinary characters of LaTeX, which UnicodeMath reads as a fraction and an absolute value;
+        // so is a bracket that a group opens and does not close, which UnicodeMath would close
         [Test]
         [Arguments(@"a/b", @"a/b", @"𝑎\/𝑏")]
         [Arguments(@"(a+b)/2", @"(a+b)/2", @"(𝑎+𝑏)\/2")]
@@ -175,6 +176,18 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"|a|\\|b|", @"|a||b|", @"|𝑎||𝑏|")]
         [Arguments(@"|\,|\\|\!|\,|", @"|\,||\!|\,|", "|\u2009|\\||\u2009|")]
         [Arguments(@"|a|~|b|", @"|a|~|b|", "|𝑎|\u00A0|𝑏|")]
+        [Arguments(@"a||b", @"a{|}|b", @"𝑎\|\|𝑏")]
+        [Arguments(@"| |", @"{|}|", @"\|\|")]
+        [Arguments(@"||x||", @"\|x\|", @"‖𝑥‖")]
+        [Arguments(@"\left|||\right|", @"\left|{|}{|}\right|", @"|(\|\|)|")]
+        [Arguments(@"{|}a|b|", @"{|}a\left|b\right|", @"\|𝑎|𝑏|")]
+        [Arguments(@"\left(x|a|b\right)", @"(x|a|b)", @"(𝑥|𝑎|𝑏)")]
+        [Arguments(@"\{|\}", @"\{{}|{}\}", @"{⬚│⬚}")]
+        [Arguments(@"(a|)", @"(a|{})", @"(𝑎│⬚)")]
+        [Arguments(@"\phantom{(}x", @"\phantom{(}x", @"⟡\( 𝑥")]
+        [Arguments(@"\mathstrut", @"\vphantom{(}", @"⇳\(")]
+        [Arguments(@"\sqrt{(}", @"\sqrt{(}", @"√\(")]
+        [Arguments(@"\text{(}", @"\text{(}", @"""(""")]
         [Arguments(@"\langle a | b \rangle | c", @"\langle a|b\rangle|c", @"⟨𝑎│𝑏⟩\|𝑐")]
         [Arguments(@"a|b", @"a|b", @"𝑎\|𝑏")]
         [Arguments(@"(a\|b)", @"(a\|b)", @"(𝑎\‖𝑏)")]
