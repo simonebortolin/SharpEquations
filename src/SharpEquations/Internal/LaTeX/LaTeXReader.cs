@@ -1037,22 +1037,39 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>
         /// A bar (| or ‖) left without its pair, as in 𝑎|𝑏, escaped: in UnicodeMath a bar opens an absolute value or a
         /// norm that a second one closes. Bars are paired within their brackets; one bar alone between brackets (𝑃(𝑐|𝑑),
-        /// {𝑥|𝑥>0}) is the separator UnicodeMath makes of it, a bar before a closing angle with no opening one is a ket
-        /// (|𝑟⟩), and the bars of \left, \right and the like are delimiters.
+        /// {𝑥|𝑥>0}) is the separator UnicodeMath makes of it, with an empty side holding the placeholder ({⬚│⬚}), a bar
+        /// before a closing angle with no opening one is a ket (|𝑟⟩), and the bars of \left, \right and the like are
+        /// delimiters. Two bars with nothing between them are bars alone, but for two such pairs around something, which
+        /// UnicodeMath reads as a norm (||𝑥||).
         /// </summary>
         private static string EscapeOddBars(string latex)
         {
             var tex = new Text(latex);
-            var frames = new Stack<List<int>>();
-            frames.Push(new List<int>());
+            var frames = new Stack<(int Open, List<int> Bars)>();
+            frames.Push((-1, new List<int>()));
             var escaped = new List<int>();
             var kets = new HashSet<int>();
-            bool ZeroSpacesBetween(int first, int second)
+            var placeholders = new HashSet<int>();
+            // the pairs of bars between \left and \right, grouped: UnicodeMath would close the bracket of the second bar
+            // at \right (├(𝑥|𝑎|𝑏┤))
+            int lefts = 0;
+            var depths = new Dictionary<int, int>();
+            var groupStarts = new HashSet<int>();
+            var groupEnds = new HashSet<int>();
+            void Pair(int first, int last)
+            {
+                if (tex[first] != "∣" && depths[first] > 0 && depths[last] == depths[first])
+                {
+                    groupStarts.Add(first);
+                    groupEnds.Add(last);
+                }
+            }
+            bool SpacesBetween(int first, int second, bool zeroSpaces)
             {
                 bool zero = false;
                 for (int k = first + 1; k < second; k++)
                 {
-                    if (tex[k] == "\\" && tex[k + 1] == "!")
+                    if (zeroSpaces && tex[k] == "\\" && tex[k + 1] == "!")
                     {
                         zero = true;
                         k++;
@@ -1060,28 +1077,57 @@ namespace SharpEquations.Internal.LaTeX
                     else if (tex[k] != " ")
                         return false;
                 }
-                return zero;
+                return zero || !zeroSpaces;
             }
-            void Close(List<int> bars, bool inBrackets)
+            void Close((int Open, List<int> Bars) frame, bool inBrackets, int close)
             {
                 foreach (var bar in new[] { "|", "‖", "∣" })
                 {
-                    var some = bars.Where(b => tex[b] == bar).ToList();
+                    var some = frame.Bars.Where(b => tex[b] == bar).ToList();
                     if (inBrackets && some.Count == 1 && bar != "‖")
+                    {
+                        if (close >= 0 && SpacesBetween(frame.Open, some[0], false))
+                            placeholders.Add(some[0]);
+                        if (close >= 0 && SpacesBetween(some[0], close, false))
+                            placeholders.Add(some[0] + 1);
                         continue;
+                    }
                     // bars in pairs, but two with only zero spaces between them (|\!|, which UnicodeMath would read as
                     // ||, one double bar): the first is then a bar alone
+                    var doubles = new List<int>();
                     for (int k = 0; k < some.Count; k++)
                     {
-                        if (k + 1 < some.Count && !ZeroSpacesBetween(some[k], some[k + 1]))
+                        if (k + 1 < some.Count && !SpacesBetween(some[k], some[k + 1], true))
+                        {
+                            if (SpacesBetween(some[k], some[k + 1], false))
+                            {
+                                // two bars with nothing between them, || when they touch, which no other bar touches,
+                                // the double bar of UnicodeMath; bars alone otherwise
+                                if (some[k + 1] == some[k] + 1 && tex[some[k] - 1] != bar && tex[some[k + 1] + 1] != bar)
+                                    doubles.Add(some[k]);
+                                else
+                                    escaped.AddRange(new[] { some[k], some[k + 1] });
+                            }
+                            else
+                                Pair(some[k], some[k + 1]);
                             k++;
+                        }
                         else
                             escaped.Add(some[k]);
+                    }
+                    // double bars in pairs around something, a norm (||𝑥||); the others bars alone
+                    for (int k = 0; k < doubles.Count; k++)
+                    {
+                        if (k + 1 < doubles.Count && !SpacesBetween(doubles[k] + 1, doubles[k + 1], false))
+                            Pair(doubles[k], doubles[++k] + 1);
+                        else
+                            escaped.AddRange(new[] { doubles[k], doubles[k] + 1 });
                     }
                 }
             }
             for (int i = 0; i < tex.Length; i++)
             {
+                int start = i;
                 var ch = tex[i];
                 if (ch == "\\")
                 {
@@ -1100,6 +1146,12 @@ namespace SharpEquations.Internal.LaTeX
                     {
                         while (tex[j] == " ")
                             j++;
+                        lefts += cw switch
+                        {
+                            "left" => 1,
+                            "right" => -1,
+                            _ => 0,
+                        };
                         // the bar after \left, \right... is skipped with the command
                         i = DelimiterCommands.Contains(cw) && (tex[j] == "|" || tex[j] == "‖") ? j : j - 1;
                         continue;
@@ -1109,33 +1161,98 @@ namespace SharpEquations.Internal.LaTeX
                 switch (ch)
                 {
                     case "(" or "[" or "⟨":
-                        frames.Push(new List<int>());
+                        frames.Push((i, new List<int>()));
                         break;
                     case ")" or "]" or "⟩" when frames.Count > 1:
-                        Close(frames.Pop(), true);
+                        Close(frames.Pop(), true, ch == "⟩" ? -1 : start);
                         break;
-                    case "⟩" when frames.Peek().Count > 0:
+                    case "⟩" when frames.Peek().Bars.Count > 0:
                         // a ket (|𝑟⟩): its bar has no pair, and ∣ (\mid) there is the bar of the ket
-                        var ket = frames.Peek()[frames.Peek().Count - 1];
-                        if (tex[ket] == "∣")
-                            kets.Add(ket);
-                        frames.Peek().RemoveAt(frames.Peek().Count - 1);
+                        var bars = frames.Peek().Bars;
+                        if (tex[bars[bars.Count - 1]] == "∣")
+                            kets.Add(bars[bars.Count - 1]);
+                        bars.RemoveAt(bars.Count - 1);
+                        break;
+                    case "|" when tex[i - 1] == "{" && tex[i - 2] != "\\" && tex[i + 1] == "}":
+                        // {|}, the ordinary bar of TeX, a bar alone
+                        escaped.Add(i);
                         break;
                     case "|" or "‖" or "∣":
-                        frames.Peek().Add(i);
+                        frames.Peek().Bars.Add(i);
+                        depths[i] = lefts;
                         break;
                 }
             }
             while (frames.Count > 0)
-                Close(frames.Pop(), false);
-            if (escaped.Count == 0 && kets.Count == 0)
+                Close(frames.Pop(), false, -1);
+            if (escaped.Count == 0 && kets.Count == 0 && placeholders.Count == 0 && groupStarts.Count == 0)
+                return latex;
+            var result = new StringBuilder();
+            for (int i = 0; i < tex.Length; i++)
+            {
+                if (placeholders.Contains(i))
+                    result.Append("{}");
+                if (groupStarts.Contains(i))
+                    result.Append('{');
+                if (escaped.Contains(i))
+                    result.Append('\\');
+                result.Append(kets.Contains(i) ? "|" : tex[i]);
+                if (groupEnds.Contains(i))
+                    result.Append('}');
+            }
+            return result.ToString();
+        }
+
+        /// <summary>
+        /// A bracket that a group opens and does not close, as in \phantom{(}, escaped: UnicodeMath would close it with an
+        /// empty fence at the end of the group. The text of \text and the like is left as it is.
+        /// </summary>
+        private static string EscapeOpenBrackets(string latex)
+        {
+            var tex = new Text(latex);
+            var groups = new Stack<List<int>>();
+            var escaped = new List<int>();
+            for (int i = 0; i < tex.Length; i++)
+            {
+                switch (tex[i])
+                {
+                    case "\\":
+                    {
+                        var cw = ControlWord(tex, i + 1);
+                        int j = i + 1 + Math.Max(1, cw.Length);
+                        if (TextCommands.Contains(cw) && BracedArgument(tex, j) is var (_, afterText) && afterText >= 0)
+                        {
+                            i = afterText - 1;
+                            break;
+                        }
+                        while (tex[j] == " ")
+                            j++;
+                        // the bracket after \left, \right... is skipped with the command
+                        i = DelimiterCommands.Contains(cw) && tex[j] is "(" or "[" or ")" or "]" ? j : j - 1;
+                        break;
+                    }
+                    case "{":
+                        groups.Push(new List<int>());
+                        break;
+                    case "}" when groups.Count > 0:
+                        escaped.AddRange(groups.Pop());
+                        break;
+                    case "(" or "[" when groups.Count > 0:
+                        groups.Peek().Add(i);
+                        break;
+                    case ")" or "]" when groups.Count > 0 && groups.Peek().Count > 0:
+                        groups.Peek().RemoveAt(groups.Peek().Count - 1);
+                        break;
+                }
+            }
+            if (escaped.Count == 0)
                 return latex;
             var result = new StringBuilder();
             for (int i = 0; i < tex.Length; i++)
             {
                 if (escaped.Contains(i))
                     result.Append('\\');
-                result.Append(kets.Contains(i) ? "|" : tex[i]);
+                result.Append(tex[i]);
             }
             return result.ToString();
         }
@@ -1436,7 +1553,7 @@ namespace SharpEquations.Internal.LaTeX
 
         private string Convert(string latex)
         {
-            var tex = new Text(EscapeOddBars(RewriteTeXOnly(Limits(NewEnvironments(latex)))));
+            var tex = new Text(EscapeOddBars(EscapeOpenBrackets(RewriteTeXOnly(Limits(NewEnvironments(latex))))));
             var cwPrev = "";
             bool needMacroPass = false;
             // whether a macro was named and its body is next, and where that body starts: an empty body expands to nothing
