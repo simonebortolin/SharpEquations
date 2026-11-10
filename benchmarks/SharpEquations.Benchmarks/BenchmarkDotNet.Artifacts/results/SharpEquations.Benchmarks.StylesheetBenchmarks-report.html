@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>SharpEquations.Benchmarks.StylesheetBenchmarks-20261110-124057</title>
+<title>SharpEquations.Benchmarks.StylesheetBenchmarks-20261110-233417</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,7 +14,7 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.15.8, Linux Ubuntu 24.04.5 LTS (Noble Numbat)
-Intel Xeon Processor 2.30GHz, 1 CPU, 4 logical and 4 physical cores
+Intel Xeon Processor 2.10GHz, 1 CPU, 4 logical and 4 physical cores
 .NET SDK 10.0.114
   [Host]   : .NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4
   ShortRun : .NET 10.0.14 (10.0.14, 10.0.1426.52326), X64 RyuJIT x86-64-v4
@@ -26,12 +26,12 @@ WarmupCount=3
 <table>
 <thead><tr><th>Method                   </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Allocated</th>
 </tr>
-</thead><tbody><tr><td>Omml2MathML</td><td>206.15 ms</td><td>353.93 ms</td><td>19.400 ms</td><td>1666.6667</td><td>461.45 MB</td>
-</tr><tr><td>Omml2MathMLXslCompiledTransform</td><td>65.30 ms</td><td>49.96 ms</td><td>2.738 ms</td><td>500.0000</td><td>156.44 MB</td>
-</tr><tr><td>MathML2Omml</td><td>140.78 ms</td><td>13.86 ms</td><td>0.760 ms</td><td>1000.0000</td><td>261.16 MB</td>
-</tr><tr><td>MathML2OmmlXslCompiledTransform</td><td>72.10 ms</td><td>114.18 ms</td><td>6.259 ms</td><td>500.0000</td><td>136.35 MB</td>
-</tr><tr><td>Mtef2MathML</td><td>85.12 ms</td><td>34.89 ms</td><td>1.913 ms</td><td>222.2222</td><td>79.9 MB</td>
-</tr><tr><td>Mtef2MathMLXslCompiledTransform</td><td>35.28 ms</td><td>18.50 ms</td><td>1.014 ms</td><td>-</td><td>20.89 MB</td>
+</thead><tbody><tr><td>Omml2MathML</td><td>20.82 ms</td><td>19.34 ms</td><td>1.060 ms</td><td>250.0000</td><td>35.68 MB</td>
+</tr><tr><td>Omml2MathMLXslCompiledTransform</td><td>70.62 ms</td><td>160.12 ms</td><td>8.777 ms</td><td>1000.0000</td><td>156.37 MB</td>
+</tr><tr><td>MathML2Omml</td><td>31.03 ms</td><td>50.63 ms</td><td>2.775 ms</td><td>-</td><td>30.23 MB</td>
+</tr><tr><td>MathML2OmmlXslCompiledTransform</td><td>74.67 ms</td><td>25.59 ms</td><td>1.403 ms</td><td>1000.0000</td><td>136.31 MB</td>
+</tr><tr><td>Mtef2MathML</td><td>17.46 ms</td><td>20.56 ms</td><td>1.127 ms</td><td>93.7500</td><td>15.71 MB</td>
+</tr><tr><td>Mtef2MathMLXslCompiledTransform</td><td>41.98 ms</td><td>24.75 ms</td><td>1.356 ms</td><td>83.3333</td><td>20.89 MB</td>
 </tr></tbody></table>
 </body>
 </html>

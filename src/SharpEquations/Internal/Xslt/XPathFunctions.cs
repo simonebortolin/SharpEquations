@@ -96,29 +96,41 @@ namespace SharpEquations.Internal.Xslt
 
         public static double Num(string value)
         {
-            var s = value.Trim(' ', '\t', '\r', '\n');
-            var i = 0;
-            if (i < s.Length && s[i] == '-')
+            var start = 0;
+            var end = value.Length;
+            while (start < end && IsSpace(value[start]))
+                start++;
+            while (end > start && IsSpace(value[end - 1]))
+                end--;
+            var i = start;
+            if (i < end && value[i] == '-')
                 i++;
             var digits = 0;
-            while (i < s.Length && s[i] >= '0' && s[i] <= '9')
+            var whole = 0L;
+            while (i < end && value[i] >= '0' && value[i] <= '9')
             {
+                whole = whole * 10 + (value[i] - '0');
                 i++;
                 digits++;
             }
-            if (i < s.Length && s[i] == '.')
+            // a short whole number, as most are, is exact as it is
+            if (i == end && digits > 0 && digits <= 15)
+                return value[start] == '-' ? -(double)whole : whole;
+            if (i < end && value[i] == '.')
             {
                 i++;
-                while (i < s.Length && s[i] >= '0' && s[i] <= '9')
+                while (i < end && value[i] >= '0' && value[i] <= '9')
                 {
                     i++;
                     digits++;
                 }
             }
-            if (digits == 0 || i != s.Length)
+            if (digits == 0 || i != end)
                 return double.NaN;
-            return double.Parse(s, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
+            return double.Parse(value.Substring(start, end - start), NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
         }
+
+        private static bool IsSpace(char c) => c == ' ' || c == '\t' || c == '\r' || c == '\n';
 
         public static double Num(double value) => value;
 
