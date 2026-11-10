@@ -13,6 +13,7 @@
     <!-- the stylesheets are C# compiled at build time (SharpEquations.XsltGenerator): nothing generates code at run
          time, so the release build compiles to WebAssembly ahead of time -->
     <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
+    <WasmBuildNative>true</WasmBuildNative>
     <WasmEnableThreads>false</WasmEnableThreads>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>

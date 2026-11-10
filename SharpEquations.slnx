@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/demo/" Id="5d20aa90-6969-d8bd-9dcd-8634f4692fda">
+    <Project Path="samples/SharpEquations.Avalonia.Browser.Demo/SharpEquations.Avalonia.Browser.Demo.csproj" />
     <Project Path="samples/SharpEquations.Avalonia.Demo/SharpEquations.Avalonia.Demo.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
@@ -12,12 +13,12 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/SharpEquations.Rendering/SharpEquations.Rendering.csproj" />
-    <Project Path="src/SharpEquations/SharpEquations.csproj" />
     <Project Path="src/SharpEquations.Avalonia/SharpEquations.Avalonia.csproj" />
     <Project Path="src/SharpEquations.Editing/SharpEquations.Editing.csproj" />
     <Project Path="src/SharpEquations.RegexPolyfill/SharpEquations.RegexPolyfill.csproj" />
+    <Project Path="src/SharpEquations.Rendering/SharpEquations.Rendering.csproj" />
     <Project Path="src/SharpEquations.XsltGenerator/SharpEquations.XsltGenerator.csproj" />
+    <Project Path="src/SharpEquations/SharpEquations.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/SharpEquations.Benchmarks/SharpEquations.Benchmarks.csproj" />
