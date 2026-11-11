@@ -120,7 +120,7 @@ namespace SharpEquations.Avalonia.Tests.Rendering
             var expected = MathLayoutEngine.Layout(root, MathFonts.Default, options);
             var actual = MathLayoutEngine.Layout(root, MathFonts.Default, options, cache);
             if (expected.Width != actual.Width || expected.Height != actual.Height || expected.Baseline != actual.Baseline)
-                return "size";
+                return FormattableString.Invariant($"size {expected.Width:R}×{expected.Height:R}/{expected.Baseline:R} without the cache, {actual.Width:R}×{actual.Height:R}/{actual.Baseline:R} with it");
             if (!expected.Glyphs.Select(Describe).SequenceEqual(actual.Glyphs.Select(Describe)))
                 return "glyphs";
             if (!expected.Shapes.Select(Describe).SequenceEqual(actual.Shapes.Select(Describe)))
