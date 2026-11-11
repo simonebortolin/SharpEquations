@@ -49,13 +49,24 @@ namespace SharpEquations.Rendering.Layout
         private readonly MathTable? math;
         private readonly MathLayoutOptions options;
         private readonly double upem;
+        private readonly MathLayoutCache? cache;
+        private readonly GlyphMetrics metrics;
+        private MathNode? lineRowCandidate;
+        private MathNode? lineRow;
+        private LayoutEntry? current;
 
-        public Engine(IMathFont font, MathLayoutOptions options)
+        /// <summary>
+        /// An engine for one layout. With a cache, the boxes of the nodes come from it when it has them; their paths
+        /// are then relative to the node, and placed under the path of the node by an anchor (<see cref="Box.Anchor"/>).
+        /// </summary>
+        public Engine(IMathFont font, MathLayoutOptions options, MathLayoutCache? cache = null)
         {
             this.font = font;
             math = font.Math;
             this.options = options;
             upem = font.UnitsPerEm;
+            this.cache = cache;
+            metrics = cache?.Begin(font, options) ?? new GlyphMetrics(font);
         }
 
         private double ScriptPercent => (math?[MathConstant.ScriptPercentScaleDown] is int p and > 0 ? p : 71) / 100.0;
@@ -66,7 +77,11 @@ namespace SharpEquations.Rendering.Layout
         {
             var display = options.Display || root.GetAttribute("display") == "block";
             var style = new Style(options.FontSize, 0, display, false, null);
-            return Layout(root, path, style, Stretch.None);
+            lineRowCandidate = root.Children.Count > 0 ? root.Children[0] : null;
+            var box = Layout(root, path, style, Stretch.None);
+            if (current != null)
+                cache!.End(current);
+            return box;
         }
 
         private double C(MathConstant constant, Style s)
@@ -102,12 +117,45 @@ namespace SharpEquations.Rendering.Layout
 
         private Box Layout(MathNode node, int[]? path, Style style, Stretch stretch)
         {
+            // the row of the equation (at the path 0), which breaks into lines
+            var isLineRow = path is { Length: 1 } && path[0] == 0 && lineRowCandidate != null && ReferenceEquals(node, lineRowCandidate);
+            if (isLineRow)
+            {
+                lineRowCandidate = null;
+                lineRow = node;
+            }
+
+            if (cache == null)
+            {
+                var laidOut = LayoutNode(node, path, style, stretch);
+                lineRow = null;
+                return laidOut;
+            }
+
+            var key = new LayoutKey(node, style, stretch, path != null, isLineRow);
+            var parent = current;
+            if (!cache.TryGet(key, out var entry))
+            {
+                entry = new LayoutEntry(key);
+                current = entry;
+                entry.Box = LayoutNode(node, path == null ? null : Array.Empty<int>(), style, stretch);
+                cache.Add(entry);
+            }
+            lineRow = null;
+            parent?.Depend(entry);
+            current = parent ?? entry;
+            return path is { Length: > 0 } ? Box.Anchored(entry.Box, path) : entry.Box;
+        }
+
+        private Box LayoutNode(MathNode node, int[]? path, Style style, Stretch stretch)
+        {
             if (node.GetAttribute("mathcolor") is { } color)
                 style = style.WithColor(color);
 
+            // a box of a child can be the box itself, with its own colour (and kept by the cache): it keeps it
             var box = LayoutElement(node, path, style, stretch);
             if (style.Color != null)
-                box.Color = style.Color;
+                box.Color ??= style.Color;
 
             if (node.GetAttribute("mathbackground") is { } background)
             {
@@ -141,7 +189,7 @@ namespace SharpEquations.Rendering.Layout
                 case "mstyle":
                     return LayoutInferred(node, path, ApplyStyle(node, style), stretch);
                 case "mphantom":
-                    var phantom = LayoutInferred(node, path, style, stretch);
+                    var phantom = Box.Wrap(LayoutInferred(node, path, style, stretch));
                     phantom.Invisible = true;
                     return phantom;
                 case "mpadded":
@@ -201,6 +249,8 @@ namespace SharpEquations.Rendering.Layout
         private Box LayoutRow(MathNode row, int[]? path, Style style, Stretch stretch)
         {
             var n = row.Children.Count;
+            var isLineRow = path != null && ReferenceEquals(row, lineRow);
+            lineRow = null;
             var box = new Box { Path = path };
             if (n == 0)
             {
@@ -271,7 +321,7 @@ namespace SharpEquations.Rendering.Layout
             box.Width = x;
             box.CaretX = caret;
             SetCaretExtent(box, style);
-            if (options.LineWidth is { } lineWidth && options.BreakLines && style.Display && x > lineWidth && path is { Length: 1 } && path[0] == 0 && n > 1)
+            if (options.LineWidth is { } lineWidth && options.BreakLines && style.Display && x > lineWidth && isLineRow && n > 1)
                 BreakLines(row, box, boxes, lineWidth, style);
             if (n == 1)
             {
@@ -579,12 +629,12 @@ namespace SharpEquations.Rendering.Layout
         }
 
         /// <summary>A copy of the box whose extent is its ink, starting at its left.</summary>
-        private static Box InkBox(Box box)
+        private Box InkBox(Box box)
         {
             double xMin = double.MaxValue, xMax = double.MinValue;
             foreach (var g in box.Glyphs)
             {
-                var b = g.Font.GetBounds(g.Glyph);
+                var b = metrics.Bounds(g.Font, g.Glyph);
                 var scale = g.Size / g.Font.UnitsPerEm;
                 xMin = Math.Min(xMin, g.X + b.XMin * scale);
                 xMax = Math.Max(xMax, g.X + b.XMax * scale);
@@ -625,13 +675,13 @@ namespace SharpEquations.Rendering.Layout
                     glyph = 0;
                 }
                 if (style.Level > 0)
-                    glyph = f.GetScriptVariant(glyph, style.Level);
+                    glyph = metrics.Variant(f, glyph, style.Level);
                 var scale = style.Size / f.UnitsPerEm;
-                var bounds = f.GetBounds(glyph);
+                var bounds = metrics.Bounds(f, glyph);
                 box.Glyphs.Add(new GlyphItem(f, glyph, x, 0, style.Size));
                 box.Height = Math.Max(box.Height, bounds.YMax * scale);
                 box.Depth = Math.Max(box.Depth, -bounds.YMin * scale);
-                x += f.GetAdvance(glyph) * scale;
+                x += metrics.Advance(f, glyph) * scale;
                 last = glyph;
                 lastFont = f;
                 count++;
@@ -646,13 +696,13 @@ namespace SharpEquations.Rendering.Layout
             return box;
         }
 
-        private static Box GlyphBox(IMathFont f, ushort glyph, Style style, double x = 0)
+        private Box GlyphBox(IMathFont f, ushort glyph, Style style, double x = 0)
         {
             var scale = style.Size / f.UnitsPerEm;
-            var bounds = f.GetBounds(glyph);
+            var bounds = metrics.Bounds(f, glyph);
             var box = new Box
             {
-                Width = f.GetAdvance(glyph) * scale,
+                Width = metrics.Advance(f, glyph) * scale,
                 Height = bounds.YMax * scale,
                 Depth = -bounds.YMin * scale,
                 Italic = (f.Math?.ItalicCorrection(glyph) ?? 0) * scale,
@@ -664,14 +714,14 @@ namespace SharpEquations.Rendering.Layout
         }
 
         /// <summary>A glyph stretched to a size at least: the first variant big enough, or an assembly of parts.</summary>
-        private static Box StretchGlyph(IMathFont f, ushort glyph, GlyphConstruction construction, double target, Style style, bool vertical)
+        private Box StretchGlyph(IMathFont f, ushort glyph, GlyphConstruction construction, double target, Style style, bool vertical)
         {
             var scale = style.Size / f.UnitsPerEm;
             var targetUnits = target / scale;
             var natural = vertical ? GlyphBox(f, glyph, style) : null;
             if (vertical && natural!.Height + natural.Depth >= target)
                 return natural;
-            if (!vertical && f.GetAdvance(glyph) >= targetUnits)
+            if (!vertical && metrics.Advance(f, glyph) >= targetUnits)
                 return GlyphBox(f, glyph, style);
 
             foreach (var (variant, advance) in construction.Variants)
@@ -686,7 +736,7 @@ namespace SharpEquations.Rendering.Layout
             return construction.Variants.Count > 0 ? GlyphBox(f, construction.Variants[construction.Variants.Count - 1].Glyph, style) : GlyphBox(f, glyph, style);
         }
 
-        private static Box Assembly(IMathFont f, IReadOnlyList<GlyphPart> parts, int minOverlap, double target, Style style, bool vertical, int italic)
+        private Box Assembly(IMathFont f, IReadOnlyList<GlyphPart> parts, int minOverlap, double target, Style style, bool vertical, int italic)
         {
             var scale = style.Size / f.UnitsPerEm;
             List<GlyphPart> list = new List<GlyphPart>();
@@ -726,11 +776,11 @@ namespace SharpEquations.Rendering.Layout
             var at = 0.0;
             foreach (var part in list)
             {
-                var bounds = f.GetBounds(part.Glyph);
+                var bounds = metrics.Bounds(f, part.Glyph);
                 if (vertical)
                 {
                     box.Glyphs.Add(new GlyphItem(f, part.Glyph, 0, (at - bounds.YMin) * scale, style.Size));
-                    box.Width = Math.Max(box.Width, f.GetAdvance(part.Glyph) * scale);
+                    box.Width = Math.Max(box.Width, metrics.Advance(f, part.Glyph) * scale);
                 }
                 else
                 {
@@ -755,22 +805,7 @@ namespace SharpEquations.Rendering.Layout
             return box;
         }
 
-        private bool Glyph(int codePoint, out IMathFont f, out ushort glyph)
-        {
-            if (font.TryGetGlyph(codePoint, out glyph) && glyph != 0)
-            {
-                f = font;
-                return true;
-            }
-            if (font.GetFallback(codePoint) is { } fallback && fallback.TryGetGlyph(codePoint, out glyph) && glyph != 0)
-            {
-                f = fallback;
-                return true;
-            }
-            f = font;
-            glyph = 0;
-            return false;
-        }
+        private bool Glyph(int codePoint, out IMathFont f, out ushort glyph) => metrics.Glyph(codePoint, out f, out glyph);
 
         private static bool IsInvisible(int cp) => cp is >= 0x2061 and <= 0x2064 or 0x200B or 0x200C or 0x200D or 0x2060 or 0xFEFF;
 
@@ -826,11 +861,11 @@ namespace SharpEquations.Rendering.Layout
                     continue;
                 }
                 var scale = style.Size / f.UnitsPerEm;
-                var bounds = f.GetBounds(glyph);
+                var bounds = metrics.Bounds(f, glyph);
                 box.Glyphs.Add(new GlyphItem(f, glyph, x, 0, style.Size));
                 box.Height = Math.Max(box.Height, bounds.YMax * scale);
                 box.Depth = Math.Max(box.Depth, -bounds.YMin * scale);
-                x += f.GetAdvance(glyph) * scale;
+                x += metrics.Advance(f, glyph) * scale;
                 caret.Add(x);
             }
             box.Width = x;

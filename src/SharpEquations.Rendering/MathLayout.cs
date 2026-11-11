@@ -157,7 +157,7 @@ namespace SharpEquations.Rendering
     public sealed class MathLayout : IMathGeometry
     {
         private readonly List<RowGeometry> rows;
-        private readonly Dictionary<string, RowGeometry> byPath;
+        private readonly Dictionary<IReadOnlyList<int>, RowGeometry> byPath;
 
         internal MathLayout(double width, double height, double baseline, IReadOnlyList<MathGlyph> glyphs, IReadOnlyList<MathShape> shapes, List<RowGeometry> rows)
         {
@@ -167,9 +167,9 @@ namespace SharpEquations.Rendering
             Glyphs = glyphs;
             Shapes = shapes;
             this.rows = rows;
-            byPath = new Dictionary<string, RowGeometry>(StringComparer.Ordinal);
+            byPath = new Dictionary<IReadOnlyList<int>, RowGeometry>(rows.Count, PathComparer.Instance);
             foreach (var row in rows)
-                byPath[Key(row.Path)] = row;
+                byPath[row.Path] = row;
         }
 
         /// <summary>The width of the equation.</summary>
@@ -190,7 +190,7 @@ namespace SharpEquations.Rendering
         /// <summary>The rectangle of the caret at a position, or null if the position is not laid out.</summary>
         public MathRect? GetCaretRect(MathPosition position)
         {
-            if (!byPath.TryGetValue(Key(position.Path), out var row) || position.Offset >= row.CaretX.Length)
+            if (!byPath.TryGetValue(position.Path, out var row) || position.Offset >= row.CaretX.Length)
                 return null;
             var i = position.Offset;
             return new MathRect(row.CaretX[i], row.CaretTop[i], 0, row.CaretBottom[i] - row.CaretTop[i]);
@@ -199,7 +199,7 @@ namespace SharpEquations.Rendering
         /// <summary>The rectangles to highlight for a selection: one for each line it is on.</summary>
         public IReadOnlyList<MathRect> GetSelectionRects(MathSelection selection)
         {
-            if (!byPath.TryGetValue(Key(selection.Path), out var row) || selection.End >= row.CaretX.Length)
+            if (!byPath.TryGetValue(selection.Path, out var row) || selection.End >= row.CaretX.Length)
                 return Array.Empty<MathRect>();
 
             var rects = new List<MathRect>();
@@ -259,12 +259,12 @@ namespace SharpEquations.Rendering
 
         /// <inheritdoc/>
         public double? GetCaretX(MathPosition position) =>
-            byPath.TryGetValue(Key(position.Path), out var row) && position.Offset < row.CaretX.Length ? row.CaretX[position.Offset] : null;
+            byPath.TryGetValue(position.Path, out var row) && position.Offset < row.CaretX.Length ? row.CaretX[position.Offset] : null;
 
         /// <inheritdoc/>
         public MathPosition? GetNearestPosition(IReadOnlyList<int> rowPath, double x)
         {
-            if (!byPath.TryGetValue(Key(rowPath), out var row))
+            if (!byPath.TryGetValue(rowPath, out var row))
                 return null;
             return RunAt(row, 0, x) ?? new MathPosition(rowPath, row.NearestOnLine(x, 0));
         }
@@ -276,7 +276,7 @@ namespace SharpEquations.Rendering
             for (var length = position.Path.Count; length >= 0; length--)
             {
                 var prefix = position.Path.Take(length).ToArray();
-                if (!byPath.TryGetValue(Key(prefix), out var row) || row.Lines < 2 || row.IsRun)
+                if (!byPath.TryGetValue(prefix, out var row) || row.Lines < 2 || row.IsRun)
                     continue;
                 var index = length == position.Path.Count ? position.Offset : position.Path[length];
                 if (index >= row.CaretX.Length || GetCaretX(position) is not { } x)
@@ -303,7 +303,36 @@ namespace SharpEquations.Rendering
             return null;
         }
 
-        private static string Key(IEnumerable<int> path) => string.Join("/", path);
+        /// <summary>Paths compared by their indexes.</summary>
+        private sealed class PathComparer : IEqualityComparer<IReadOnlyList<int>>
+        {
+            public static readonly PathComparer Instance = new PathComparer();
+
+            public bool Equals(IReadOnlyList<int>? x, IReadOnlyList<int>? y)
+            {
+                if (ReferenceEquals(x, y))
+                    return true;
+                if (x == null || y == null || x.Count != y.Count)
+                    return false;
+                for (var i = 0; i < x.Count; i++)
+                {
+                    if (x[i] != y[i])
+                        return false;
+                }
+                return true;
+            }
+
+            public int GetHashCode(IReadOnlyList<int> path)
+            {
+                unchecked
+                {
+                    var hash = 17;
+                    for (var i = 0; i < path.Count; i++)
+                        hash = hash * 31 + path[i];
+                    return hash;
+                }
+            }
+        }
     }
 
     /// <summary>The geometry of a row or a run, in the coordinates of the layout; a row broken into lines has several.</summary>
@@ -319,9 +348,16 @@ namespace SharpEquations.Rendering
             CaretLine = caretLine;
             LineRight = lineRight;
             Left = left;
-            Top = Math.Min(top, caretTop.DefaultIfEmpty(top).Min());
-            Bottom = Math.Max(bottom, caretBottom.DefaultIfEmpty(bottom).Max());
-            Right = Math.Max(left + 1, lineRight.Max());
+            foreach (var y in caretTop)
+                top = Math.Min(top, y);
+            foreach (var y in caretBottom)
+                bottom = Math.Max(bottom, y);
+            var right = left + 1;
+            foreach (var x in lineRight)
+                right = Math.Max(right, x);
+            Top = top;
+            Bottom = bottom;
+            Right = right;
         }
 
         public int[] Path { get; }

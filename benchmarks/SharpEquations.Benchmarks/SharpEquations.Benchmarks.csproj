@@ -15,10 +15,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SharpEquations\SharpEquations.csproj" />
+    <ProjectReference Include="..\..\src\SharpEquations.Editing\SharpEquations.Editing.csproj" />
+    <ProjectReference Include="..\..\src\SharpEquations.Rendering\SharpEquations.Rendering.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="..\..\tests\data\omml\*.omml" Link="data\omml\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\SharpEquations.Avalonia\Assets\Fonts\LibertinusMath-Regular.otf" Link="data\fonts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\tests\data\unicodemath\unicodemathml-examples.json" Link="data\unicodemath\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

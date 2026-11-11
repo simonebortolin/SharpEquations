@@ -58,7 +58,22 @@ namespace SharpEquations.Rendering.Layout
         /// </summary>
         public RowLines? Lines { get; set; }
 
+        /// <summary>
+        /// The path of the node the box lays out, relative to the anchor above it, when the box is an anchor: the paths
+        /// of the rows under it are relative to the node, so that the box of the node can serve wherever the node is.
+        /// </summary>
+        public int[]? Anchor { get; set; }
+
         public void Add(Box box, double x, double shift) => Children.Add((box, x, shift));
+
+        /// <summary>A box of a node at a path, as large as the box of the node and with its caret positions.</summary>
+        public static Box Anchored(Box node, int[] path)
+        {
+            var box = Wrap(node);
+            box.CaretX = node.CaretX;
+            box.Anchor = path;
+            return box;
+        }
 
         /// <summary>A box of one child, shifted.</summary>
         public static Box Wrap(Box child, double x = 0, double shift = 0)
