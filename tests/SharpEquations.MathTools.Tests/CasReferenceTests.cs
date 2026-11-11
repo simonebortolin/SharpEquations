@@ -6,13 +6,12 @@ namespace SharpEquations.MathTools.Tests
     using SharpEquations.MathTools;
 
     /// <summary>
-    /// The reference tests of the computer algebra: each case of <c>tests/data/mathtools/cas.json</c> done by
-    /// <see cref="AngouriMathEngine"/> (a case still pending is skipped with its reason) and the conversions of
+    /// The reference tests of the computer algebra: each case of <c>tests/data/mathtools/cas.json</c> done by a new
+    /// <see cref="AngouriMathEngine"/> (with the unit of angles and the definitions of the case) (a case still pending is skipped with its reason) and the conversions of
     /// <c>tests/data/mathtools/units.json</c>.
     /// </summary>
     public class CasReferenceTests
     {
-        private static readonly AngouriMathEngine Engine = new AngouriMathEngine();
         private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(20);
 
         [Test]
@@ -23,7 +22,10 @@ namespace SharpEquations.MathTools.Tests
             if (test.Pending != null)
                 Skip.Test(test.Pending);
             var input = Equation.Parse(test.Input, EquationFormat.UnicodeMath, new EquationOptions { Display = true });
-            var work = Task.Run(() => Engine.Run(test.Action, input, test.Variable));
+            var engine = new AngouriMathEngine { Angles = test.Angles };
+            foreach (var definition in test.Definitions)
+                engine.Run(CasAction.Define, Equation.Parse(definition, EquationFormat.UnicodeMath));
+            var work = Task.Run(() => engine.Run(test.Action, input, test.Variable));
             if (await Task.WhenAny(work, Task.Delay(Timeout)) != work)
                 Assert.Fail("No result in " + Timeout.TotalSeconds + " seconds.");
             var result = await work;

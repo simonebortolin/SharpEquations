@@ -26,7 +26,7 @@ namespace SharpEquations.MathTools.Tests
             List<Entity> actual;
             try
             {
-                actual = result.Values.Select(MathReader.Read).ToList();
+                actual = result.Values.Select(v => MathReader.Read(v)).ToList();
             }
             catch (NotSupportedException e)
             {

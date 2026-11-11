@@ -14,6 +14,12 @@ namespace SharpEquations.MathTools.Tests
     /// </summary>
     public sealed record CasCase(CasAction Action, string Input, string? Variable, IReadOnlyList<string> Expected, string? Pending)
     {
+        /// <summary>The unit of the angles (radians if not said).</summary>
+        public AngleUnit Angles { get; init; }
+
+        /// <summary>The definitions made before the action (<c>a≔3</c>), in UnicodeMath.</summary>
+        public IReadOnlyList<string> Definitions { get; init; } = System.Array.Empty<string>();
+
         internal static readonly JsonSerializerOptions Options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -24,7 +30,8 @@ namespace SharpEquations.MathTools.Tests
             JsonSerializer.Deserialize<List<CasCase>>(File.ReadAllText(TestData.Path("mathtools", "cas.json")), Options)!;
 
         /// <summary>The name of a case in the test list: its action and its input, which are unique.</summary>
-        public string Name => Action + " " + Input + (Variable != null ? " by " + Variable : "");
+        public string Name => Action + " " + Input + (Variable != null ? " by " + Variable : "")
+            + (Angles == AngleUnit.Degrees ? " in degrees" : "") + (Definitions.Count > 0 ? " with " + string.Join(", ", Definitions) : "");
 
         public static IEnumerable<string> Names() => All.Select(c => c.Name);
 

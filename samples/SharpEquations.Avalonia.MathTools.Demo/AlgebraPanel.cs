@@ -29,6 +29,7 @@ namespace SharpEquations.Avalonia.MathTools
             (CasAction.Factor, "Factor", "The expression as a product"),
             (CasAction.Differentiate, "d/dx", "The derivative by the letter chosen"),
             (CasAction.Integrate, "∫ dx", "An antiderivative by the letter chosen"),
+            (CasAction.Define, "Define", "Gives the letter before ≔ its value, for what is computed next: a≔5 (type a:=5)"),
         };
 
         private readonly MathEditBox editor;
@@ -36,6 +37,8 @@ namespace SharpEquations.Avalonia.MathTools
         private readonly MathView answer = new MathView { FontSize = 26, HorizontalAlignment = HorizontalAlignment.Left };
         private readonly TextBlock answerNote = Ui.Muted("", 12.5);
         private readonly StackPanel results = new StackPanel { Spacing = 12 };
+        private readonly WrapPanel definitions = new WrapPanel { ItemSpacing = 14, LineSpacing = 6, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) };
+        private readonly DockPanel definitionsRow;
         private readonly DispatcherTimer timer;
         private int version;
 
@@ -67,6 +70,24 @@ namespace SharpEquations.Avalonia.MathTools
             var forLabel = Ui.Muted("by", 12.5);
             buttons.Add(forLabel);
             buttons.Add(Letter);
+            Angles = new ComboBox { ItemsSource = new[] { "Radians", "Degrees" }, SelectedIndex = engine.Angles == AngleUnit.Degrees ? 1 : 0, MinWidth = 110 };
+            ToolTip.SetTip(Angles, "The unit of the angles of sin, cos, tan and their inverses");
+            Angles.SelectionChanged += async (_, _) =>
+            {
+                engine.Angles = Angles.SelectedIndex == 1 ? AngleUnit.Degrees : AngleUnit.Radians;
+                await RefreshAnswer().ConfigureAwait(true);
+            };
+            buttons.Add(Angles);
+
+            var forget = new Button { Content = "Forget", CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 3) };
+            ToolTip.SetTip(forget, "Forgets the letters defined");
+            forget.Click += async (_, _) =>
+            {
+                engine.ClearDefinitions();
+                ShowDefinitions();
+                await RefreshAnswer().ConfigureAwait(true);
+            };
+            definitionsRow = new DockPanel { Children = { Ui.Docked(forget, Dock.Right), Ui.Docked(Ui.Muted("Defined:", 12.5), Dock.Left), definitions } };
 
             var answerFrame = new Border
             {
@@ -77,12 +98,19 @@ namespace SharpEquations.Avalonia.MathTools
             };
             answerFrame.Bind(Border.BackgroundProperty, answerFrame.GetResourceObservable("CodeBrush"));
 
-            Content = new StackPanel { Spacing = 14, Children = { answerFrame, Ui.Row(buttons.ToArray()), results } };
+            Content = new StackPanel { Spacing = 14, Children = { answerFrame, Ui.Row(buttons.ToArray()), definitionsRow, results } };
+            ShowDefinitions();
             ShowAnswer(null, "The value of what is typed shows here.");
         }
 
         /// <summary>The letter to solve for, and to differentiate and integrate by.</summary>
         public ComboBox Letter { get; }
+
+        /// <summary>The computer algebra system, with the letters defined.</summary>
+        public ICasEngine Engine => engine;
+
+        /// <summary>The unit of the angles: radians or degrees.</summary>
+        public ComboBox Angles { get; }
 
         /// <summary>The value of the equation of the editor, as it was last computed.</summary>
         public CasResult? Answer { get; private set; }
@@ -123,6 +151,11 @@ namespace SharpEquations.Avalonia.MathTools
             {
                 AddMessage(message!);
                 return null;
+            }
+            if (action == CasAction.Define)
+            {
+                ShowDefinitions();
+                await RefreshAnswer().ConfigureAwait(true);
             }
             history.Insert(0, result);
             results.Children.Insert(0, ResultCard(result, Label(action, letter ?? "x")));
@@ -194,6 +227,20 @@ namespace SharpEquations.Avalonia.MathTools
             answerNote.IsVisible = !string.IsNullOrEmpty(answerNote.Text);
         }
 
+        // the letters defined, as a definition each: a ≔ 3
+        private void ShowDefinitions()
+        {
+            definitions.Children.Clear();
+            foreach (var (name, value) in engine.Definitions.OrderBy(d => d.Key, StringComparer.Ordinal))
+            {
+                var text = name + "≔" + value.ToString(EquationFormat.UnicodeMath);
+                definitions.Children.Add(Equation.TryParse(text, EquationFormat.UnicodeMath, out var equation)
+                    ? new MathView { FontSize = 17, Equation = equation }
+                    : Ui.Muted(text, 13));
+            }
+            definitionsRow.IsVisible = definitions.Children.Count > 0;
+        }
+
         private void AddMessage(string message)
         {
             results.Children.Insert(0, Ui.Muted(message, 13));
@@ -228,6 +275,7 @@ namespace SharpEquations.Avalonia.MathTools
             CasAction.Solve => "Solve for " + letter,
             CasAction.Differentiate => "Derivative by " + letter,
             CasAction.Integrate => "Antiderivative by " + letter,
+            CasAction.Define => "Defined",
             _ => action.ToString(),
         };
     }
