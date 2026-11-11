@@ -1,11 +1,10 @@
-#if NET10_0_OR_GREATER
-namespace SharpEquations.Avalonia.Tests.MathTools
+namespace SharpEquations.MathTools.Tests
 {
     using System;
     using System.Linq;
     using System.Threading.Tasks;
     using SharpEquations;
-    using SharpEquations.Avalonia.MathTools;
+    using SharpEquations.MathTools;
 
     /// <summary>The conversions of the unit converter, and the values written as UnicodeMath.</summary>
     public class UnitsTests
@@ -92,4 +91,3 @@ namespace SharpEquations.Avalonia.Tests.MathTools
         }
     }
 }
-#endif

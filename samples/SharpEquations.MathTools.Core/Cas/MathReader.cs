@@ -1,4 +1,4 @@
-namespace SharpEquations.Avalonia.MathTools
+namespace SharpEquations.MathTools
 {
     using System;
     using System.Collections.Generic;

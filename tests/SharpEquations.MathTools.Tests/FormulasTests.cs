@@ -1,10 +1,9 @@
-#if NET10_0_OR_GREATER
-namespace SharpEquations.Avalonia.Tests.MathTools
+namespace SharpEquations.MathTools.Tests
 {
     using System.Linq;
     using System.Threading.Tasks;
     using SharpEquations;
-    using SharpEquations.Avalonia.MathTools;
+    using SharpEquations.MathTools;
 
     /// <summary>The formulas of the library parse without errors, and their UnicodeMath and LaTeX read back.</summary>
     public class FormulasTests
@@ -38,4 +37,3 @@ namespace SharpEquations.Avalonia.Tests.MathTools
         }
     }
 }
-#endif

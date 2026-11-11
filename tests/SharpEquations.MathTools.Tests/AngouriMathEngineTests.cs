@@ -1,15 +1,14 @@
-#if NET10_0_OR_GREATER
-namespace SharpEquations.Avalonia.Tests.MathTools
+namespace SharpEquations.MathTools.Tests
 {
     using System;
     using System.Linq;
     using System.Threading.Tasks;
     using AngouriMath;
     using SharpEquations;
-    using SharpEquations.Avalonia.MathTools;
+    using SharpEquations.MathTools;
 
-    /// <summary>What an equation means, read from its presentation MathML, and what the calculator computes from it with AngouriMath.</summary>
-    public class AlgebraTests
+    /// <summary>What an equation means, read from its presentation MathML, and what the engine of the calculator computes from it with AngouriMath.</summary>
+    public class AngouriMathEngineTests
     {
         private static Entity Read(string unicodeMath) => MathReader.Read(Equation.Parse(unicodeMath, EquationFormat.UnicodeMath));
 
@@ -48,7 +47,7 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             var value = Read(unicodeMath);
             if (value.Vars.Any())
                 value = value.Simplify();
-            await Assert.That(Algebra.Decimal(value.EvalNumerical())).IsEqualTo(expected);
+            await Assert.That(AngouriMathEngine.Decimal(value.EvalNumerical())).IsEqualTo(expected);
         }
 
         [Test]
@@ -61,25 +60,25 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             var expression = Read(unicodeMath);
             var equation = expression is Entity.Equalsf ? expression : expression.Equalizes(0);
             var solutions = ((Entity.Set.FiniteSet)equation.Solve(variable).Simplify())
-                .Select(s => Algebra.Decimal(s.EvalNumerical())).ToList();
+                .Select(s => AngouriMathEngine.Decimal(s.EvalNumerical())).ToList();
             foreach (var solution in real)
                 await Assert.That(solutions).Contains(solution);
         }
 
         /// <summary>The result of each action, drawn: it reads back from the LaTeX of AngouriMath without errors.</summary>
         [Test]
-        [Arguments("Evaluate", "1/3+1/6", "1/2 ≈ 0.5")]
-        [Arguments("Evaluate", "√8", "2 * sqrt(2) ≈ 2.828427125")]
-        [Arguments("Solve", "x^2-5x+6=0", null)]
-        [Arguments("Simplify", "(x^2-1)/(x-1)", null)]
-        [Arguments("Expand", "(x+1)^3", null)]
-        [Arguments("Factor", "x^2-1", null)]
-        [Arguments("Differentiate", "x^3 sin x", null)]
-        [Arguments("Integrate", "x e^x", null)]
-        [Arguments("Evaluate", "d/dx x^3", null)]
-        public async Task ResultIsDrawn(string action, string unicodeMath, string? text)
+        [Arguments(CasAction.Evaluate, "1/3+1/6", "1/2 ≈ 0.5")]
+        [Arguments(CasAction.Evaluate, "√8", "2 * sqrt(2) ≈ 2.828427125")]
+        [Arguments(CasAction.Solve, "x^2-5x+6=0", null)]
+        [Arguments(CasAction.Simplify, "(x^2-1)/(x-1)", null)]
+        [Arguments(CasAction.Expand, "(x+1)^3", null)]
+        [Arguments(CasAction.Factor, "x^2-1", null)]
+        [Arguments(CasAction.Differentiate, "x^3 sin x", null)]
+        [Arguments(CasAction.Integrate, "x e^x", null)]
+        [Arguments(CasAction.Evaluate, "d/dx x^3", null)]
+        public async Task ResultIsDrawn(CasAction action, string unicodeMath, string? text)
         {
-            var result = Algebra.Run(action, Read(unicodeMath), null);
+            var result = new AngouriMathEngine().Run(action, Equation.Parse(unicodeMath, EquationFormat.UnicodeMath));
             await Assert.That(result.Math).IsNotNull().Because(result.Text);
             if (text != null)
                 await Assert.That(result.Text).IsEqualTo(text);
@@ -88,9 +87,10 @@ namespace SharpEquations.Avalonia.Tests.MathTools
         [Test]
         public async Task SolvesForTheLetterAsked()
         {
-            var expression = Read("a x+b=0");
-            await Assert.That(Algebra.Variables(expression)).IsEquivalentTo(new[] { "x", "a", "b" });
-            var result = Algebra.Run(Algebra.Solve, expression, "x");
+            var engine = new AngouriMathEngine();
+            var equation = Equation.Parse("a x+b=0", EquationFormat.UnicodeMath);
+            await Assert.That(engine.Variables(equation)).IsEquivalentTo(new[] { "x", "a", "b" });
+            var result = engine.Run(CasAction.Solve, equation, "x");
             await Assert.That(result.Text).Contains("b").And.Contains("a");
         }
 
@@ -106,4 +106,3 @@ namespace SharpEquations.Avalonia.Tests.MathTools
         }
     }
 }
-#endif

@@ -19,11 +19,14 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | `src/SharpEquations.Avalonia/` | The controls for Avalonia: `MathEditBox` (the editor), `MathView`; embeds Libertinus Math |
 | `samples/SharpEquations.Avalonia.Demo/` | A window with the editor (`DemoView`, shared with the web demo) |
 | `samples/SharpEquations.Avalonia.Browser.Demo/` | The same demo on WebAssembly (needs the `wasm-tools` workload, so not in the solution; `.github/workflows/demo.yml` publishes it to GitHub Pages) |
-| `samples/SharpEquations.Avalonia.MathTools.Demo/` | A second app, math tools around the editor (`MathToolsView`, a page each: the scientific keypad, the library of formulas, the unit converter, the solver of triangles; the calculator computes with AngouriMath, through `MathReader`, which reads what the normalized presentation MathML means) |
+| `samples/SharpEquations.Avalonia.MathTools.Demo/` | A second app, math tools around the editor: its views (`MathToolsView`, a page each: the scientific keypad, the library of formulas, the unit converter, the solver of triangles) and the desktop window |
+| `samples/SharpEquations.MathTools.Core/` | The math tools without a user interface: `ICasEngine` (`AngouriMathEngine`, through `MathReader`, which reads what the normalized presentation MathML means), the formulas, units and triangles, and the services the views ask the platform for (`ISettingsStore`: a file on the desktop, the local storage in the browser) |
+| `samples/SharpEquations.MathTools.Graphing/` | The graphs of the math tools without a user interface: the region shown (`Viewport`) and the marks of the axes |
 | `samples/SharpEquations.Avalonia.Browser.MathTools.Demo/` | The math tools on WebAssembly (as the web demo, not in the solution build; `demo.yml` publishes them under `math/`) |
 | `benchmarks/SharpEquations.Benchmarks/` | BenchmarkDotNet benchmarks of reading, writing and converting the corpora |
 | `tests/SharpEquations.Tests/` | TUnit tests, in folders by subject (PublicApi, MathML, Omml, Mtef, UnicodeMath, LaTeX, Property, Regression) |
-| `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia) |
+| `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia), and of the views of the math tools |
+| `tests/SharpEquations.MathTools.Tests/` | TUnit tests of `SharpEquations.MathTools.Core` and `.Graphing` (net10.0) |
 | `tests/data/` | Test data and its provenance (`tests/data/README.md`) |
 
 ## Code Style

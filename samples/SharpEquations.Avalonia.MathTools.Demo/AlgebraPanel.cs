@@ -4,43 +4,45 @@ namespace SharpEquations.Avalonia.MathTools
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
-    using AngouriMath;
     using global::Avalonia;
     using global::Avalonia.Controls;
     using global::Avalonia.Layout;
     using global::Avalonia.Threading;
     using SharpEquations;
+    using SharpEquations.MathTools;
 
     /// <summary>
-    /// What the calculator computes from the equation of the editor, with AngouriMath: its value as it is typed, and on a
-    /// click its solutions, its simplified, expanded or factored form, its derivative and its integral, each result
-    /// drawn and ready to go back to the editor.
+    /// What the calculator computes from the equation of the editor, with a computer algebra system (<see cref="ICasEngine"/>):
+    /// its value as it is typed, and on a click its solutions, its simplified, expanded or factored form, its derivative
+    /// and its integral, each result drawn and ready to go back to the editor.
     /// </summary>
     public sealed class AlgebraPanel : UserControl
     {
         private static readonly TimeSpan Delay = TimeSpan.FromMilliseconds(300);
         private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
 
-        private static readonly (string Action, string Face, string Tip)[] Buttons =
+        private static readonly (CasAction Action, string Face, string Tip)[] Buttons =
         {
-            (Algebra.Solve, "Solve", "The solutions of the equation, or where the expression is 0"),
-            (Algebra.Simplify, "Simplify", "The expression in a simpler form"),
-            (Algebra.Expand, "Expand", "Products and powers multiplied out"),
-            (Algebra.Factor, "Factor", "The expression as a product"),
-            (Algebra.Differentiate, "d/dx", "The derivative by the letter chosen"),
-            (Algebra.Integrate, "∫ dx", "An antiderivative by the letter chosen"),
+            (CasAction.Solve, "Solve", "The solutions of the equation, or where the expression is 0"),
+            (CasAction.Simplify, "Simplify", "The expression in a simpler form"),
+            (CasAction.Expand, "Expand", "Products and powers multiplied out"),
+            (CasAction.Factor, "Factor", "The expression as a product"),
+            (CasAction.Differentiate, "d/dx", "The derivative by the letter chosen"),
+            (CasAction.Integrate, "∫ dx", "An antiderivative by the letter chosen"),
         };
 
         private readonly MathEditBox editor;
+        private readonly ICasEngine engine;
         private readonly MathView answer = new MathView { FontSize = 26, HorizontalAlignment = HorizontalAlignment.Left };
         private readonly TextBlock answerNote = Ui.Muted("", 12.5);
         private readonly StackPanel results = new StackPanel { Spacing = 12 };
         private readonly DispatcherTimer timer;
         private int version;
 
-        public AlgebraPanel(MathEditBox editor)
+        public AlgebraPanel(MathEditBox editor, ICasEngine engine)
         {
             this.editor = editor;
+            this.engine = engine;
             Letter = new ComboBox { MinWidth = 70 };
             timer = new DispatcherTimer { Interval = Delay };
             timer.Tick += async (_, _) =>
@@ -83,40 +85,40 @@ namespace SharpEquations.Avalonia.MathTools
         public ComboBox Letter { get; }
 
         /// <summary>The value of the equation of the editor, as it was last computed.</summary>
-        public AlgebraResult? Answer { get; private set; }
+        public CasResult? Answer { get; private set; }
 
         /// <summary>The results of the actions, the last first.</summary>
-        public IReadOnlyList<AlgebraResult> Results => history;
+        public IReadOnlyList<CasResult> Results => history;
 
-        private readonly List<AlgebraResult> history = new List<AlgebraResult>();
+        private readonly List<CasResult> history = new List<CasResult>();
 
         /// <summary>Computes the value of the equation of the editor now, as typing does after a pause.</summary>
         public async Task RefreshAnswer()
         {
             timer.Stop();
             var current = ++version;
-            if (!TryRead(out var expression, out var error))
+            if (!TryRead(out var equation, out var letters, out var error))
             {
-                UpdateLetters(null);
+                UpdateLetters(Array.Empty<string>());
                 ShowAnswer(null, error);
                 return;
             }
-            UpdateLetters(expression);
-            var (result, message) = await Compute(Algebra.Evaluate, expression!, null).ConfigureAwait(true);
+            UpdateLetters(letters);
+            var (result, message) = await Compute(CasAction.Evaluate, equation!, null).ConfigureAwait(true);
             if (current == version)
                 ShowAnswer(result, message);
         }
 
         /// <summary>Does an action to the equation of the editor, as its button does, and adds the result to the list.</summary>
-        public async Task<AlgebraResult?> RunAsync(string action)
+        public async Task<CasResult?> RunAsync(CasAction action)
         {
-            if (!TryRead(out var expression, out var error))
+            if (!TryRead(out var equation, out _, out var error))
             {
                 AddMessage(error!);
                 return null;
             }
             var letter = Letter.SelectedItem as string;
-            var (result, message) = await Compute(action, expression!, letter).ConfigureAwait(true);
+            var (result, message) = await Compute(action, equation!, letter).ConfigureAwait(true);
             if (result == null)
             {
                 AddMessage(message!);
@@ -129,11 +131,11 @@ namespace SharpEquations.Avalonia.MathTools
             return result;
         }
 
-        private bool TryRead(out Entity? expression, out string? error)
+        private bool TryRead(out Equation? equation, out IReadOnlyList<string> letters, out string? error)
         {
-            expression = null;
+            letters = Array.Empty<string>();
             error = null;
-            var equation = editor.Equation;
+            equation = editor.Equation;
             if (equation == null)
             {
                 error = "The value of what is typed shows here.";
@@ -146,7 +148,7 @@ namespace SharpEquations.Avalonia.MathTools
             }
             try
             {
-                expression = MathReader.Read(equation);
+                letters = engine.Variables(equation);
                 return true;
             }
             catch (NotSupportedException e)
@@ -156,27 +158,26 @@ namespace SharpEquations.Avalonia.MathTools
             }
         }
 
-        // on another thread, since AngouriMath can take long (it cannot be stopped: a result too late is dropped)
-        private static async Task<(AlgebraResult? Result, string? Message)> Compute(string action, Entity expression, string? letter)
+        // on another thread, since the engine can take long (it cannot be stopped: a result too late is dropped)
+        private async Task<(CasResult? Result, string? Message)> Compute(CasAction action, Equation equation, string? letter)
         {
-            var work = Task.Run(() => Algebra.Run(action, expression, letter));
+            var work = Task.Run(() => engine.Run(action, equation, letter));
             if (await Task.WhenAny(work, Task.Delay(Timeout)).ConfigureAwait(true) != work)
-                return (null, "It takes too long: AngouriMath found no result in " + Timeout.TotalSeconds + " seconds.");
+                return (null, "It takes too long: " + engine.Name + " found no result in " + Timeout.TotalSeconds + " seconds.");
             try
             {
                 return (await work.ConfigureAwait(true), null);
             }
-#pragma warning disable CA1031 // what AngouriMath cannot do, it says with exceptions of many kinds
+#pragma warning disable CA1031 // what the engine cannot do, it says with exceptions of many kinds
             catch (Exception e)
 #pragma warning restore CA1031
             {
-                return (null, "AngouriMath cannot do it: " + e.Message);
+                return (null, engine.Name + " cannot do it: " + e.Message);
             }
         }
 
-        private void UpdateLetters(Entity? expression)
+        private void UpdateLetters(IReadOnlyList<string> letters)
         {
-            var letters = expression == null ? Array.Empty<string>() : Algebra.Variables(expression);
             var selected = Letter.SelectedItem as string;
             if (Letter.ItemsSource is IReadOnlyList<string> old && old.SequenceEqual(letters))
                 return;
@@ -184,7 +185,7 @@ namespace SharpEquations.Avalonia.MathTools
             Letter.SelectedItem = selected != null && letters.Contains(selected) ? selected : letters.Count > 0 ? letters[0] : null;
         }
 
-        private void ShowAnswer(AlgebraResult? result, string? message)
+        private void ShowAnswer(CasResult? result, string? message)
         {
             Answer = result;
             answer.Equation = result?.Math;
@@ -200,7 +201,7 @@ namespace SharpEquations.Avalonia.MathTools
                 results.Children.RemoveAt(results.Children.Count - 1);
         }
 
-        private Border ResultCard(AlgebraResult result, string label)
+        private Border ResultCard(CasResult result, string label)
         {
             Control math = result.Math != null
                 ? new MathView { FontSize = 22, Equation = result.Math, HorizontalAlignment = HorizontalAlignment.Left }
@@ -222,12 +223,12 @@ namespace SharpEquations.Avalonia.MathTools
             return card;
         }
 
-        private static string Label(string action, string letter) => action switch
+        private static string Label(CasAction action, string letter) => action switch
         {
-            Algebra.Solve => "Solve for " + letter,
-            Algebra.Differentiate => "Derivative by " + letter,
-            Algebra.Integrate => "Antiderivative by " + letter,
-            _ => action,
+            CasAction.Solve => "Solve for " + letter,
+            CasAction.Differentiate => "Derivative by " + letter,
+            CasAction.Integrate => "Antiderivative by " + letter,
+            _ => action.ToString(),
         };
     }
 }

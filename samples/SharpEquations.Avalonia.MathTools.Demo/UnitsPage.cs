@@ -7,6 +7,7 @@ namespace SharpEquations.Avalonia.MathTools
     using global::Avalonia.Layout;
     using global::Avalonia.Media;
     using SharpEquations;
+    using SharpEquations.MathTools;
 
     /// <summary>
     /// The unit converter: a value in a unit of a quantity, in another unit and in all of them, the results written in
