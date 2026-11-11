@@ -1,0 +1,123 @@
+:root {
+    --page: #f3f4fa;
+    --ink: #1f2333;
+    --muted: #6b7280;
+    --track: rgba(15, 118, 110, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --page: #0d0f16;
+        --ink: #e7e9f2;
+        --muted: #9aa3b5;
+        --track: rgba(94, 234, 212, 0.18);
+    }
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: var(--page);
+    color: var(--ink);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+#out {
+    position: fixed;
+    inset: 0;
+}
+
+#splash {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background:
+        radial-gradient(60rem 40rem at 10% -10%, rgba(20, 184, 166, 0.35), transparent 60%),
+        radial-gradient(50rem 40rem at 110% 110%, rgba(37, 99, 235, 0.28), transparent 60%),
+        var(--page);
+    transition: opacity 0.45s ease, visibility 0.45s;
+    z-index: 10;
+}
+
+#splash.done {
+    opacity: 0;
+    visibility: hidden;
+}
+
+#splash .card {
+    text-align: center;
+    padding: 2.5rem 3rem;
+    max-width: 26rem;
+}
+
+#splash .formula {
+    display: flex;
+    justify-content: center;
+    gap: 0.9rem;
+    font-size: 2.6rem;
+    font-family: "Cambria Math", "STIX Two Math", "Latin Modern Math", serif;
+    background: linear-gradient(120deg, #0f766e, #0891b2 55%, #2563eb);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+#splash .formula span {
+    display: inline-block;
+    animation: float 1.8s ease-in-out infinite;
+}
+
+#splash .formula span:nth-child(2) { animation-delay: 0.15s; }
+#splash .formula span:nth-child(3) { animation-delay: 0.3s; }
+#splash .formula span:nth-child(4) { animation-delay: 0.45s; }
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-0.4rem); }
+}
+
+#splash h1 {
+    margin: 0.8rem 0 0.3rem;
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+#splash p {
+    margin: 0 0 1.4rem;
+    color: var(--muted);
+}
+
+#splash .bar {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--track);
+    overflow: hidden;
+}
+
+#splash #progress {
+    width: 4%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #0f766e, #0891b2, #2563eb);
+    transition: width 0.25s ease;
+}
+
+#splash small {
+    display: block;
+    margin-top: 1rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+}
+
+#splash.failed .bar {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #splash .formula span { animation: none; }
+}
