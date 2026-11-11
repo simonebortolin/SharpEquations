@@ -60,7 +60,20 @@ namespace SharpEquations.Avalonia
         public double GetAdvance(ushort glyph) => file.Advance(glyph);
 
         /// <inheritdoc/>
-        public GlyphBounds GetBounds(ushort glyph) => outlines.Value?.Bounds(glyph) ?? default;
+        public GlyphBounds GetBounds(ushort glyph) => outlines.Value?.Bounds(glyph) ?? LineBounds(glyph);
+
+        /// <summary>
+        /// The box of a glyph of a font without outlines (the bitmaps of a color emoji font, <c>CBDT</c>), which has no
+        /// ink box to read: its advance across, and the ascent and descent of the font.
+        /// </summary>
+        private GlyphBounds LineBounds(ushort glyph)
+        {
+            if (file.Table("hhea") is not { Length: >= 8 } hhea)
+                return default;
+            var ascent = (short)(hhea[4] << 8 | hhea[5]);
+            var descent = (short)(hhea[6] << 8 | hhea[7]);
+            return new GlyphBounds(0, descent, file.Advance(glyph), ascent);
+        }
 
         /// <inheritdoc/>
         public ushort GetScriptVariant(ushort glyph, int scriptLevel) => scriptStyles.Value?.Variant(glyph, scriptLevel) ?? glyph;
