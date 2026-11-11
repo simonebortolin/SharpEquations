@@ -171,7 +171,8 @@ namespace SharpEquations.Tests.LaTeX
         }
 
         // a slash and a bar are ordinary characters of LaTeX, which UnicodeMath reads as a fraction and an absolute value;
-        // so is a bracket that a group opens and does not close, which UnicodeMath would close
+        // so is a bracket that a group opens and does not close, which UnicodeMath would close, or a bracket alone as a
+        // script; a bar in text, after \bigm (a relation) or {|} is a bar alone, which no other bar pairs with
         [Test]
         [Arguments(@"a/b", @"a/b", @"𝑎\/𝑏")]
         [Arguments(@"(a+b)/2", @"(a+b)/2", @"(𝑎+𝑏)\/2")]
@@ -194,6 +195,17 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\mathstrut", @"\vphantom{(}", @"⇳\(")]
         [Arguments(@"\sqrt{(}", @"\sqrt{(}", @"√\(")]
         [Arguments(@"\text{(}", @"\text{(}", @"""(""")]
+        [Arguments(@"x_{[}", @"x_{[}", @"𝑥_\[")]
+        [Arguments(@"x_(", @"x_{(}", @"𝑥_\(")]
+        [Arguments(@"x^{)}", @"x^{)}", @"𝑥^\)")]
+        [Arguments(@"x^{ ] }", @"x^{]}", @"𝑥^\]")]
+        [Arguments(@"\text{a|b}", @"\text{a|b}", @"""a|b""")]
+        [Arguments(@"a\vert b", @"a|b", @"𝑎\|𝑏")]
+        [Arguments(@"\vert x\vert", @"|x|", @"|𝑥|")]
+        [Arguments(@"a \Bigm\vert b", @"a|b", @"𝑎\|𝑏")]
+        [Arguments(@"|a \bigm| b|", @"\left|a{|}b\right|", @"|(𝑎\|𝑏)|")]
+        [Arguments(@"\{x \bigm| x>0\}", @"\{x|x>0\}", @"{𝑥│𝑥>0}")]
+        [Arguments(@"\{x {|} x>0\}", @"\{x{|}x>0\}", @"{𝑥\|𝑥>0}")]
         [Arguments(@"\langle a | b \rangle | c", @"\langle a|b\rangle|c", @"⟨𝑎│𝑏⟩\|𝑐")]
         [Arguments(@"a|b", @"a|b", @"𝑎\|𝑏")]
         [Arguments(@"(a\|b)", @"(a\|b)", @"(𝑎\‖𝑏)")]
