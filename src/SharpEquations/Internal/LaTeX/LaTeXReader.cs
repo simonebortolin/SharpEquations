@@ -52,6 +52,9 @@ namespace SharpEquations.Internal.LaTeX
             ("\\textasciicircum{}", '\uFDD7', '^'), ("\\textasciitilde{}", '\uFDD8', '~'),
         };
 
+        // the closing brackets that EscapeOpenBrackets escapes (x^{)}), held as noncharacters, since \) and \] would end the LaTeX
+        private static readonly (char Held, char Character)[] HeldBrackets = { ('\uFDDA', ')'), ('\uFDDB', ']') };
+
         private static readonly HashSet<string> TextCommands = new HashSet<string>(StringComparer.Ordinal)
         {
             "text", "textrm", "textup", "textnormal", "textbf", "textit", "textsf", "texttt", "textmd", "mbox", "emph",
@@ -69,6 +72,8 @@ namespace SharpEquations.Internal.LaTeX
         private static string RestoreTextEscapes(string unicodemath)
         {
             foreach (var (_, held, character) in TextEscapes)
+                unicodemath = unicodemath.Replace(held, character);
+            foreach (var (held, character) in HeldBrackets)
                 unicodemath = unicodemath.Replace(held, character);
             if (!Characters(unicodemath).Any(c => CodePointAt(c, 0) >= HeldMarks))
                 return unicodemath;
@@ -436,7 +441,7 @@ namespace SharpEquations.Internal.LaTeX
             ["smallfrown"] = "⌢", ["smallsmile"] = "⌣", ["thicksim"] = "∼", ["thickapprox"] = "≈", ["varsubsetneqq"] = "⫋",
             ["varsupsetneq"] = "⊋", ["varsupsetneqq"] = "⫌", ["bigcirc"] = "\\◯", ["centerdot"] = "⬝", ["degree"] = "°",
             ["intop"] = "\\int", ["smallint"] = "\\int", ["diagup"] = "\\╱", ["diagdown"] = "\\╲", ["thickspace"] = "\\;",
-            ["And"] = "\\&", ["lvert"] = "|", ["rvert"] = "|", ["idotsint"] = "\\∫⋯\\∫",
+            ["And"] = "\\&", ["lvert"] = "|", ["rvert"] = "|", ["vert"] = "|", ["idotsint"] = "\\∫⋯\\∫",
             ["mathscr"] = "\\mathcal", ["operatornamewithlimits"] = "\\operatorname", ["mathstrut"] = "\\vphantom{\\(}",
             // \Re and \Im, the symbols ℜ and ℑ of LaTeX, which UnicodeMath reads as the function names Re and Im
             ["Re"] = "ℜ", ["Im"] = "ℑ",
@@ -683,6 +688,20 @@ namespace SharpEquations.Internal.LaTeX
                         result.Append('{').Append(RewriteTeXOnly(argument)).Append('}');
                     i = fractionArguments.Next;
                     continue;
+                }
+                if (cw is "bigm" or "Bigm" or "biggm" or "Biggm" && brackets == 0)
+                {
+                    // \bigm|, a relation outside brackets: a bar alone, {|}, which no other bar pairs with (|𝑎 \bigm| 𝑏|)
+                    int k = j;
+                    while (tex[k] == " ")
+                        k++;
+                    var afterBar = tex[k] == "|" ? k + 1 : tex.Sub(k, k + 5) == "\\vert" && !IsAsciiAlphabetic(tex[k + 5]) ? k + 5 : -1;
+                    if (afterBar >= 0)
+                    {
+                        result.Append("{|}");
+                        i = afterBar;
+                        continue;
+                    }
                 }
                 if (Dropped.Contains(cw))
                 {
@@ -1183,6 +1202,12 @@ namespace SharpEquations.Internal.LaTeX
                 if (ch == "\\")
                 {
                     var cw = ControlWord(tex, i + 1);
+                    // the text of \text and the like, whose bars are text (\text{a|b})
+                    if (TextCommands.Contains(cw) && BracedArgument(tex, i + 1 + cw.Length) is var (_, afterText) && afterText >= 0)
+                    {
+                        i = afterText - 1;
+                        continue;
+                    }
                     // the brackets among the commands (\{, \}, \langle, \rangle) become the bracket they stand for; an
                     // escaped character (\|) is skipped
                     ch = cw switch
@@ -1256,13 +1281,17 @@ namespace SharpEquations.Internal.LaTeX
 
         /// <summary>
         /// A bracket that a group opens and does not close, as in \phantom{(}, escaped: UnicodeMath would close it with an
-        /// empty fence at the end of the group. The text of \text and the like is left as it is.
+        /// empty fence at the end of the group; so are a closing bracket alone in a group (x^{)}) and a bracket that is a
+        /// script and does not close (x_(). A script in brackets that close is grouped whole (x^(a+b) as x^{(a+b)}). The
+        /// text of \text and the like is left as it is.
         /// </summary>
         private static string EscapeOpenBrackets(string latex)
         {
             var tex = new Text(latex);
             var groups = new Stack<List<int>>();
             var escaped = new List<int>();
+            // the scripts grouped, from the index of their first character to that of their last
+            var scripts = new Dictionary<int, int>();
             for (int i = 0; i < tex.Length; i++)
             {
                 switch (tex[i])
@@ -1291,21 +1320,99 @@ namespace SharpEquations.Internal.LaTeX
                     case "(" or "[" when groups.Count > 0:
                         groups.Peek().Add(i);
                         break;
-                    case ")" or "]" when groups.Count > 0 && groups.Peek().Count > 0:
-                        groups.Peek().RemoveAt(groups.Peek().Count - 1);
+                    case ")" or "]" when groups.Count > 0:
+                        if (groups.Peek().Count > 0)
+                            groups.Peek().RemoveAt(groups.Peek().Count - 1);
+                        else if (Blank(tex, i, -1) == "{" && Blank(tex, i, 1) == "}")
+                        {
+                            // a group of a closing bracket alone (x^{)}) is escaped too; in others the bracket may close
+                            // another (⟨𝑎])
+                            escaped.Add(i);
+                        }
                         break;
+                    case "_" or "^":
+                    {
+                        // a bracket that is a script and closes nothing, x^), or opens what does not close, x_(, which
+                        // UnicodeMath would read as the opening of what follows; a script in brackets that close, x^(a+b),
+                        // is grouped whole, as Word's LaTeX writes it and Word reads it (x^{(a+b)})
+                        int k = i + 1;
+                        while (tex[k] == " ")
+                            k++;
+                        var close = tex[k] is "(" or "[" ? ClosingBracket(tex, k) : -1;
+                        if (close >= 0)
+                            scripts[k] = close;
+                        else if (tex[k] is "(" or "[" or ")" or "]")
+                        {
+                            escaped.Add(k);
+                            scripts[k] = k;
+                            i = k;
+                        }
+                        break;
+                    }
                 }
             }
-            if (escaped.Count == 0)
+            if (escaped.Count == 0 && scripts.Count == 0)
                 return latex;
+            var ends = scripts.Values.ToList();
             var result = new StringBuilder();
             for (int i = 0; i < tex.Length; i++)
             {
+                if (scripts.ContainsKey(i))
+                    result.Append('{');
                 if (escaped.Contains(i))
-                    result.Append('\\');
-                result.Append(tex[i]);
+                {
+                    // a closing bracket held, since \) and \] would end the LaTeX
+                    result.Append('\\').Append(tex[i] switch
+                    {
+                        ")" => "\uFDDA",
+                        "]" => "\uFDDB",
+                        var bracket => bracket,
+                    });
+                }
+                else
+                    result.Append(tex[i]);
+                foreach (var _ in ends.Where(end => end == i))
+                    result.Append('}');
             }
             return result.ToString();
+        }
+
+        /// <summary>The character before (step -1) or after (step 1) the index, past the blanks.</summary>
+        private static string Blank(Text tex, int i, int step)
+        {
+            do
+                i += step;
+            while (i >= 0 && i < tex.Length && tex[i] == " ");
+            return i >= 0 && i < tex.Length ? tex[i] : null;
+        }
+
+        /// <summary>The index of the bracket that closes the one at the index before the group around it ends; -1 if none.</summary>
+        private static int ClosingBracket(Text tex, int open)
+        {
+            int depth = 0, braces = 0;
+            for (int i = open; i < tex.Length; i++)
+            {
+                switch (tex[i])
+                {
+                    case "\\":
+                        i++;
+                        break;
+                    case "{":
+                        braces++;
+                        break;
+                    case "}" when braces == 0:
+                        return -1;
+                    case "}":
+                        braces--;
+                        break;
+                    case "(" or "[":
+                        depth++;
+                        break;
+                    case ")" or "]" when --depth == 0:
+                        return i;
+                }
+            }
+            return -1;
         }
 
         /// <summary>The count arguments (braced or single characters) at the index, and the index after them; null if missing.</summary>
