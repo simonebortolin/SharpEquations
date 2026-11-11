@@ -1281,15 +1281,17 @@ namespace SharpEquations.Internal.LaTeX
 
         /// <summary>
         /// A bracket that a group opens and does not close, as in \phantom{(}, escaped: UnicodeMath would close it with an
-        /// empty fence at the end of the group; so are a closing bracket alone in a group (x^{)}) and a bracket
-        /// that is a script and does not close (x_(). The text of \text and the like is left as it is.
+        /// empty fence at the end of the group; so are a closing bracket alone in a group (x^{)}) and a bracket that is a
+        /// script and does not close (x_(). A script in brackets that close is grouped whole (x^(a+b) as x^{(a+b)}). The
+        /// text of \text and the like is left as it is.
         /// </summary>
         private static string EscapeOpenBrackets(string latex)
         {
             var tex = new Text(latex);
             var groups = new Stack<List<int>>();
             var escaped = new List<int>();
-            var scripts = new HashSet<int>();
+            // the scripts grouped, from the index of their first character to that of their last
+            var scripts = new Dictionary<int, int>();
             for (int i = 0; i < tex.Length; i++)
             {
                 switch (tex[i])
@@ -1330,27 +1332,32 @@ namespace SharpEquations.Internal.LaTeX
                         break;
                     case "_" or "^":
                     {
-                        // a bracket that is a script and closes nothing, x^), or opens what does not close, x_(: Word's LaTeX
-                        // groups a script in brackets (x^(a+b)), which UnicodeMath would read as the opening of what follows
+                        // a bracket that is a script and closes nothing, x^), or opens what does not close, x_(, which
+                        // UnicodeMath would read as the opening of what follows; a script in brackets that close, x^(a+b),
+                        // is grouped whole, as Word's LaTeX writes it and Word reads it (x^{(a+b)})
                         int k = i + 1;
                         while (tex[k] == " ")
                             k++;
-                        if (tex[k] is ")" or "]" || tex[k] is "(" or "[" && !BracketCloses(tex, k))
+                        var close = tex[k] is "(" or "[" ? ClosingBracket(tex, k) : -1;
+                        if (close >= 0)
+                            scripts[k] = close;
+                        else if (tex[k] is "(" or "[" or ")" or "]")
                         {
                             escaped.Add(k);
-                            scripts.Add(k);
+                            scripts[k] = k;
                             i = k;
                         }
                         break;
                     }
                 }
             }
-            if (escaped.Count == 0)
+            if (escaped.Count == 0 && scripts.Count == 0)
                 return latex;
+            var ends = scripts.Values.ToList();
             var result = new StringBuilder();
             for (int i = 0; i < tex.Length; i++)
             {
-                if (scripts.Contains(i))
+                if (scripts.ContainsKey(i))
                     result.Append('{');
                 if (escaped.Contains(i))
                 {
@@ -1364,7 +1371,7 @@ namespace SharpEquations.Internal.LaTeX
                 }
                 else
                     result.Append(tex[i]);
-                if (scripts.Contains(i))
+                foreach (var _ in ends.Where(end => end == i))
                     result.Append('}');
             }
             return result.ToString();
@@ -1379,8 +1386,8 @@ namespace SharpEquations.Internal.LaTeX
             return i >= 0 && i < tex.Length ? tex[i] : null;
         }
 
-        /// <summary>Whether the bracket at the index closes before the group around it ends.</summary>
-        private static bool BracketCloses(Text tex, int open)
+        /// <summary>The index of the bracket that closes the one at the index before the group around it ends; -1 if none.</summary>
+        private static int ClosingBracket(Text tex, int open)
         {
             int depth = 0, braces = 0;
             for (int i = open; i < tex.Length; i++)
@@ -1394,7 +1401,7 @@ namespace SharpEquations.Internal.LaTeX
                         braces++;
                         break;
                     case "}" when braces == 0:
-                        return false;
+                        return -1;
                     case "}":
                         braces--;
                         break;
@@ -1402,10 +1409,10 @@ namespace SharpEquations.Internal.LaTeX
                         depth++;
                         break;
                     case ")" or "]" when --depth == 0:
-                        return true;
+                        return i;
                 }
             }
-            return false;
+            return -1;
         }
 
         /// <summary>The count arguments (braced or single characters) at the index, and the index after them; null if missing.</summary>
