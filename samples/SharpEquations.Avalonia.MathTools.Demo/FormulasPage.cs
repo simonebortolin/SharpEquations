@@ -28,7 +28,12 @@ namespace SharpEquations.Avalonia.MathTools
             this.open = open;
 
             Search = new TextBox { PlaceholderText = "Search a formula", Width = 260 };
-            Search.TextChanged += (_, _) => Filter();
+            // the property, not TextChanged, which Avalonia raises later, on the dispatcher
+            Search.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == TextBox.TextProperty)
+                    Filter();
+            };
 
             var chips = Ui.Row(Search);
             foreach (var name in new string?[] { null }.Concat(Formulas.Subjects))
