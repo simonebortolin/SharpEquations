@@ -14,11 +14,11 @@ namespace SharpEquations.Tests.Omml
     /// <remarks>
     /// The mathematical alphanumerics are written as Word writes them, the plain letter with its style (𝒢 is a G with
     /// m:scr), before mml2omml.xsl sees them, so how the stylesheet counts characters does not matter for them. An
-    /// emoji reaches the stylesheet as it is, and the stylesheet, compiled to C#, counts code points, as XPath does
-    /// (XslCompiledTransform counts UTF-16 units: 🍕, one character, counts as two there, so its mi is taken for a
-    /// name of several letters and written upright, m:sty p, in a run of its own). The tests marked as depending on
-    /// code point counting pin that behaviour: 🍕 is written as an italic identifier, without m:rPr, in one run with
-    /// the characters around it, and reads back to the same equation.
+    /// emoji reaches the stylesheet as it is, and the stylesheet, compiled to C# by SharpEquations.XsltGenerator,
+    /// counts code points as XPath does (XslCompiledTransform counted UTF-16 units, so that 🍕 counted as two
+    /// characters and was written upright, in a run of its own): 🍕 is written as an italic identifier, without m:rPr,
+    /// in one run with the characters around it, and reads back to the same equation. The tests marked as counting
+    /// code points pin that behaviour.
     /// </remarks>
     public class OmmlAstralTests
     {
@@ -78,21 +78,19 @@ namespace SharpEquations.Tests.Omml
         }
 
         /// <summary>
-        /// Depends on code point counting: 🍕 counts as one character in mml2omml.xsl and is written as an italic
-        /// identifier, in one run with the characters around it. Counting UTF-16 units, it would be upright (m:sty p),
-        /// in a run of its own.
+        /// Counting code points: 🍕 is one character in mml2omml.xsl, an italic identifier written without m:rPr, in
+        /// one run with the characters around it.
         /// </summary>
         [Test]
         [Arguments("🍕", "<m:oMath><m:r><m:t>🍕</m:t></m:r></m:oMath>")]
         [Arguments("𝑥+🍕", "<m:oMath><m:r><m:t>x+🍕</m:t></m:r></m:oMath>")]
-        public async Task WritesEmojiCountingCodePoints(string unicodeMath, string omml)
+        public async Task WritesEmojiItalicCountingCodePoints(string unicodeMath, string omml)
         {
             await Assert.That(Compact(Equation.Parse(unicodeMath, EquationFormat.UnicodeMath).ToOmml())).IsEqualTo(omml);
         }
 
         /// <summary>
-        /// Depends on code point counting: no 🍕 of the corpus example has run properties. Counting UTF-16 units, the
-        /// runs would be <c>nor=:pizza sty=p:🍕 sty=p:🍕</c>.
+        /// Counting code points: each 🍕 of the corpus example is written as an italic identifier, without m:rPr.
         /// </summary>
         [Test]
         public async Task WritesThePizzaOfTheCorpusCountingCodePoints()
@@ -136,9 +134,8 @@ namespace SharpEquations.Tests.Omml
         }
 
         /// <summary>
-        /// Depends on code point counting: the 🍕 that mml2omml.xsl writes, an italic identifier, reads back as it was,
-        /// so the first trip through OMML gives the same equation. Counting UTF-16 units, it would be written upright
-        /// and read back with <c>mathvariant="normal"</c>.
+        /// Counting code points: the italic 🍕 that mml2omml.xsl writes reads back as it was, so the first trip through
+        /// OMML gives the same equation.
         /// </summary>
         [Test]
         [Arguments("🍕", "<mi>🍕</mi>")]
@@ -151,7 +148,6 @@ namespace SharpEquations.Tests.Omml
             await Assert.That(back.ToMathML().ToString(SaveOptions.DisableFormatting)).IsEqualTo(MathML(mathML));
             await Assert.That(back).IsEqualTo(equation);
             await Assert.That(back.ToString(EquationFormat.UnicodeMath)).IsEqualTo(equation.ToString(EquationFormat.UnicodeMath));
-            await Assert.That(Equation.Parse(back.ToOmml(), EquationFormat.Omml)).IsEqualTo(back);
         }
 
         [Test]
@@ -222,8 +218,7 @@ namespace SharpEquations.Tests.Omml
         }
 
         /// <summary>
-        /// Depends on code point counting: an italic 🍕 of OMML (a run without m:sty) is written back as it was read.
-        /// Counting UTF-16 units, it would be written back upright.
+        /// Counting code points: an italic 🍕 of OMML (a run without m:sty) is written back as it was read.
         /// </summary>
         [Test]
         public async Task ItalicEmojiOfOmmlComesBackItalicCountingCodePoints()

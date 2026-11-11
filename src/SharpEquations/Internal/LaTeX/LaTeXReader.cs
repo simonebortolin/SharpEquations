@@ -36,8 +36,8 @@ namespace SharpEquations.Internal.LaTeX
         }
 
         /// <summary>
-        /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def
-        /// or \newcommand, and environments defined with \newenvironment, go to <paramref name="macros"/>, where later conversions find them. In a display equation the
+        /// TeX2UnicodeMath: the UnicodeMath of LaTeX math (without its $ or \[ delimiters). Macros defined with \def,
+        /// \newcommand or \DeclareMathOperator, and environments defined with \newenvironment, go to <paramref name="macros"/>, where later conversions find them. In a display equation the
         /// scripts of a large operator other than an integral (\sum, \prod, \bigcup...) go under and over it, as TeX
         /// puts them. The \ce and \pu of mhchem are rewritten as plain LaTeX first (<see cref="Mhchem"/>).
         /// </summary>
@@ -51,6 +51,9 @@ namespace SharpEquations.Internal.LaTeX
             ("\\%", '\uFDD5', '%'), ("\\&", '\uFDD6', '&'), ("\\^{}", '\uFDD7', '^'), ("\\~{}", '\uFDD8', '~'),
             ("\\textasciicircum{}", '\uFDD7', '^'), ("\\textasciitilde{}", '\uFDD8', '~'),
         };
+
+        // the closing brackets that EscapeOpenBrackets escapes (x^{)}), held as noncharacters, since \) and \] would end the LaTeX
+        private static readonly (char Held, char Character)[] HeldBrackets = { ('\uFDDA', ')'), ('\uFDDB', ']') };
 
         private static readonly HashSet<string> TextCommands = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -69,6 +72,8 @@ namespace SharpEquations.Internal.LaTeX
         private static string RestoreTextEscapes(string unicodemath)
         {
             foreach (var (_, held, character) in TextEscapes)
+                unicodemath = unicodemath.Replace(held, character);
+            foreach (var (held, character) in HeldBrackets)
                 unicodemath = unicodemath.Replace(held, character);
             if (!Characters(unicodemath).Any(c => CodePointAt(c, 0) >= HeldMarks))
                 return unicodemath;
@@ -305,6 +310,11 @@ namespace SharpEquations.Internal.LaTeX
                         while (tex[i] == " ")
                             i++;
                     }
+                    else if (IsAsciiAlphabetic(tex[i]))
+                    {
+                        // a name followed by a letter (\operatorname*{max}x): a space parts them, which would otherwise be one word
+                        result.Append(' ');
+                    }
                     summation = -1;
                     continue;
                 }
@@ -431,8 +441,10 @@ namespace SharpEquations.Internal.LaTeX
             ["smallfrown"] = "⌢", ["smallsmile"] = "⌣", ["thicksim"] = "∼", ["thickapprox"] = "≈", ["varsubsetneqq"] = "⫋",
             ["varsupsetneq"] = "⊋", ["varsupsetneqq"] = "⫌", ["bigcirc"] = "\\◯", ["centerdot"] = "⬝", ["degree"] = "°",
             ["intop"] = "\\int", ["smallint"] = "\\int", ["diagup"] = "\\╱", ["diagdown"] = "\\╲", ["thickspace"] = "\\;",
-            ["And"] = "\\&", ["lvert"] = "|", ["rvert"] = "|", ["idotsint"] = "\\∫⋯\\∫",
+            ["And"] = "\\&", ["lvert"] = "|", ["rvert"] = "|", ["vert"] = "|", ["idotsint"] = "\\∫⋯\\∫",
             ["mathscr"] = "\\mathcal", ["operatornamewithlimits"] = "\\operatorname", ["mathstrut"] = "\\vphantom{\\(}",
+            // \Re and \Im, the symbols ℜ and ℑ of LaTeX, which UnicodeMath reads as the function names Re and Im
+            ["Re"] = "ℜ", ["Im"] = "ℑ",
         };
 
         private static readonly HashSet<string> OpeningBrackets = new HashSet<string>(StringComparer.Ordinal) { "(", "[", "{", "⟨", "⌈", "⌊" };
@@ -653,6 +665,15 @@ namespace SharpEquations.Internal.LaTeX
                     i = end;
                     continue;
                 }
+                if (cw == "DeclareMathOperator" && Argument(tex, tex[j] == "*" ? j + 1 : j) is var (operatorName, afterOperatorName) && afterOperatorName >= 0 &&
+                    BracedArgument(tex, afterOperatorName) is var (operatorBody, afterOperatorBody) && afterOperatorBody >= 0)
+                {
+                    // \DeclareMathOperator{\name}{text}: \name defined as \operatorname{text}, \operatorname*{text} when starred
+                    result.Append("\\newcommand{").Append(operatorName.Trim()).Append("}{")
+                        .Append(RewriteTeXOnly("\\operatorname" + (tex[j] == "*" ? "*" : "") + "{" + operatorBody + "}")).Append('}');
+                    i = afterOperatorBody;
+                    continue;
+                }
                 if (cw == "renewcommand")
                 {
                     result.Append("\\newcommand");
@@ -667,6 +688,20 @@ namespace SharpEquations.Internal.LaTeX
                         result.Append('{').Append(RewriteTeXOnly(argument)).Append('}');
                     i = fractionArguments.Next;
                     continue;
+                }
+                if (cw is "bigm" or "Bigm" or "biggm" or "Biggm" && brackets == 0)
+                {
+                    // \bigm|, a relation outside brackets: a bar alone, {|}, which no other bar pairs with (|𝑎 \bigm| 𝑏|)
+                    int k = j;
+                    while (tex[k] == " ")
+                        k++;
+                    var afterBar = tex[k] == "|" ? k + 1 : tex.Sub(k, k + 5) == "\\vert" && !IsAsciiAlphabetic(tex[k + 5]) ? k + 5 : -1;
+                    if (afterBar >= 0)
+                    {
+                        result.Append("{|}");
+                        i = afterBar;
+                        continue;
+                    }
                 }
                 if (Dropped.Contains(cw))
                 {
@@ -939,6 +974,21 @@ namespace SharpEquations.Internal.LaTeX
                         continue;
                     }
                 }
+                else if (cw is "sout" or "hcancel" && Argument(tex, j) is var (struck, afterStruck) && afterStruck >= 0)
+                {
+                    // a horizontal strike: \sout of ulem (and of KaTeX), \hcancel
+                    result.Append(Enclosure("horizontalstrike", RewriteTeXOnly(struck)));
+                    i = afterStruck;
+                    continue;
+                }
+                else if (cw == "enclose" && BracedArgument(tex, j) is var (notation, afterNotation) && afterNotation >= 0 &&
+                    BracedArgument(tex, OptionalArgument(tex, afterNotation).Next) is var (enclosed, afterEnclosed) && afterEnclosed >= 0)
+                {
+                    // \enclose{notation}[attributes]{body} of MathJax: the notations of MathML menclose, parted by commas
+                    result.Append(Enclosure(notation, RewriteTeXOnly(enclosed)));
+                    i = afterEnclosed;
+                    continue;
+                }
                 else if (FontSwitches.TryGetValue(cw, out var font))
                 {
                     // an old font switch, {\rm rxn}, styles the rest of its group: \mathrm{rxn}
@@ -951,6 +1001,40 @@ namespace SharpEquations.Internal.LaTeX
                 i = j;
             }
             return result.ToString();
+        }
+
+        // the notations of menclose that UnicodeMath has an operator for
+        private static readonly Dictionary<string, string> EnclosureOperators = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["box"] = "▭", ["roundedbox"] = "▢", ["circle"] = "◯", ["longdiv"] = "⟌",
+        };
+
+        // the notations of menclose that UnicodeMath writes as the bits of the mask of ▭ (the sides are those it hides)
+        private static readonly Dictionary<string, int> EnclosureBits = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["top"] = 1, ["bottom"] = 2, ["left"] = 4, ["right"] = 8, ["horizontalstrike"] = 16, ["verticalstrike"] = 32,
+            ["downdiagonalstrike"] = 64, ["updiagonalstrike"] = 128, ["box"] = 15, ["madruwb"] = 10,
+        };
+
+        private static readonly char[] NotationSeparators = { ',', ' ' };
+
+        /// <summary>
+        /// The UnicodeMath of a body in an enclosure of MathML notations (\enclose{top,bottom}{x}): its operator (⟌{x}), the
+        /// mask of ▭ (▭(28&amp;{x})), or the square root of the radical; a box when none is known.
+        /// </summary>
+        private static string Enclosure(string notation, string body)
+        {
+            var notations = notation.Split(NotationSeparators, StringSplitOptions.RemoveEmptyEntries);
+            if (notations.Length == 1 && notations[0] == "radical")
+                return "\\sqrt{" + body + "}";
+            if (notations.Length == 1 && EnclosureOperators.TryGetValue(notations[0], out var op))
+                return op + "{" + body + "}";
+            // the actuarial, a combining mark before its body in UnicodeMath, and the ▭ of a mask, held through the passes
+            // (which would put the mark after a base, and take the mask for the argument of ▭) in a group of their own
+            if (notations.Length == 1 && notations[0] == "actuarial")
+                return "{{" + HoldMark("⃧") + "(" + body + ")}}";
+            int mask = notations.Sum(n => EnclosureBits.TryGetValue(n, out var bits) ? bits : 0);
+            return mask == 0 || mask == 15 ? "▭{" + body + "}" : "{" + HoldMark("▭") + "(" + (mask ^ 15) + "&{" + body + "})}";
         }
 
         // the font switches of plain TeX, which style the rest of their group, as the LaTeX commands with an argument
@@ -1023,22 +1107,39 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>
         /// A bar (| or ‖) left without its pair, as in 𝑎|𝑏, escaped: in UnicodeMath a bar opens an absolute value or a
         /// norm that a second one closes. Bars are paired within their brackets; one bar alone between brackets (𝑃(𝑐|𝑑),
-        /// {𝑥|𝑥>0}) is the separator UnicodeMath makes of it, a bar before a closing angle with no opening one is a ket
-        /// (|𝑟⟩), and the bars of \left, \right and the like are delimiters.
+        /// {𝑥|𝑥>0}) is the separator UnicodeMath makes of it, with an empty side holding the placeholder ({⬚│⬚}), a bar
+        /// before a closing angle with no opening one is a ket (|𝑟⟩), and the bars of \left, \right and the like are
+        /// delimiters. Two bars with nothing between them are bars alone, but for two such pairs around something, which
+        /// UnicodeMath reads as a norm (||𝑥||).
         /// </summary>
         private static string EscapeOddBars(string latex)
         {
             var tex = new Text(latex);
-            var frames = new Stack<List<int>>();
-            frames.Push(new List<int>());
+            var frames = new Stack<(int Open, List<int> Bars)>();
+            frames.Push((-1, new List<int>()));
             var escaped = new List<int>();
             var kets = new HashSet<int>();
-            bool ZeroSpacesBetween(int first, int second)
+            var placeholders = new HashSet<int>();
+            // the pairs of bars between \left and \right, grouped: UnicodeMath would close the bracket of the second bar
+            // at \right (├(𝑥|𝑎|𝑏┤))
+            int lefts = 0;
+            var depths = new Dictionary<int, int>();
+            var groupStarts = new HashSet<int>();
+            var groupEnds = new HashSet<int>();
+            void Pair(int first, int last)
+            {
+                if (tex[first] != "∣" && depths[first] > 0 && depths[last] == depths[first])
+                {
+                    groupStarts.Add(first);
+                    groupEnds.Add(last);
+                }
+            }
+            bool SpacesBetween(int first, int second, bool zeroSpaces)
             {
                 bool zero = false;
                 for (int k = first + 1; k < second; k++)
                 {
-                    if (tex[k] == "\\" && tex[k + 1] == "!")
+                    if (zeroSpaces && tex[k] == "\\" && tex[k + 1] == "!")
                     {
                         zero = true;
                         k++;
@@ -1046,32 +1147,67 @@ namespace SharpEquations.Internal.LaTeX
                     else if (tex[k] != " ")
                         return false;
                 }
-                return zero;
+                return zero || !zeroSpaces;
             }
-            void Close(List<int> bars, bool inBrackets)
+            void Close((int Open, List<int> Bars) frame, bool inBrackets, int close)
             {
                 foreach (var bar in new[] { "|", "‖", "∣" })
                 {
-                    var some = bars.Where(b => tex[b] == bar).ToList();
+                    var some = frame.Bars.Where(b => tex[b] == bar).ToList();
                     if (inBrackets && some.Count == 1 && bar != "‖")
+                    {
+                        if (close >= 0 && SpacesBetween(frame.Open, some[0], false))
+                            placeholders.Add(some[0]);
+                        if (close >= 0 && SpacesBetween(some[0], close, false))
+                            placeholders.Add(some[0] + 1);
                         continue;
+                    }
                     // bars in pairs, but two with only zero spaces between them (|\!|, which UnicodeMath would read as
                     // ||, one double bar): the first is then a bar alone
+                    var doubles = new List<int>();
                     for (int k = 0; k < some.Count; k++)
                     {
-                        if (k + 1 < some.Count && !ZeroSpacesBetween(some[k], some[k + 1]))
+                        if (k + 1 < some.Count && !SpacesBetween(some[k], some[k + 1], true))
+                        {
+                            if (SpacesBetween(some[k], some[k + 1], false))
+                            {
+                                // two bars with nothing between them, || when they touch, which no other bar touches,
+                                // the double bar of UnicodeMath; bars alone otherwise
+                                if (some[k + 1] == some[k] + 1 && tex[some[k] - 1] != bar && tex[some[k + 1] + 1] != bar)
+                                    doubles.Add(some[k]);
+                                else
+                                    escaped.AddRange(new[] { some[k], some[k + 1] });
+                            }
+                            else
+                                Pair(some[k], some[k + 1]);
                             k++;
+                        }
                         else
                             escaped.Add(some[k]);
+                    }
+                    // double bars in pairs around something, a norm (||𝑥||); the others bars alone
+                    for (int k = 0; k < doubles.Count; k++)
+                    {
+                        if (k + 1 < doubles.Count && !SpacesBetween(doubles[k] + 1, doubles[k + 1], false))
+                            Pair(doubles[k], doubles[++k] + 1);
+                        else
+                            escaped.AddRange(new[] { doubles[k], doubles[k] + 1 });
                     }
                 }
             }
             for (int i = 0; i < tex.Length; i++)
             {
+                int start = i;
                 var ch = tex[i];
                 if (ch == "\\")
                 {
                     var cw = ControlWord(tex, i + 1);
+                    // the text of \text and the like, whose bars are text (\text{a|b})
+                    if (TextCommands.Contains(cw) && BracedArgument(tex, i + 1 + cw.Length) is var (_, afterText) && afterText >= 0)
+                    {
+                        i = afterText - 1;
+                        continue;
+                    }
                     // the brackets among the commands (\{, \}, \langle, \rangle) become the bracket they stand for; an
                     // escaped character (\|) is skipped
                     ch = cw switch
@@ -1086,6 +1222,12 @@ namespace SharpEquations.Internal.LaTeX
                     {
                         while (tex[j] == " ")
                             j++;
+                        lefts += cw switch
+                        {
+                            "left" => 1,
+                            "right" => -1,
+                            _ => 0,
+                        };
                         // the bar after \left, \right... is skipped with the command
                         i = DelimiterCommands.Contains(cw) && (tex[j] == "|" || tex[j] == "‖") ? j : j - 1;
                         continue;
@@ -1095,35 +1237,182 @@ namespace SharpEquations.Internal.LaTeX
                 switch (ch)
                 {
                     case "(" or "[" or "⟨":
-                        frames.Push(new List<int>());
+                        frames.Push((i, new List<int>()));
                         break;
                     case ")" or "]" or "⟩" when frames.Count > 1:
-                        Close(frames.Pop(), true);
+                        Close(frames.Pop(), true, ch == "⟩" ? -1 : start);
                         break;
-                    case "⟩" when frames.Peek().Count > 0:
+                    case "⟩" when frames.Peek().Bars.Count > 0:
                         // a ket (|𝑟⟩): its bar has no pair, and ∣ (\mid) there is the bar of the ket
-                        var ket = frames.Peek()[frames.Peek().Count - 1];
-                        if (tex[ket] == "∣")
-                            kets.Add(ket);
-                        frames.Peek().RemoveAt(frames.Peek().Count - 1);
+                        var bars = frames.Peek().Bars;
+                        if (tex[bars[bars.Count - 1]] == "∣")
+                            kets.Add(bars[bars.Count - 1]);
+                        bars.RemoveAt(bars.Count - 1);
+                        break;
+                    case "|" when tex[i - 1] == "{" && tex[i - 2] != "\\" && tex[i + 1] == "}":
+                        // {|}, the ordinary bar of TeX, a bar alone
+                        escaped.Add(i);
                         break;
                     case "|" or "‖" or "∣":
-                        frames.Peek().Add(i);
+                        frames.Peek().Bars.Add(i);
+                        depths[i] = lefts;
                         break;
                 }
             }
             while (frames.Count > 0)
-                Close(frames.Pop(), false);
-            if (escaped.Count == 0 && kets.Count == 0)
+                Close(frames.Pop(), false, -1);
+            if (escaped.Count == 0 && kets.Count == 0 && placeholders.Count == 0 && groupStarts.Count == 0)
                 return latex;
             var result = new StringBuilder();
             for (int i = 0; i < tex.Length; i++)
             {
+                if (placeholders.Contains(i))
+                    result.Append("{}");
+                if (groupStarts.Contains(i))
+                    result.Append('{');
                 if (escaped.Contains(i))
                     result.Append('\\');
                 result.Append(kets.Contains(i) ? "|" : tex[i]);
+                if (groupEnds.Contains(i))
+                    result.Append('}');
             }
             return result.ToString();
+        }
+
+        /// <summary>
+        /// A bracket that a group opens and does not close, as in \phantom{(}, escaped: UnicodeMath would close it with an
+        /// empty fence at the end of the group; so are a closing bracket alone in a group (x^{)}) and a bracket that is a
+        /// script and does not close (x_(). A script in brackets that close is grouped whole (x^(a+b) as x^{(a+b)}). The
+        /// text of \text and the like is left as it is.
+        /// </summary>
+        private static string EscapeOpenBrackets(string latex)
+        {
+            var tex = new Text(latex);
+            var groups = new Stack<List<int>>();
+            var escaped = new List<int>();
+            // the scripts grouped, from the index of their first character to that of their last
+            var scripts = new Dictionary<int, int>();
+            for (int i = 0; i < tex.Length; i++)
+            {
+                switch (tex[i])
+                {
+                    case "\\":
+                    {
+                        var cw = ControlWord(tex, i + 1);
+                        int j = i + 1 + Math.Max(1, cw.Length);
+                        if (TextCommands.Contains(cw) && BracedArgument(tex, j) is var (_, afterText) && afterText >= 0)
+                        {
+                            i = afterText - 1;
+                            break;
+                        }
+                        while (tex[j] == " ")
+                            j++;
+                        // the bracket after \left, \right... is skipped with the command
+                        i = DelimiterCommands.Contains(cw) && tex[j] is "(" or "[" or ")" or "]" ? j : j - 1;
+                        break;
+                    }
+                    case "{":
+                        groups.Push(new List<int>());
+                        break;
+                    case "}" when groups.Count > 0:
+                        escaped.AddRange(groups.Pop());
+                        break;
+                    case "(" or "[" when groups.Count > 0:
+                        groups.Peek().Add(i);
+                        break;
+                    case ")" or "]" when groups.Count > 0:
+                        if (groups.Peek().Count > 0)
+                            groups.Peek().RemoveAt(groups.Peek().Count - 1);
+                        else if (Blank(tex, i, -1) == "{" && Blank(tex, i, 1) == "}")
+                        {
+                            // a group of a closing bracket alone (x^{)}) is escaped too; in others the bracket may close
+                            // another (⟨𝑎])
+                            escaped.Add(i);
+                        }
+                        break;
+                    case "_" or "^":
+                    {
+                        // a bracket that is a script and closes nothing, x^), or opens what does not close, x_(, which
+                        // UnicodeMath would read as the opening of what follows; a script in brackets that close, x^(a+b),
+                        // is grouped whole, as Word's LaTeX writes it and Word reads it (x^{(a+b)})
+                        int k = i + 1;
+                        while (tex[k] == " ")
+                            k++;
+                        var close = tex[k] is "(" or "[" ? ClosingBracket(tex, k) : -1;
+                        if (close >= 0)
+                            scripts[k] = close;
+                        else if (tex[k] is "(" or "[" or ")" or "]")
+                        {
+                            escaped.Add(k);
+                            scripts[k] = k;
+                            i = k;
+                        }
+                        break;
+                    }
+                }
+            }
+            if (escaped.Count == 0 && scripts.Count == 0)
+                return latex;
+            var ends = scripts.Values.ToList();
+            var result = new StringBuilder();
+            for (int i = 0; i < tex.Length; i++)
+            {
+                if (scripts.ContainsKey(i))
+                    result.Append('{');
+                if (escaped.Contains(i))
+                {
+                    // a closing bracket held, since \) and \] would end the LaTeX
+                    result.Append('\\').Append(tex[i] switch
+                    {
+                        ")" => "\uFDDA",
+                        "]" => "\uFDDB",
+                        var bracket => bracket,
+                    });
+                }
+                else
+                    result.Append(tex[i]);
+                foreach (var _ in ends.Where(end => end == i))
+                    result.Append('}');
+            }
+            return result.ToString();
+        }
+
+        /// <summary>The character before (step -1) or after (step 1) the index, past the blanks.</summary>
+        private static string Blank(Text tex, int i, int step)
+        {
+            do
+                i += step;
+            while (i >= 0 && i < tex.Length && tex[i] == " ");
+            return i >= 0 && i < tex.Length ? tex[i] : null;
+        }
+
+        /// <summary>The index of the bracket that closes the one at the index before the group around it ends; -1 if none.</summary>
+        private static int ClosingBracket(Text tex, int open)
+        {
+            int depth = 0, braces = 0;
+            for (int i = open; i < tex.Length; i++)
+            {
+                switch (tex[i])
+                {
+                    case "\\":
+                        i++;
+                        break;
+                    case "{":
+                        braces++;
+                        break;
+                    case "}" when braces == 0:
+                        return -1;
+                    case "}":
+                        braces--;
+                        break;
+                    case "(" or "[":
+                        depth++;
+                        break;
+                    case ")" or "]" when --depth == 0:
+                        return i;
+                }
+            }
+            return -1;
         }
 
         /// <summary>The count arguments (braced or single characters) at the index, and the index after them; null if missing.</summary>
@@ -1422,9 +1711,12 @@ namespace SharpEquations.Internal.LaTeX
 
         private string Convert(string latex)
         {
-            var tex = new Text(EscapeOddBars(RewriteTeXOnly(Limits(NewEnvironments(latex)))));
+            var tex = new Text(EscapeOddBars(EscapeOpenBrackets(RewriteTeXOnly(Limits(NewEnvironments(latex))))));
             var cwPrev = "";
             bool needMacroPass = false;
+            // whether a macro was named and its body is next, and where that body starts: an empty body expands to nothing
+            bool macroNamed = false;
+            int macroBody = -1;
             var uniTeX = new StringBuilder();
 
             for (int i = 0; i < tex.Length;)
@@ -1471,6 +1763,7 @@ namespace SharpEquations.Internal.LaTeX
                                 i++;
                             needMacroPass = true;
                             macros[cw] = "";
+                            macroNamed = true;
                             continue;
                         }
                         cwPrev = cw;
@@ -1548,10 +1841,16 @@ namespace SharpEquations.Internal.LaTeX
                             i++;
                             continue;
                         }
+
+                        if (macroNamed)
+                        {
+                            macroNamed = false;
+                            macroBody = i;
+                        }
                         uniTeX.Append(tex[i++]);
                         break;
                     case "}":
-                        if (i > 0 && tex[i - 1] == "{")
+                        if (i > 0 && tex[i - 1] == "{" && i - 1 != macroBody)
                             uniTeX.Append('⬚');
                         uniTeX.Append(tex[i++]);
                         break;
@@ -1690,12 +1989,20 @@ namespace SharpEquations.Internal.LaTeX
         {
             int k;
             int cArg = 0;
+            string optional = null;
             if (tex[i] == "[")
             {
                 cArg = Js.CodeAt(tex[i + 1], 0) - '0';
                 if (tex[i + 2] != "]" || cArg < 0 || cArg > 9)
                     return ("", i);
                 k = i + 3;
+                // [n][default]: the first argument optional, with that default
+                if (tex[k] == "[" && cArg > 0)
+                {
+                    (optional, k) = OptionalArgument(tex, k);
+                    if (optional == null)
+                        return ("", i);
+                }
             }
             else
             {
@@ -1723,6 +2030,13 @@ namespace SharpEquations.Internal.LaTeX
                 var arg = "";
                 while (tex[i] == " ")
                     i++;
+                if (j == 0 && optional != null)
+                {
+                    var (given, afterGiven) = OptionalArgument(tex, i);
+                    args.Add(given ?? optional);
+                    i = afterGiven;
+                    continue;
+                }
                 if (tex[i] == "{")
                 {
                     k = FindClosingBrace(tex, i + 1);
@@ -1743,7 +2057,7 @@ namespace SharpEquations.Internal.LaTeX
                 args.Add(arg);
             }
             while (args.Count < cArg)
-                args.Add("");
+                args.Add(args.Count == 0 && optional != null ? optional : "");
 
             var val = new StringBuilder();
             // an accent passed as an argument (\hat, a combining mark) goes on the character after it, as in LaTeX

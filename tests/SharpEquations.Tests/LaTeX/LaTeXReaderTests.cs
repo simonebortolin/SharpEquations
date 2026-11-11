@@ -90,7 +90,13 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"x ^ { 2 } _ i", @"x_i^2", @"𝑥_𝑖^2")]
         [Arguments(@"\sum_{\substack{i<n\\i\ne j}} a_i", @"\sum_{\begin{matrix}i<n\\i\ne j\end{matrix}}a_i", @"∑_■(𝑖<𝑛@𝑖≠𝑗) 𝑎_𝑖")]
         [Arguments(@"a\cdot b\times c\div d", @"a\cdot b\times c\div d", @"𝑎⋅𝑏×𝑐÷𝑑")]
-        [Arguments(@"\hbar\ell\Re\Im\aleph", @"\hbar\ell  \Re\Im\aleph", @"ℏℓ Re⁡Im⁡ℵ")]
+        [Arguments(@"\hbar\ell\Re\Im\aleph\wp", @"\hbar\ell\Re\Im\aleph\wp", @"ℏℓℜℑℵ℘")]
+        [Arguments(@"\Re z+\operatorname{Im}z", @"\Re z+\operatorname{Im}z", @"ℜ𝑧+Im⁡𝑧")]
+        [Arguments(@"\sout{a+b}+\hcancel x", @"\sout{a+b}+\sout{x}", @"▭(31&𝑎+𝑏)+▭(31&𝑥)")]
+        [Arguments(@"\enclose{longdiv}{a}+\enclose{top,bottom}{b}+\enclose{left}[mathcolor=red]{c}", @"\enclose{longdiv}{a}+\enclose{bottom,top}{b}+\enclose{left}{c}", @"⟌𝑎+▭(12&𝑏)+▭(11&𝑐)")]
+        [Arguments(@"\enclose{roundedbox}{a}\enclose{circle}{b}\enclose{box}{c}\enclose{radical}{d}", @"\enclose{roundedbox}{a}\enclose{circle}{b}\boxed{c}\sqrt{d}", @"▢𝑎 ◯𝑏 ▭𝑐 √𝑑")]
+        [Arguments(@"\sout{x}_1+\enclose{left}{y}^2", @"\sout{x}_1+\enclose{left}{y}^2", @"▭(31&𝑥)₁+▭(11&𝑦)²")]
+        [Arguments(@"\left\langle\frac{a}{b}\right\rangle", @"\left\langle\frac{a}{b}\right\rangle", @"⟨𝑎/𝑏 ⟩")]
         [Arguments(@"\langle a, b\rangle", @"\langle a,b\rangle", @"⟨𝑎,𝑏⟩")]
         [Arguments(@"|x|", @"|x|", @"|𝑥|")]
         [Arguments(@"\big| x \big|", @"|x|", @"|𝑥|")]
@@ -164,7 +170,9 @@ namespace SharpEquations.Tests.LaTeX
             await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);
         }
 
-        // a slash and a bar are ordinary characters of LaTeX, which UnicodeMath reads as a fraction and an absolute value
+        // a slash and a bar are ordinary characters of LaTeX, which UnicodeMath reads as a fraction and an absolute value;
+        // so is a bracket that a group opens and does not close, which UnicodeMath would close, or a bracket alone as a
+        // script (a script in brackets that close is grouped whole, x^(a+b), as Word reads it); a bar in text, after \bigm (a relation) or {|} is a bar alone, which no other bar pairs with
         [Test]
         [Arguments(@"a/b", @"a/b", @"𝑎\/𝑏")]
         [Arguments(@"(a+b)/2", @"(a+b)/2", @"(𝑎+𝑏)\/2")]
@@ -175,6 +183,33 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"|a|\\|b|", @"|a||b|", @"|𝑎||𝑏|")]
         [Arguments(@"|\,|\\|\!|\,|", @"|\,||\!|\,|", "|\u2009|\\||\u2009|")]
         [Arguments(@"|a|~|b|", @"|a|~|b|", "|𝑎|\u00A0|𝑏|")]
+        [Arguments(@"a||b", @"a{|}|b", @"𝑎\|\|𝑏")]
+        [Arguments(@"| |", @"{|}|", @"\|\|")]
+        [Arguments(@"||x||", @"\|x\|", @"‖𝑥‖")]
+        [Arguments(@"\left|||\right|", @"\left|{|}{|}\right|", @"|(\|\|)|")]
+        [Arguments(@"{|}a|b|", @"{|}a\left|b\right|", @"\|𝑎|𝑏|")]
+        [Arguments(@"\left(x|a|b\right)", @"(x|a|b)", @"(𝑥|𝑎|𝑏)")]
+        [Arguments(@"\{|\}", @"\{{}|{}\}", @"{⬚│⬚}")]
+        [Arguments(@"(a|)", @"(a|{})", @"(𝑎│⬚)")]
+        [Arguments(@"\phantom{(}x", @"\phantom{(}x", @"⟡\( 𝑥")]
+        [Arguments(@"\mathstrut", @"\vphantom{(}", @"⇳\(")]
+        [Arguments(@"\sqrt{(}", @"\sqrt{(}", @"√\(")]
+        [Arguments(@"\text{(}", @"\text{(}", @"""(""")]
+        [Arguments(@"x_{[}", @"x_{[}", @"𝑥_\[")]
+        [Arguments(@"x_(", @"x_{(}", @"𝑥_\(")]
+        [Arguments(@"x^{)}", @"x^{)}", @"𝑥^\)")]
+        [Arguments(@"x^{ ] }", @"x^{]}", @"𝑥^\]")]
+        [Arguments(@"x^(a+b)", @"x^{(a+b)}", @"𝑥^((𝑎+𝑏))")]
+        [Arguments(@"x_[i]y", @"x_{[i]}y", @"𝑥_[𝑖] 𝑦")]
+        [Arguments(@"x^ (a)(b)", @"x^{(a)}(b)", @"𝑥^((𝑎)) (𝑏)")]
+        [Arguments(@"e^(i\pi)_n", @"e_n^{(i\pi)}", @"𝑒_𝑛^((𝑖𝜋))")]
+        [Arguments(@"\text{a|b}", @"\text{a|b}", @"""a|b""")]
+        [Arguments(@"a\vert b", @"a|b", @"𝑎\|𝑏")]
+        [Arguments(@"\vert x\vert", @"|x|", @"|𝑥|")]
+        [Arguments(@"a \Bigm\vert b", @"a|b", @"𝑎\|𝑏")]
+        [Arguments(@"|a \bigm| b|", @"\left|a{|}b\right|", @"|(𝑎\|𝑏)|")]
+        [Arguments(@"\{x \bigm| x>0\}", @"\{x|x>0\}", @"{𝑥│𝑥>0}")]
+        [Arguments(@"\{x {|} x>0\}", @"\{x{|}x>0\}", @"{𝑥\|𝑥>0}")]
         [Arguments(@"\langle a | b \rangle | c", @"\langle a|b\rangle|c", @"⟨𝑎│𝑏⟩\|𝑐")]
         [Arguments(@"a|b", @"a|b", @"𝑎\|𝑏")]
         [Arguments(@"(a\|b)", @"(a\|b)", @"(𝑎\‖𝑏)")]
@@ -335,6 +370,15 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\def\R{\mathbb{R}} x\in\R", @"x\in\mathbb{R}")]
         [Arguments(@"\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}\pd{f}{x}", @"\frac{\partial f}{\partial x}")]
         [Arguments(@"\newcommand{\N}{\mathbb{N}}\N", @"\mathbb{N}")]
+        [Arguments(@"\newcommand{\f}[2][y]{#1+#2} \f{a}+\f[b]{c}", @"y+a+b+c")]
+        [Arguments(@"\newcommand{\g}[1][Hello]{#1} \g{world}", @"Helloworld")]
+        [Arguments(@"\newcommand{\g}[1][a]{#1^2} \g", @"a^2")]
+        [Arguments(@"\newcommand{\e}{} \e x", @"x")]
+        [Arguments(@"\def\e{}\e x+\e y", @"x+y")]
+        [Arguments(@"\newcommand{\h}[2]{} \h{a}{b}x", @"x")]
+        [Arguments(@"\DeclareMathOperator{\Res}{Res} \Res_{z=0}", @"\operatorname{Res}_{z=0}")]
+        [Arguments(@"\DeclareMathOperator\Tr{Tr} \Tr A", @"\operatorname{Tr}A")]
+        [Arguments(@"\DeclareMathOperator*{\argmax}{argmax} \argmax_x f", @"\operatorname{argmax}_xf")]
         public async Task ExpandsMacros(string latex, string expected)
         {
             await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX).ToString(EquationFormat.LaTeX)).IsEqualTo(expected);
@@ -367,6 +411,8 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\operatorname*{argmax}_{x} f(x)", true, "<munder><mi>argmax</mi><mi>x</mi></munder><mo>\u2061</mo><mi>f</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow>")]
         [Arguments(@"\operatornamewithlimits{lim}_{x}", true, "<munder><mi>lim</mi><mi>x</mi></munder>")]
         [Arguments(@"\lim_{x}", true, "<munder><mi>lim</mi><mi>x</mi></munder>")]
+        [Arguments(@"\operatorname*{max}x", true, "<mi>max</mi><mo>\u2061</mo><mi>x</mi>")]
+        [Arguments(@"\operatorname*{argmax}x", false, "<mi>argmax</mi><mo>\u2061</mo><mi>x</mi>")]
         public async Task ReadsOperatorNamesOfAmsmath(string latex, bool display, string expected)
         {
             var options = new EquationOptions { Display = display };
