@@ -14,7 +14,7 @@ namespace SharpEquations.Avalonia.MathTools
     /// The math tools, a page each: the scientific keypad around the equation editor, the library of formulas, the
     /// unit converter and the solver of triangles. The desktop window and the WebAssembly page show the same view, each
     /// with the services of its platform: where the settings are kept (the page shown, the equation of the calculator,
-    /// the theme), and the computer algebra system.
+    /// the unit of angles, the theme), and the computer algebra system.
     /// </summary>
     public sealed class MathToolsView : UserControl
     {
@@ -23,6 +23,7 @@ namespace SharpEquations.Avalonia.MathTools
         private const string TabKey = "tab";
         private const string EquationKey = "equation";
         private const string ThemeKey = "theme";
+        private const string AnglesKey = "angles";
 
         private readonly ISettingsStore settings;
 
@@ -51,6 +52,7 @@ namespace SharpEquations.Avalonia.MathTools
 
             Restore();
             Tabs.SelectionChanged += (_, _) => this.settings.Set(TabKey, Tabs.SelectedIndex.ToString(CultureInfo.InvariantCulture));
+            Calculator.Solver.Angles.SelectionChanged += (_, _) => this.settings.Set(AnglesKey, Calculator.Solver.Angles.SelectedIndex == 1 ? "degrees" : "radians");
             Calculator.Editor.EquationChanged += (_, _) => this.settings.Set(EquationKey, Calculator.Editor.Equation?.ToString(EquationFormat.UnicodeMath));
 
             var root = new DockPanel { Children = { Ui.Docked(Header(), Dock.Top), Tabs } };
@@ -83,6 +85,8 @@ namespace SharpEquations.Avalonia.MathTools
                 Tabs.SelectedIndex = tab;
             if (settings.Get(EquationKey) is { } text && Equation.TryParse(text, EquationFormat.UnicodeMath, new EquationOptions { Display = true }, out var equation))
                 Calculator.Editor.Equation = equation;
+            if (settings.Get(AnglesKey) == "degrees")
+                Calculator.Solver.Angles.SelectedIndex = 1;
             if (Application.Current is { } app && settings.Get(ThemeKey) is { } theme)
                 app.RequestedThemeVariant = theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light;
         }

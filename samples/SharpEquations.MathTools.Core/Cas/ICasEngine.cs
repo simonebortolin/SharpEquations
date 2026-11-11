@@ -26,6 +26,16 @@ namespace SharpEquations.MathTools
 
         /// <summary>An antiderivative by a letter.</summary>
         Integrate,
+
+        /// <summary>A definition, <c>a≔5</c>: the letter stands for its value in what is computed next.</summary>
+        Define,
+    }
+
+    /// <summary>The unit of the angles of the trigonometric functions.</summary>
+    public enum AngleUnit
+    {
+        Radians,
+        Degrees,
     }
 
     /// <summary>A result of an <see cref="ICasEngine"/>: what was done, the result as an equation (null if it cannot be drawn) and as text.</summary>
@@ -48,11 +58,24 @@ namespace SharpEquations.MathTools
         /// <summary>The name of the engine, as the app shows it.</summary>
         string Name { get; }
 
-        /// <summary>The letters of an equation, <c>x</c> first when there is one.</summary>
+        /// <summary>The unit of the angles of the trigonometric functions (radians by default).</summary>
+        AngleUnit Angles { get; set; }
+
+        /// <summary>The letters defined (<see cref="CasAction.Define"/>), with their values as equations.</summary>
+        IReadOnlyDictionary<string, Equation> Definitions { get; }
+
+        /// <summary>Forgets the definitions.</summary>
+        void ClearDefinitions();
+
+        /// <summary>The letters of an equation that are not defined, <c>x</c> first when there is one.</summary>
         /// <exception cref="NotSupportedException">The equation has something the engine cannot read, as the message says.</exception>
         IReadOnlyList<string> Variables(Equation equation);
 
-        /// <summary>Does an action to an equation; <paramref name="variable"/> is the letter to solve for, or to differentiate and integrate by (the first of <see cref="Variables"/> if null).</summary>
+        /// <summary>
+        /// Does an action to an equation, or to a system of equations for <see cref="CasAction.Solve"/>, with the letters
+        /// defined replaced by their values; <paramref name="variable"/> is the letter to solve for, or to differentiate and
+        /// integrate by (the first of <see cref="Variables"/> if null; a system is solved for all its letters).
+        /// </summary>
         /// <exception cref="NotSupportedException">The equation has something the engine cannot read, as the message says.</exception>
         /// <remarks>It can take long, and throw exceptions of other kinds for what the engine cannot do.</remarks>
         CasResult Run(CasAction action, Equation equation, string? variable = null);

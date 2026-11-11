@@ -17,8 +17,48 @@ namespace SharpEquations.MathTools
     public static class MathReader
     {
         /// <summary>Reads an equation; a relation (<c>a=b</c>) is an equality of AngouriMath, and a trailing <c>=</c> is dropped.</summary>
-        /// <exception cref="NotSupportedException">The equation has something that has no meaning here, as the message says.</exception>
-        public static Entity Read(Equation equation) => new Reader().Relation(Items(equation.ToMathML()));
+        /// <param name="equation">The equation.</param>
+        /// <param name="angles">The unit of the angles of the trigonometric functions: in degrees, <c>sin 30</c> is ½ and <c>sin^(-1) 1</c> is 90.</param>
+        /// <exception cref="NotSupportedException">The equation has something that has no meaning here, or is a system, as the message says.</exception>
+        public static Entity Read(Equation equation, AngleUnit angles = AngleUnit.Radians) =>
+            ReadSystem(equation, angles) switch
+            {
+                [var single] => single,
+                _ => throw new NotSupportedException("A system of equations: it can only be solved."),
+            };
+
+        /// <summary>
+        /// Reads a system of equations, separated by commas (<c>x+y=3, x−y=1</c>) or one a line in a brace
+        /// (<c>{█(x+y=3@x−y=1)┤</c>); an equation that is not a system is a system of one.
+        /// </summary>
+        /// <exception cref="NotSupportedException">An equation has something that has no meaning here, as the message says.</exception>
+        public static IReadOnlyList<Entity> ReadSystem(Equation equation, AngleUnit angles = AngleUnit.Radians) =>
+            Lines(Items(equation.ToMathML()).ToList()).Select(line => new Reader(angles).Relation(line)).ToList();
+
+        /// <summary>Reads a definition, <c>a≔5</c> (<c>a:=5</c>): the letter defined and its value; false for what is not a definition.</summary>
+        /// <exception cref="NotSupportedException">The value has something that has no meaning here, as the message says.</exception>
+        public static bool TryReadDefinition(Equation equation, AngleUnit angles, out string name, out Entity value)
+        {
+            var row = Items(equation.ToMathML()).ToList();
+            if (row.Count >= 3 && Name(row[0]) == "mi" && IsOperator(row[1], "≔"))
+            {
+                name = Reader.Identifier(row[0].Value);
+                value = new Reader(angles).Relation(row.Skip(2));
+                return true;
+            }
+            name = "";
+            value = 0;
+            return false;
+        }
+
+        // the equations of a system: the lines of a brace, or the parts between top-level commas that each hold a relation
+        private static List<List<XElement>> Lines(List<XElement> row)
+        {
+            if (row.Count == 1 && Name(row[0]) == "mrow" && Items(row[0]).ToList() is [var brace, var table, ..] && IsOperator(brace, "{") && Name(table) == "mtable")
+                return table.Elements().Select(tr => tr.Elements().SelectMany(Items).Where(e => Name(e) is not ("maligngroup" or "malignmark")).ToList()).ToList();
+            var parts = Split(row, e => IsOperator(e, ","));
+            return parts.Count > 1 && parts.All(p => p.Any(e => IsOperator(e, "=", "<", ">", "≤", "≥"))) ? parts : new List<List<XElement>> { row };
+        }
 
         private static IEnumerable<XElement> Items(XElement row) =>
             row.Elements().Where(e => e.Name.LocalName is not ("mspace" or "annotation" or "annotation-xml"));
@@ -49,8 +89,15 @@ namespace SharpEquations.MathTools
                 ["sgn"] = MathS.Signum,
             };
 
+            private static readonly HashSet<string> Trigonometric = new HashSet<string>(StringComparer.Ordinal) { "sin", "cos", "tan", "cot", "sec", "csc" };
+
+            private readonly bool degrees;
             private List<XElement> items = new List<XElement>();
             private int at;
+
+            public Reader(AngleUnit angles) => degrees = angles == AngleUnit.Degrees;
+
+            private static Entity Degree => MathS.pi / 180;
 
             private XElement? Peek => at < items.Count ? items[at] : null;
 
@@ -128,10 +175,11 @@ namespace SharpEquations.MathTools
             private Entity Postfix()
             {
                 var result = Primary();
-                while (Peek is { } op && IsOperator(op, "!"))
+                while (Peek is { } op && IsOperator(op, "!", "°"))
                 {
                     at++;
-                    result = MathS.Factorial(result);
+                    // 30° is 30 in degrees, and π/6 in radians
+                    result = op.Value.Trim() == "!" ? MathS.Factorial(result) : degrees ? result : result * Degree;
                 }
                 return result;
             }
@@ -164,19 +212,26 @@ namespace SharpEquations.MathTools
                 switch (Name(function))
                 {
                     case "mi" when Functions.TryGetValue(function.Value.Trim(), out var f):
-                        return f(argument);
+                        return Call(function.Value.Trim(), f, argument);
                     case "msup" when function.Elements().First() is { } name && Functions.TryGetValue(name.Value.Trim(), out var f):
                         var power = function.Elements().ElementAt(1);
                         // sin^(-1) x is the arcsine, not the cosecant
                         if (IsMinusOne(power) && Functions.TryGetValue("arc" + name.Value.Trim(), out var inverse))
-                            return inverse(argument);
-                        return MathS.Pow(f(argument), Node(power));
+                            return Call("arc" + name.Value.Trim(), inverse, argument);
+                        return MathS.Pow(Call(name.Value.Trim(), f, argument), Node(power));
                     case "msub" when function.Elements().First().Value.Trim() == "log":
                         return MathS.Log(Node(function.Elements().ElementAt(1)), argument);
                     default:
                         throw new NotSupportedException("Unknown function “" + Text(function) + "”.");
                 }
             }
+
+            // in degrees, the trigonometric functions take degrees and their inverses give them
+            private Entity Call(string name, Func<Entity, Entity> f, Entity argument) =>
+                !degrees ? f(argument)
+                : Trigonometric.Contains(name) ? f(argument * Degree)
+                : name.StartsWith("arc", StringComparison.Ordinal) && Trigonometric.Contains(name[3..]) ? f(argument) / Degree
+                : f(argument);
 
             // ∑_(k=1)^n k², ∫_0^1 x dx: the operand of a sum is the next item (the parsers group it); the operand of an
             // integral goes on to its differential, dx or ⅆx
@@ -334,7 +389,7 @@ namespace SharpEquations.MathTools
                 _ => MathS.Var(Identifier(text)),
             };
 
-            private static string Identifier(string text)
+            public static string Identifier(string text)
             {
                 var name = text.Trim() switch
                 {

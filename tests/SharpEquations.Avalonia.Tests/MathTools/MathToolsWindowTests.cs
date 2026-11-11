@@ -189,6 +189,38 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(derivative!.Math).IsNotNull();
             await Assert.That(unreadable).IsNull();
         }
+
+        /// <summary>A letter defined stands for its value in what is computed next; in degrees, sin 30 is ½.</summary>
+        [Test]
+        public async Task CalculatorDefinesLettersAndTakesDegrees()
+        {
+            var (defined, value, sine, angles) = await Headless.RunAsync(async () =>
+            {
+                var settings = new MemorySettingsStore();
+                var window = new MainWindow(settings);
+                window.Show();
+                var page = window.GetVisualDescendants().OfType<CalculatorPage>().Single();
+                var display = new EquationOptions { Display = true };
+                page.Editor.Equation = Equation.Parse("a≔3", EquationFormat.UnicodeMath, display);
+                await page.Solver.RunAsync(CasAction.Define);
+                var names = page.Solver.Engine.Definitions.Keys.ToList();
+                page.Editor.Equation = Equation.Parse("a^2+1", EquationFormat.UnicodeMath, display);
+                await page.Solver.RefreshAnswer();
+                var first = page.Solver.Answer;
+                page.Solver.Angles.SelectedIndex = 1;
+                page.Editor.Equation = Equation.Parse("sin 30", EquationFormat.UnicodeMath, display);
+                await page.Solver.RefreshAnswer();
+                var second = page.Solver.Answer;
+                window.Height = 1500;
+                Save(window, "math-tools-define");
+                window.Close();
+                return (names, first, second, settings.Get("angles"));
+            });
+            await Assert.That(defined).IsEquivalentTo(new[] { "a" });
+            await Assert.That(value!.Text).IsEqualTo("10");
+            await Assert.That(sine!.Text).StartsWith("1/2");
+            await Assert.That(angles).IsEqualTo("degrees");
+        }
     }
 }
 #endif
