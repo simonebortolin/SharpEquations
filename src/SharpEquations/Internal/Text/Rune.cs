@@ -28,6 +28,9 @@ namespace System.Text
 
         public override string ToString() => char.ConvertFromUtf32(value);
 
+        public static System.Globalization.UnicodeCategory GetUnicodeCategory(Rune value) =>
+            System.Globalization.CharUnicodeInfo.GetUnicodeCategory(value.ToString(), 0);
+
         public bool Equals(Rune other) => value == other.value;
 
         public override bool Equals(object obj) => obj is Rune other && Equals(other);

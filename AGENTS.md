@@ -80,7 +80,7 @@ init-only record: `Display`, `Strict`, `PreserveFormatting`, `LaTeXFlavor` stand
   error shows as PARLOT001). Its JavaScript translator is ported line by line over `JsObject`, with strings indexed by
   code points (`Js.Ch`, `Js.Len`, `Js.Sub`) where the JavaScript indexes UTF-16 units; Parlot parses `char`s, so the
   input maps the characters outside the basic plane to the private use area first (`MapToPrivate`). The writer checks
-  what it writes by reading it back.
+  what it writes by reading it back, when reading could give another equation (`NeedsReadBack`).
 - `Internal/LaTeX/`: LaTeX is read as Word reads it, through UnicodeMath (`LaTeXReader`, a port of TeX2UnicodeMath, with
   `RewriteTeXOnly` for the commands UnicodeMath has no control word for, and for what LaTeX means otherwise than
   UnicodeMath: a slash is a slash, not a fraction, and a bar without its pair is a bar, not an absolute value), and

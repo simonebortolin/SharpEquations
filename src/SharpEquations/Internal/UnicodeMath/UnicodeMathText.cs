@@ -118,7 +118,13 @@ namespace SharpEquations.Internal.UnicodeMath
         }
 
         /// <summary>Array.from(chars): the code points of a string, as strings.</summary>
-        public static List<string> Characters(string chars) => CodePoints.Of(chars).Select(c => c.ToString()).ToList();
+        public static List<string> Characters(string chars)
+        {
+            var characters = new List<string>(chars.Length);
+            for (int at = 0; at < chars.Length; at += CodePoints.LengthAt(chars, at))
+                characters.Add(CodePoints.TextAt(chars, at));
+            return characters;
+        }
 
         public static string ItalicizeCharacters(string chars) => string.Concat(Characters(chars).Select(ItalicizeCharacter));
 

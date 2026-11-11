@@ -27,6 +27,8 @@ namespace SharpEquations.Internal.UnicodeMath
         /// </summary>
         public static string SetBuilderBars(string unicodemath)
         {
+            if (unicodemath.IndexOf('|') < 0 || unicodemath.IndexOf('{') < 0)
+                return unicodemath;
             var chars = Characters(unicodemath);
             var frames = new Stack<(string Open, List<int> Bars)>();
             var separators = new List<int>();
@@ -250,6 +252,8 @@ namespace SharpEquations.Internal.UnicodeMath
         /// </summary>
         public static string MapToPrivate(string s)
         {
+            if (!NeedsMapToPrivate(s))
+                return s;
             var cps = CodePoints.Of(s).Select(c => c.Value).ToList();
             var u = new List<int>();
             for (int i = 0; i < cps.Count; i++)
@@ -306,9 +310,31 @@ namespace SharpEquations.Internal.UnicodeMath
             return string.Concat(u.Select(FromCodePoint));
         }
 
+        private static bool NeedsMapToPrivate(string s)
+        {
+            foreach (var c in s)
+            {
+                if (char.IsSurrogate(c) || c >= '₀' && c <= '₉')
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool NeedsMapFromPrivate(string s)
+        {
+            foreach (var c in s)
+            {
+                if (c >= 0xD800 && c <= 0xF8FF)
+                    return true;
+            }
+            return false;
+        }
+
         /// <summary>mapFromPrivate: the inverse of <see cref="MapToPrivate"/> for the private use area.</summary>
         public static string MapFromPrivate(string s)
         {
+            if (!NeedsMapFromPrivate(s))
+                return s;
             var sb = new StringBuilder();
             foreach (var c in Characters(s))
             {
@@ -344,8 +370,14 @@ namespace SharpEquations.Internal.UnicodeMath
                 case string s:
                     return MapFromPrivate(s);
                 case JsObject o:
-                    foreach (var key in new List<string>(o.Keys))
-                        o[key] = AstMapFromPrivate(o[key]);
+                    for (int i = 0; i < o.Keys.Count; i++)
+                    {
+                        var key = o.Keys[i];
+                        var value = o[key];
+                        var mapped = AstMapFromPrivate(value);
+                        if (!ReferenceEquals(mapped, value))
+                            o[key] = mapped;
+                    }
                     return o;
                 default:
                     return ast;

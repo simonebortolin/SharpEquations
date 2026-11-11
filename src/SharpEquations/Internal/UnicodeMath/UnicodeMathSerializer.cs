@@ -1,6 +1,7 @@
 namespace SharpEquations.Internal.UnicodeMath
 {
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Linq;
     using System.Text.RegularExpressions;
     using System.Xml.Linq;
@@ -84,11 +85,64 @@ namespace SharpEquations.Internal.UnicodeMath
             return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= 0x3B1 && c <= 0x3C9;
         }
 
-        public static string Serialize(XElement math, bool keepSelectionInfo = false)
+        /// <summary>
+        /// Whether reading what is written could give another equation, which <see cref="FindLostIntents"/> looks for:
+        /// an intent or an argument name the equation holds, an n-ary operator, or an operator with a character that
+        /// reading gives identifiers with (a letter, ∞, an emoji).
+        /// </summary>
+        internal static bool NeedsReadBack(XElement math)
+        {
+            foreach (var element in math.DescendantsAndSelf())
+            {
+                if (IsHeld(element.Attribute("intent")) || IsHeld(element.Attribute("arg")))
+                    return true;
+                if (Name(element) == "mo" && !IsPlainOperator(Text(element)))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool IsPlainOperator(string op)
+        {
+            if (op.Length == 0)
+                return false;
+            foreach (var rune in CodePoints.Of(op))
+            {
+                switch (rune.Value)
+                {
+                    case > 0x20 and < 0x7F:
+                        if (rune.Value is >= '0' and <= '9' or >= 'A' and <= 'Z' or >= 'a' and <= 'z')
+                            return false;
+                        break;
+                    case 0x2118 or 0x221E or 0x22BA or 0x25FD or 0x25FE or > 0xFFFF:
+                        return false;
+                    case var _ when IsNaryOperator(rune.ToString()):
+                        return false;
+                    default:
+                        switch (System.Text.Rune.GetUnicodeCategory(rune))
+                        {
+                            case UnicodeCategory.MathSymbol or UnicodeCategory.DashPunctuation or UnicodeCategory.OpenPunctuation
+                                or UnicodeCategory.ClosePunctuation or UnicodeCategory.OtherPunctuation or UnicodeCategory.InitialQuotePunctuation
+                                or UnicodeCategory.FinalQuotePunctuation or UnicodeCategory.SpaceSeparator or UnicodeCategory.Format:
+                                break;
+                            default:
+                                return false;
+                        }
+                        break;
+                }
+            }
+            return true;
+        }
+
+        public static string Serialize(XElement math, bool keepSelectionInfo = false) => Serialize(math, keepSelectionInfo, false);
+
+        internal static string Serialize(XElement math, bool keepSelectionInfo, bool alwaysReadBack)
         {
             var italicized = MathML.DefaultIntents.Restore(Italicized(math));
             var serializer = new UnicodeMathSerializer(keepSelectionInfo) { display = (string)math.Attribute("display") == "block" };
             var text = serializer.Write(italicized);
+            if (!alwaysReadBack && !NeedsReadBack(italicized))
+                return text;
             // the intents and argument names that reading does not give back are written: ⓘ("name"…) and ⓐ(name …)
             bool display = (string)math.Attribute("display") == "block";
             for (int pass = 0; pass < 3; pass++)

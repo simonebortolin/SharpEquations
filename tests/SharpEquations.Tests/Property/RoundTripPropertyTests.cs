@@ -66,6 +66,62 @@ namespace SharpEquations.Tests.Property
 
         private static List<string> Listed(Dictionary<string, string> failures) => failures.Select(f => f.Key + "\n  " + f.Value).ToList();
 
+        /// <summary>
+        /// The UnicodeMath writer reads back what it writes only when reading could give another equation
+        /// (UnicodeMathSerializer.NeedsReadBack): what it writes without reading back is what it writes reading back.
+        /// </summary>
+        [Test]
+        public async Task UnicodeMathWrittenWithoutReadingBackIsTheSame()
+        {
+            static string? Check(Equation equation)
+            {
+                var math = equation.ToMathML();
+                var written = Internal.UnicodeMath.UnicodeMathSerializer.Serialize(math, false, false);
+                var checkedBack = Internal.UnicodeMath.UnicodeMathSerializer.Serialize(math, false, true);
+                return written == checkedBack ? null : written + " instead of " + checkedBack;
+            }
+
+            await Assert.That(Listed(Failures(Check))).IsEmpty();
+            await Assert.That(Listed(Failures(Check, WordEquations()))).IsEmpty();
+        }
+
+        /// <summary>
+        /// The same for an operator of each character of the basic plane that is not a letter or a digit, alone, between
+        /// two identifiers, before one and in a script: the characters that reading gives identifiers with are read back.
+        /// </summary>
+        [Test]
+        public async Task OperatorsWrittenWithoutReadingBackAreTheSame()
+        {
+            var failures = new List<string>();
+            for (int codePoint = 0x21; codePoint <= 0xFFFF; codePoint++)
+            {
+                if (codePoint is >= 0xD800 and <= 0xF8FF || char.IsLetterOrDigit((char)codePoint) || char.IsControl((char)codePoint))
+                    continue;
+                var mo = new System.Xml.Linq.XElement(MathMLNamespaces.MathML + "mo", ((char)codePoint).ToString());
+                var a = new System.Xml.Linq.XElement(MathMLNamespaces.MathML + "mi", "a");
+                var b = new System.Xml.Linq.XElement(MathMLNamespaces.MathML + "mi", "b");
+                foreach (var content in new object[] { mo, new object[] { a, mo, b }, new object[] { mo, a }, new object[] { a, mo },
+                    new System.Xml.Linq.XElement(MathMLNamespaces.MathML + "msub", a, mo) })
+                {
+                    Equation equation;
+                    try
+                    {
+                        equation = Equation.Parse(new System.Xml.Linq.XElement(MathMLNamespaces.MathML + "math", content), EquationFormat.MathML);
+                    }
+                    catch (FormatException)
+                    {
+                        continue;
+                    }
+                    var math = equation.ToMathML();
+                    var written = Internal.UnicodeMath.UnicodeMathSerializer.Serialize(math, false, false);
+                    var checkedBack = Internal.UnicodeMath.UnicodeMathSerializer.Serialize(math, false, true);
+                    if (written != checkedBack)
+                        failures.Add("U+" + codePoint.ToString("X4") + ": " + written + " instead of " + checkedBack);
+                }
+            }
+            await Assert.That(failures).IsEmpty();
+        }
+
         [Test]
         public async Task WritingNeverThrows()
         {
