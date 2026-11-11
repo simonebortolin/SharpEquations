@@ -24,4 +24,10 @@
                       SetTargetFramework="TargetFramework=netstandard2.0" />
   </ItemGroup>
 
+  <!-- the stylesheet of Xslt/GeneratorConformance, compiled as those of the library are -->
+  <ItemGroup>
+    <AdditionalFiles Include="Xslt\*.xsl" />
+    <ProjectReference Include="..\..\src\SharpEquations.XsltGenerator\SharpEquations.XsltGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
 </Project>
