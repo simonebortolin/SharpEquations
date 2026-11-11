@@ -25,7 +25,24 @@ namespace SharpEquations.Tests.MathML
         [Arguments(@"<math><menclose notation=""updiagonalstrike""><mi>x</mi></menclose></math>", @"\cancel{x}", @"\cancel{𝑥}", @"▭(143&𝑥)")]
         [Arguments(@"<math><menclose notation=""downdiagonalstrike""><mi>x</mi></menclose></math>", @"\bcancel{x}", @"\bcancel{𝑥}", @"▭(79&𝑥)")]
         [Arguments(@"<math><menclose notation=""updiagonalstrike downdiagonalstrike""><mi>x</mi></menclose></math>", @"\xcancel{x}", @"\xcancel{𝑥}", @"▭(207&𝑥)")]
-        [Arguments(@"<math><menclose notation=""circle""><mi>x</mi></menclose></math>", null, null, @"◯𝑥")]
+        [Arguments(@"<math><menclose notation=""circle""><mi>x</mi></menclose></math>", @"\enclose{circle}{x}", @"\circle{𝑥}", @"◯𝑥")]
+        [Arguments(@"<math><menclose notation=""horizontalstrike""><mi>x</mi></menclose></math>", @"\sout{x}", @"\boxed{𝑥}", @"▭(31&𝑥)")]
+        [Arguments(@"<math><menclose notation=""verticalstrike""><mi>x</mi></menclose></math>", @"\enclose{verticalstrike}{x}", @"\boxed{𝑥}", @"▭(47&𝑥)")]
+        [Arguments(@"<math><menclose notation=""longdiv""><mi>x</mi></menclose></math>", @"\enclose{longdiv}{x}", @"\boxed{𝑥}", @"⟌𝑥")]
+        [Arguments(@"<math><menclose notation=""roundedbox""><mi>x</mi></menclose></math>", @"\enclose{roundedbox}{x}", @"\boxed{𝑥}", @"▢𝑥")]
+        [Arguments(@"<math><menclose notation=""actuarial""><mi>x</mi></menclose></math>", @"\enclose{actuarial}{x}", @"\boxed{𝑥}", "⃧𝑥")]
+        [Arguments(@"<math><menclose notation=""left""><mi>x</mi></menclose></math>", @"\enclose{left}{x}", @"\boxed{𝑥}", @"▭(11&𝑥)")]
+        [Arguments(@"<math><menclose notation=""right""><mi>x</mi></menclose></math>", @"\enclose{right}{x}", @"\boxed{𝑥}", @"▭(7&𝑥)")]
+        [Arguments(@"<math><menclose notation=""top bottom""><mi>x</mi></menclose></math>", @"\enclose{top,bottom}{x}", @"\boxed{𝑥}", @"▭(12&𝑥)")]
+        [Arguments(@"<math><menclose notation=""madruwb""><mi>x</mi></menclose></math>", @"\enclose{madruwb}{x}", @"\boxed{𝑥}", @"▭𝑥")]
+        [Arguments(@"<math><menclose notation=""radical""><mi>x</mi></menclose></math>", @"\sqrt{x}", @"\boxed{𝑥}", @"▭𝑥")]
+        [Arguments(@"<math><menclose notation=""left right top bottom""><mi>x</mi></menclose><menclose><mi>y</mi></menclose></math>", @"\boxed{x}\boxed{y}", @"\boxed{𝑥}\boxed{𝑦}", @"▭(0&𝑥)▭𝑦")]
+        [Arguments(@"<math><mi>ℓ</mi><mi>ℑ</mi><mi>ℜ</mi><mi>℘</mi><mi>ℏ</mi><mi>ℵ</mi></math>", @"\ell\Im\Re\wp\hbar\aleph", @"ℓℑℜ℘ℏℵ", @"ℓℑℜ℘ℏℵ")]
+        [Arguments(@"<math><mi>Re</mi><mo>&#x2061;</mo><mi>z</mi><mo>+</mo><mi>Im</mi><mo>&#x2061;</mo><mi>z</mi></math>", @"\operatorname{Re}z+\operatorname{Im}z", @"\operatorname{Re}𝑧+\operatorname{Im}𝑧", @"Re⁡𝑧+Im⁡𝑧")]
+        [Arguments("<math><mi>m</mi><mo>〈</mo><mi>n</mi><mo>〉</mo></math>", @"m\langle n\rangle", "𝑚〈𝑛〉", "𝑚〈𝑛〉")]
+        [Arguments("<math><mrow><mo>〈</mo><mfrac><mi>a</mi><mi>b</mi></mfrac><mo>〉</mo></mrow><mrow><mo>〈</mo><mfrac><mi>a</mi><mi>b</mi></mfrac><mo>〉</mo></mrow></math>", @"\left\langle\frac{a}{b}\right\rangle\left\langle\frac{a}{b}\right\rangle", null, "〈𝑎/𝑏 〉〈𝑎/𝑏 〉")]
+        [Arguments("<math><mrow><mo>|</mo><mi>a</mi><mo>〉</mo></mrow><mrow><mo>〈</mo><mi>b</mi><mo>|</mo></mrow></math>", @"|a\rangle\langle b|", null, "|𝑎〉〈𝑏|")]
+        [Arguments("<math><mrow><mo>〈</mo><mi>a</mi><mo>|</mo><mi>b</mi><mo>〉</mo></mrow></math>", @"\langle a|b\rangle", null, "〈𝑎|𝑏〉")]
         [Arguments(@"<math><mmultiscripts><mi>C</mi><mi>b</mi><none/><mprescripts/><mi>a</mi><mi>c</mi></mmultiscripts></math>", @"{}_a^cC_b", @"{}_𝑎^𝑐𝐶_𝑏", @"_𝑎^𝑐 𝐶_𝑏")]
         [Arguments(@"<math><mi>a</mi><mspace width=""thinmathspace""/><mi>b</mi><mspace width=""1em""/><mi>c</mi></math>", @"a\,b\quad c", @"𝑎 𝑏 𝑐", @"𝑎 𝑏 𝑐")]
         [Arguments(@"<math><mphantom><mi>x</mi></mphantom></math>", @"\phantom{x}", @"\phantom{𝑥}", @"⟡𝑥")]
@@ -80,10 +97,18 @@ namespace SharpEquations.Tests.MathML
         [Arguments("<math><menclose notation=\"downdiagonalstrike\"><mi>x</mi></menclose></math>", @"\bcancel{x}")]
         [Arguments("<math><menclose notation=\"updiagonalstrike downdiagonalstrike\"><mi>x</mi></menclose></math>", @"\xcancel{x}")]
         [Arguments("<math><menclose notation=\"box\"><mi>x</mi></menclose></math>", @"\boxed{x}")]
+        [Arguments("<math><menclose notation=\"horizontalstrike\"><mrow><mi>a</mi><mo>+</mo><mi>b</mi></mrow></menclose></math>", @"\sout{a+b}")]
+        [Arguments("<math><menclose notation=\"verticalstrike\"><mi>x</mi></menclose></math>", @"\enclose{verticalstrike}{x}")]
+        [Arguments("<math><menclose notation=\"longdiv\"><mfrac><mi>a</mi><mi>b</mi></mfrac></menclose></math>", @"\enclose{longdiv}{\frac{a}{b}}")]
+        [Arguments("<math><menclose notation=\"roundedbox\"><mi>x</mi></menclose></math>", @"\enclose{roundedbox}{x}")]
+        [Arguments("<math><menclose notation=\"circle\"><mi>x</mi></menclose></math>", @"\enclose{circle}{x}")]
+        [Arguments("<math><menclose notation=\"actuarial\"><mi>n</mi></menclose></math>", @"\enclose{actuarial}{n}")]
+        [Arguments("<math><menclose notation=\"left\"><mi>x</mi></menclose></math>", @"\enclose{left}{x}")]
         public async Task StrikesAndBoxesReadBack(string mathML, string latex)
         {
             var equation = Equation.Parse(mathML, EquationFormat.MathML);
             await Assert.That(equation.ToString(EquationFormat.LaTeX)).IsEqualTo(latex);
+            await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX)).IsEqualTo(equation);
             await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX).ToString(EquationFormat.LaTeX)).IsEqualTo(latex);
             await Assert.That(Equation.Parse(equation.ToString(EquationFormat.UnicodeMath), EquationFormat.UnicodeMath).ToString(EquationFormat.LaTeX)).IsEqualTo(latex);
         }

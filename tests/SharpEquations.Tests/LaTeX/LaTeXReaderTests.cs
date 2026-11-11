@@ -90,7 +90,13 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"x ^ { 2 } _ i", @"x_i^2", @"𝑥_𝑖^2")]
         [Arguments(@"\sum_{\substack{i<n\\i\ne j}} a_i", @"\sum_{\begin{matrix}i<n\\i\ne j\end{matrix}}a_i", @"∑_■(𝑖<𝑛@𝑖≠𝑗) 𝑎_𝑖")]
         [Arguments(@"a\cdot b\times c\div d", @"a\cdot b\times c\div d", @"𝑎⋅𝑏×𝑐÷𝑑")]
-        [Arguments(@"\hbar\ell\Re\Im\aleph", @"\hbar\ell  \Re\Im\aleph", @"ℏℓ Re⁡Im⁡ℵ")]
+        [Arguments(@"\hbar\ell\Re\Im\aleph\wp", @"\hbar\ell\Re\Im\aleph\wp", @"ℏℓℜℑℵ℘")]
+        [Arguments(@"\Re z+\operatorname{Im}z", @"\Re z+\operatorname{Im}z", @"ℜ𝑧+Im⁡𝑧")]
+        [Arguments(@"\sout{a+b}+\hcancel x", @"\sout{a+b}+\sout{x}", @"▭(31&𝑎+𝑏)+▭(31&𝑥)")]
+        [Arguments(@"\enclose{longdiv}{a}+\enclose{top,bottom}{b}+\enclose{left}[mathcolor=red]{c}", @"\enclose{longdiv}{a}+\enclose{bottom,top}{b}+\enclose{left}{c}", @"⟌𝑎+▭(12&𝑏)+▭(11&𝑐)")]
+        [Arguments(@"\enclose{roundedbox}{a}\enclose{circle}{b}\enclose{box}{c}\enclose{radical}{d}", @"\enclose{roundedbox}{a}\enclose{circle}{b}\boxed{c}\sqrt{d}", @"▢𝑎 ◯𝑏 ▭𝑐 √𝑑")]
+        [Arguments(@"\sout{x}_1+\enclose{left}{y}^2", @"\sout{x}_1+\enclose{left}{y}^2", @"▭(31&𝑥)₁+▭(11&𝑦)²")]
+        [Arguments(@"\left\langle\frac{a}{b}\right\rangle", @"\left\langle\frac{a}{b}\right\rangle", @"⟨𝑎/𝑏 ⟩")]
         [Arguments(@"\langle a, b\rangle", @"\langle a,b\rangle", @"⟨𝑎,𝑏⟩")]
         [Arguments(@"|x|", @"|x|", @"|𝑥|")]
         [Arguments(@"\big| x \big|", @"|x|", @"|𝑥|")]
@@ -164,7 +170,8 @@ namespace SharpEquations.Tests.LaTeX
             await ReadsLaTeX(latex, expectedLaTeX, expectedUnicodeMath);
         }
 
-        // a slash and a bar are ordinary characters of LaTeX, which UnicodeMath reads as a fraction and an absolute value
+        // a slash and a bar are ordinary characters of LaTeX, which UnicodeMath reads as a fraction and an absolute value;
+        // so is a bracket that a group opens and does not close, which UnicodeMath would close
         [Test]
         [Arguments(@"a/b", @"a/b", @"𝑎\/𝑏")]
         [Arguments(@"(a+b)/2", @"(a+b)/2", @"(𝑎+𝑏)\/2")]
@@ -175,6 +182,18 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"|a|\\|b|", @"|a||b|", @"|𝑎||𝑏|")]
         [Arguments(@"|\,|\\|\!|\,|", @"|\,||\!|\,|", "|\u2009|\\||\u2009|")]
         [Arguments(@"|a|~|b|", @"|a|~|b|", "|𝑎|\u00A0|𝑏|")]
+        [Arguments(@"a||b", @"a{|}|b", @"𝑎\|\|𝑏")]
+        [Arguments(@"| |", @"{|}|", @"\|\|")]
+        [Arguments(@"||x||", @"\|x\|", @"‖𝑥‖")]
+        [Arguments(@"\left|||\right|", @"\left|{|}{|}\right|", @"|(\|\|)|")]
+        [Arguments(@"{|}a|b|", @"{|}a\left|b\right|", @"\|𝑎|𝑏|")]
+        [Arguments(@"\left(x|a|b\right)", @"(x|a|b)", @"(𝑥|𝑎|𝑏)")]
+        [Arguments(@"\{|\}", @"\{{}|{}\}", @"{⬚│⬚}")]
+        [Arguments(@"(a|)", @"(a|{})", @"(𝑎│⬚)")]
+        [Arguments(@"\phantom{(}x", @"\phantom{(}x", @"⟡\( 𝑥")]
+        [Arguments(@"\mathstrut", @"\vphantom{(}", @"⇳\(")]
+        [Arguments(@"\sqrt{(}", @"\sqrt{(}", @"√\(")]
+        [Arguments(@"\text{(}", @"\text{(}", @"""(""")]
         [Arguments(@"\langle a | b \rangle | c", @"\langle a|b\rangle|c", @"⟨𝑎│𝑏⟩\|𝑐")]
         [Arguments(@"a|b", @"a|b", @"𝑎\|𝑏")]
         [Arguments(@"(a\|b)", @"(a\|b)", @"(𝑎\‖𝑏)")]
@@ -335,6 +354,15 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\def\R{\mathbb{R}} x\in\R", @"x\in\mathbb{R}")]
         [Arguments(@"\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}\pd{f}{x}", @"\frac{\partial f}{\partial x}")]
         [Arguments(@"\newcommand{\N}{\mathbb{N}}\N", @"\mathbb{N}")]
+        [Arguments(@"\newcommand{\f}[2][y]{#1+#2} \f{a}+\f[b]{c}", @"y+a+b+c")]
+        [Arguments(@"\newcommand{\g}[1][Hello]{#1} \g{world}", @"Helloworld")]
+        [Arguments(@"\newcommand{\g}[1][a]{#1^2} \g", @"a^2")]
+        [Arguments(@"\newcommand{\e}{} \e x", @"x")]
+        [Arguments(@"\def\e{}\e x+\e y", @"x+y")]
+        [Arguments(@"\newcommand{\h}[2]{} \h{a}{b}x", @"x")]
+        [Arguments(@"\DeclareMathOperator{\Res}{Res} \Res_{z=0}", @"\operatorname{Res}_{z=0}")]
+        [Arguments(@"\DeclareMathOperator\Tr{Tr} \Tr A", @"\operatorname{Tr}A")]
+        [Arguments(@"\DeclareMathOperator*{\argmax}{argmax} \argmax_x f", @"\operatorname{argmax}_xf")]
         public async Task ExpandsMacros(string latex, string expected)
         {
             await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX).ToString(EquationFormat.LaTeX)).IsEqualTo(expected);
@@ -345,6 +373,39 @@ namespace SharpEquations.Tests.LaTeX
         {
             var options = new EquationOptions { LaTeXMacros = new Dictionary<string, string> { ["R"] = @"\mathbb{R}", ["half"] = @"\frac{1}{2}" } };
             await Assert.That(Equation.Parse(@"\half x\in\R", EquationFormat.LaTeX, options).ToString(EquationFormat.LaTeX)).IsEqualTo(@"\frac{1}{2}x\in\mathbb{R}");
+        }
+
+        // the operator names of amsmath, alone or with their limits, which go under them in a display equation; the LaTeX
+        // and the UnicodeMath written for them read back as the same equation
+        [Test]
+        [Arguments(@"\lg", false, "<mi>lg</mi><mo>\u2061</mo>")]
+        [Arguments(@"\lg x", false, "<mi>lg</mi><mo>\u2061</mo><mi>x</mi>")]
+        [Arguments(@"\operatorname{lg}", true, "<mi>lg</mi><mo>\u2061</mo>")]
+        [Arguments(@"\liminf", true, "<mi>lim\u2009inf</mi><mo>\u2061</mo>")]
+        [Arguments(@"\limsup_{n} a_n", true, "<munder><mi>lim\u2009sup</mi><mi>n</mi></munder><mo>\u2061</mo><msub><mi>a</mi><mi>n</mi></msub>")]
+        [Arguments(@"\limsup_{n} a_n", false, "<msub><mi>lim\u2009sup</mi><mi>n</mi></msub><mo>\u2061</mo><msub><mi>a</mi><mi>n</mi></msub>")]
+        [Arguments(@"\injlim", true, "<mi>inj\u2009lim</mi><mo>\u2061</mo>")]
+        [Arguments(@"\projlim", true, "<mi>proj\u2009lim</mi><mo>\u2061</mo>")]
+        [Arguments(@"\varinjlim", true, "<munder><mi>lim</mi><mo>→</mo></munder>")]
+        [Arguments(@"\varprojlim", true, "<munder><mi>lim</mi><mo>←</mo></munder>")]
+        [Arguments(@"\varliminf", true, "<menclose notation=\"bottom\"><mi>lim</mi></menclose>")]
+        [Arguments(@"\varlimsup", true, "<mover><mi>lim</mi><mo>¯</mo></mover>")]
+        [Arguments(@"\operatorname*{argmax}_{x}", true, "<munder><mi>argmax</mi><mi>x</mi></munder>")]
+        [Arguments(@"\operatorname*{argmax}_{x}", false, "<msub><mi>argmax</mi><mi>x</mi></msub>")]
+        [Arguments(@"\operatorname*{argmax}_{x} f(x)", true, "<munder><mi>argmax</mi><mi>x</mi></munder><mo>\u2061</mo><mi>f</mi><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow>")]
+        [Arguments(@"\operatornamewithlimits{lim}_{x}", true, "<munder><mi>lim</mi><mi>x</mi></munder>")]
+        [Arguments(@"\lim_{x}", true, "<munder><mi>lim</mi><mi>x</mi></munder>")]
+        [Arguments(@"\operatorname*{max}x", true, "<mi>max</mi><mo>\u2061</mo><mi>x</mi>")]
+        [Arguments(@"\operatorname*{argmax}x", false, "<mi>argmax</mi><mo>\u2061</mo><mi>x</mi>")]
+        public async Task ReadsOperatorNamesOfAmsmath(string latex, bool display, string expected)
+        {
+            var options = new EquationOptions { Display = display };
+            var equation = Equation.Parse(latex, EquationFormat.LaTeX, options);
+            var mathML = string.Concat(equation.ToMathML().Elements().Select(e => e.ToString(System.Xml.Linq.SaveOptions.DisableFormatting)))
+                .Replace(" xmlns=\"http://www.w3.org/1998/Math/MathML\"", "");
+            await Assert.That(mathML).IsEqualTo(expected);
+            await Assert.That(Equation.Parse(equation.ToString(EquationFormat.LaTeX), EquationFormat.LaTeX, options)).IsEqualTo(equation);
+            await Assert.That(Equation.Parse(equation.ToString(EquationFormat.UnicodeMath), EquationFormat.UnicodeMath, options)).IsEqualTo(equation);
         }
 
         [Test]
@@ -372,8 +433,8 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"\foo x", @"Unknown control word \foo in the LaTeX.")]
         [Arguments(@"a+\undefinedcommand", @"Unknown control word \undefinedcommand in the LaTeX.")]
         [Arguments(@"\sgn r", @"Unknown control word \sgn in the LaTeX.")]
-        [Arguments(@"\lg d", @"Unknown control word \lg in the LaTeX.")]
-        [Arguments(@"\liminf v", @"Unknown control word \liminf in the LaTeX.")]
+        [Arguments(@"\tr d", @"Unknown control word \tr in the LaTeX.")]
+        [Arguments(@"\Var v", @"Unknown control word \Var in the LaTeX.")]
         [Arguments(@"a \backslash b", @"Unknown control word \backslash in the LaTeX.")]
         [Arguments(@"\sgn2", @"Unknown control word \sgn in the LaTeX.")]
         public async Task RejectsUnknownControlWordsWhenStrict(string latex, string message)
@@ -384,8 +445,8 @@ namespace SharpEquations.Tests.LaTeX
 
         [Test]
         [Arguments(@"\sgn r", @"\sgn", "r")]
-        [Arguments(@"\lg d", @"\lg", "d")]
-        [Arguments(@"\liminf v", @"\liminf", "v")]
+        [Arguments(@"\tr d", @"\tr", "d")]
+        [Arguments(@"\Var v", @"\Var", "v")]
         [Arguments(@"a \backslash b", @"\backslash", "b")]
         [Arguments(@"\sgn  r", @"\sgn", "r")]
         [Arguments(@"\sgn{r}", @"\sgn", "r")]

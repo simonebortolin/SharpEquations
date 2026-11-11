@@ -43,6 +43,12 @@ Thilo Planz, and Javier Fernandez.
 `mtef/go`: two "Equation Native" streams extracted from MathType OLE objects supplied by the user and attributed to the
 Go project in the pasted source. `expected-MathML/` contains the corresponding MathML produced by SharpEquations.
 
+`mtef/npoi`: seven "Equation Native" streams (`*.eqn`) of the MathType objects of `equations-ole-all.doc` of the test
+data of NPOI (`testcases/test-data/document`), one paragraph of MathType's palettes each: `overlines` (horizontal
+strikes), `operators`, `symbols` (ℓ, ℑ, ℜ, ℘, ℏ, ℵ...), `fraction-and-rad` (with two long divisions), `bra-ket`,
+`parentheses` and `nested-fences` (angle brackets as MTEF writes them, U+2329 and U+232A), extracted from the
+`ObjectPool` of the document.
+
 `mtef/mtef-rs`: the "Equation Native" stream extracted from the MathType OLE object with the duplicate filename,
 supplied by the user and attributed to [hiro93/mtef-rs](https://github.com/hiro93/mtef-rs).
 `expected-MathML/` contains the MathML produced by SharpEquations.
@@ -77,7 +83,11 @@ corrected where latex2mathml writes MathML that is not what the LaTeX means: the
 (`limit-at-plus-infinity`). Ten more were corrected for the
 fonts of mathematics, which do not reach the text of `\text` (in the text font): `var` is plain text in `mathbf`,
 `mathit`, `mathcal`, `calligraphic-mode`, `mathscr`, `mathfrak`, `mathtt`, `mit` and `blackboard-bold`, and the `1`
-of `\mathsf{1}` is sans-serif (`mathsf`).
+of `\mathsf{1}` is sans-serif (`mathsf`). Seven more were corrected for the operator names of amsmath: `\liminf`,
+`\limsup`, `\injlim` and `\projlim` are one name with the thin space of TeX between its words (`lim\,inf`), where
+latex2mathml writes an operator with a six-per-em space (`liminf`, `limsup`, `injlim`, `projlim`); `\varinjlim` is lim
+with an arrow under it, not inj lim (`varinjlim`); the limit of `\operatorname*` and of `\operatornamewithlimits` goes
+under the name in a display equation (`operatorname-star`, `operatornamewithlimits`).
 
 `mathml/mml2tex.json`: the scenarios of `xspec/*.xspec` of [transpect/mml2tex](https://github.com/transpect/mml2tex)
 (commit 9458a7a2f5125609c92eb178fcd0f8b8419e2c40), MathML with the LaTeX mml2tex writes for it, and the MathML of

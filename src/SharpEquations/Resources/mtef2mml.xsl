@@ -2331,11 +2331,6 @@
     </xsl:template>
 
     <!-- MATHEMATICAL SCRIPT CAPITAL P -->
-    <xsl:template match="char[mt_code_value='0x2118' and variation='mathmode']">
-        <mi><xsl:text disable-output-escaping="yes">&amp;#x1D4AB</xsl:text>;</mi>
-    </xsl:template>
-
-    <!-- MATHEMATICAL SCRIPT CAPITAL P -->
     <xsl:template match="char[mt_code_value='0xF10F' and variation='mathmode']">
         <mi mathvariant='script'>P</mi>
     </xsl:template>
@@ -2480,9 +2475,9 @@
         <mi mathvariant='script'>k</mi>
     </xsl:template>
 
-    <!-- MATHEMATICAL SCRIPT SMALL L -->
+    <!-- SCRIPT SMALL L, the letterlike symbol ℓ (\ell) rather than a script letter l -->
     <xsl:template match="char[mt_code_value='0x2113' and variation='mathmode']">
-        <mi mathvariant='script'>l</mi>
+        <mi><xsl:text disable-output-escaping="yes">&amp;#x2113;</xsl:text></mi>
     </xsl:template>
 
     <!-- MATHEMATICAL SCRIPT SMALL L -->

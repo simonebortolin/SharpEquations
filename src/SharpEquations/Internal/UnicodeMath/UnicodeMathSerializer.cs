@@ -709,6 +709,23 @@ namespace SharpEquations.Internal.UnicodeMath
             return nested || !IsFunctionName(Text(name)) ? name : null;
         }
 
+        // the names of two words of TeX, with the thin space of \liminf, which UnicodeMath reads as it reads lim
+        private static readonly string[] TwoWordNames = { "lim\u2009inf", "lim\u2009sup", "inj\u2009lim", "proj\u2009lim" };
+
+        /// <summary>
+        /// The name of a function, alone or with scripts, that is written with the function apply sign after it when
+        /// nothing follows it, or null: a name of letters that UnicodeMath does not know, which it would read as letters
+        /// (lg, argmax, the lim inf of \liminf, with a thin space).
+        /// </summary>
+        private static XElement LoneFunctionName(XElement node)
+        {
+            var name = node;
+            while (Name(name) is "msub" or "msup" or "msubsup" or "munder" or "mover" or "munderover")
+                name = First(name);
+            return Name(name) == "mi" && !name.HasElements && Len(Text(name)) >= 2 && !IsFunctionName(Text(name)) &&
+                Characters(Text(name)).All(c => c == "\u2009" || char.IsLetter(c, 0)) ? name : null;
+        }
+
         /// <summary>The operand of an n-ary operator that does not grow it (∫64), an mpadded of no height.</summary>
         private static bool IsSmashed(XElement naryand) =>
             Name(naryand) == "mpadded" && Attr(naryand, "height") == "0" && naryand.Attributes().All(a => a.Name == "height" || a.Name == "arg");
@@ -1345,10 +1362,20 @@ namespace SharpEquations.Internal.UnicodeMath
                 {
                     // a function name with scripts that is not one UnicodeMath knows (argmax), or whose scripts are not
                     // where they go (lim²_(𝑥→0)): the function apply sign follows the name, as in argmax⁡┬(𝑥∈𝑆) 𝑓(𝑥)
-                    functionName = name;
+                    // (not the names of two words, which UnicodeMath reads as lim: lim inf┬𝑛 𝑎)
+                    functionName = TwoWordNames.Contains(Text(name)) && name == node.Elements().FirstOrDefault() ? null : name;
                     dumped = Dump(node);
                     functionName = null;
                     functionMarked = true;
+                }
+                else if ((i + 1 == nodes.Count || Name(nodes[i + 1]) == "mo" && Text(nodes[i + 1]) != "\u2061" && !IsOpenDelimiter(Text(nodes[i + 1]))) &&
+                    LoneFunctionName(node) is { } lone)
+                {
+                    // a function name with nothing to apply it to, which UnicodeMath would read as letters without the
+                    // function apply sign after it: lg⁡, argmax⁡_𝑥
+                    functionName = lone;
+                    dumped = Dump(node);
+                    functionName = null;
                 }
                 else if (functionMarked && Name(node) == "mo" && Text(node) == "\u2061")
                 {
