@@ -68,6 +68,40 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(equation).IsEqualTo(Equation.Parse("c^2=a^2+b^2-2ab cos⁡γ", EquationFormat.UnicodeMath, new EquationOptions { Display = true }));
             await Assert.That(tab).IsEqualTo(0);
         }
+
+        [Test]
+        public async Task UnitsConvert()
+        {
+            var (miles, swapped, celsius, invalid) = await Headless.Run(() =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                view.Tabs.SelectedIndex = 2;
+                var page = view.Converter;
+                page.Value.Text = "42.195";
+                page.From.SelectedItem = Units.Get("Length")["km"];
+                page.To.SelectedItem = Units.Get("Length")["mi"];
+                window.UpdateLayout();
+                var first = page.Result;
+                Save(window, "math-tools-units");
+                page.Swap();
+                var second = page.Result;
+                page.Quantity.SelectedItem = Units.Get("Temperature");
+                page.Value.Text = "98.6";
+                page.From.SelectedItem = Units.Get("Temperature")["°F"];
+                page.To.SelectedItem = Units.Get("Temperature")["°C"];
+                var third = page.Result;
+                page.Value.Text = "abc";
+                var fourth = page.Result;
+                window.Close();
+                return (first, second, third, fourth);
+            });
+            await Assert.That(miles).IsEqualTo("42.195 \"\u00A0km\"=26.2188 \"\u00A0mi\"");
+            await Assert.That(swapped).IsEqualTo("42.195 \"\u00A0mi\"=67.9063 \"\u00A0km\"");
+            await Assert.That(celsius).IsEqualTo("98.6 \"\u00A0°F\"=37 \"\u00A0°C\"");
+            await Assert.That(invalid).IsNull();
+        }
     }
 }
 #endif

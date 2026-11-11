@@ -9,8 +9,8 @@ namespace SharpEquations.Avalonia.MathTools
     using SharpEquations;
 
     /// <summary>
-    /// The math tools, a page each: the scientific keypad around the equation editor, and the library of formulas. The
-    /// desktop window and the WebAssembly page show the same view.
+    /// The math tools, a page each: the scientific keypad around the equation editor, the library of formulas and the
+    /// unit converter. The desktop window and the WebAssembly page show the same view.
     /// </summary>
     public sealed class MathToolsView : UserControl
     {
@@ -20,6 +20,7 @@ namespace SharpEquations.Avalonia.MathTools
         {
             Ui.AddBrushes(Resources);
             Calculator = new CalculatorPage();
+            Converter = new UnitsPage();
             Tabs = new TabControl { Margin = new Thickness(20, 12, 20, 0) };
             FormulaLibrary = new FormulasPage(equation =>
             {
@@ -31,6 +32,7 @@ namespace SharpEquations.Avalonia.MathTools
             {
                 Tab("Calculator", Calculator),
                 Tab("Formulas", FormulaLibrary),
+                Tab("Units", Converter),
             };
 
             var root = new DockPanel { Children = { Ui.Docked(Header(), Dock.Top), Tabs } };
@@ -43,6 +45,9 @@ namespace SharpEquations.Avalonia.MathTools
 
         /// <summary>The page of the library of formulas.</summary>
         public FormulasPage FormulaLibrary { get; }
+
+        /// <summary>The page of the unit converter.</summary>
+        public UnitsPage Converter { get; }
 
         /// <summary>The tabs of the pages.</summary>
         public TabControl Tabs { get; }
