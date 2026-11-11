@@ -19,12 +19,6 @@ namespace SharpEquations.Internal.Xslt
         public static partial XElement? Transform(XElement input);
     }
 
-    /// <summary>ctop.xsl: content MathML to presentation MathML.</summary>
-    internal sealed partial class CtopStylesheet
-    {
-        public static partial XElement? Transform(XElement input);
-    }
-
     /// <summary>mtef2mml.xsl: the XML of MTEF records to MathML.</summary>
     internal sealed partial class Mtef2mmlStylesheet
     {

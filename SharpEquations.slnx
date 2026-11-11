@@ -1,6 +1,9 @@
 <Solution>
   <Folder Name="/demo/" Id="5d20aa90-6969-d8bd-9dcd-8634f4692fda">
-    <Project Path="samples/SharpEquations.Avalonia.Browser.Demo/SharpEquations.Avalonia.Browser.Demo.csproj" />
+    <!-- built by demo.yml only: it needs the wasm-tools workload -->
+    <Project Path="samples/SharpEquations.Avalonia.Browser.Demo/SharpEquations.Avalonia.Browser.Demo.csproj">
+      <Build Project="false" />
+    </Project>
     <Project Path="samples/SharpEquations.Avalonia.Demo/SharpEquations.Avalonia.Demo.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
