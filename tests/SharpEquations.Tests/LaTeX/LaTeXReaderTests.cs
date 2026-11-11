@@ -172,7 +172,7 @@ namespace SharpEquations.Tests.LaTeX
 
         // a slash and a bar are ordinary characters of LaTeX, which UnicodeMath reads as a fraction and an absolute value;
         // so is a bracket that a group opens and does not close, which UnicodeMath would close, or a bracket alone as a
-        // script; a bar in text, after \bigm (a relation) or {|} is a bar alone, which no other bar pairs with
+        // script (a script in brackets that close is grouped whole, x^(a+b), as Word reads it); a bar in text, after \bigm (a relation) or {|} is a bar alone, which no other bar pairs with
         [Test]
         [Arguments(@"a/b", @"a/b", @"𝑎\/𝑏")]
         [Arguments(@"(a+b)/2", @"(a+b)/2", @"(𝑎+𝑏)\/2")]
@@ -199,6 +199,10 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"x_(", @"x_{(}", @"𝑥_\(")]
         [Arguments(@"x^{)}", @"x^{)}", @"𝑥^\)")]
         [Arguments(@"x^{ ] }", @"x^{]}", @"𝑥^\]")]
+        [Arguments(@"x^(a+b)", @"x^{(a+b)}", @"𝑥^((𝑎+𝑏))")]
+        [Arguments(@"x_[i]y", @"x_{[i]}y", @"𝑥_[𝑖] 𝑦")]
+        [Arguments(@"x^ (a)(b)", @"x^{(a)}(b)", @"𝑥^((𝑎)) (𝑏)")]
+        [Arguments(@"e^(i\pi)_n", @"e_n^{(i\pi)}", @"𝑒_𝑛^((𝑖𝜋))")]
         [Arguments(@"\text{a|b}", @"\text{a|b}", @"""a|b""")]
         [Arguments(@"a\vert b", @"a|b", @"𝑎\|𝑏")]
         [Arguments(@"\vert x\vert", @"|x|", @"|𝑥|")]
