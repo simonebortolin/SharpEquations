@@ -130,6 +130,40 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(two.Triangles.Count).IsEqualTo(2);
             await Assert.That(error!.Error).IsEqualTo("“x” is not a number.");
         }
+
+        [Test]
+        public async Task CalculatorComputes()
+        {
+            var (value, solved, derivative, unreadable) = await Headless.RunAsync(async () =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                var page = window.GetVisualDescendants().OfType<CalculatorPage>().Single();
+                var display = new EquationOptions { Display = true };
+                page.Editor.Equation = Equation.Parse("√2+1/3", EquationFormat.UnicodeMath, display);
+                await page.Solver.RefreshAnswer();
+                var first = page.Solver.Answer;
+                page.Editor.Equation = Equation.Parse("x^2-5x+6=0", EquationFormat.UnicodeMath, display);
+                await page.Solver.RefreshAnswer();
+                var second = await page.Solver.RunAsync(Algebra.Solve);
+                page.Editor.Equation = Equation.Parse("x^3 sin x", EquationFormat.UnicodeMath, display);
+                await page.Solver.RefreshAnswer();
+                var third = await page.Solver.RunAsync(Algebra.Differentiate);
+                window.Height = 1500;
+                Save(window, "math-tools-compute");
+                page.Editor.Equation = Equation.Parse("\"text\"", EquationFormat.UnicodeMath, display);
+                await page.Solver.RefreshAnswer();
+                var fourth = page.Solver.Answer;
+                window.Close();
+                return (first, second, third, fourth);
+            });
+            await Assert.That(value!.Text).EndsWith("≈ 1.747546896");
+            await Assert.That(value.Math).IsNotNull();
+            await Assert.That(solved!.Text).IsEqualTo("x ∈ { 2, 3 }");
+            await Assert.That(solved.Math).IsNotNull();
+            await Assert.That(derivative!.Math).IsNotNull();
+            await Assert.That(unreadable).IsNull();
+        }
     }
 }
 #endif

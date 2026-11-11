@@ -11,6 +11,7 @@
     <PackageVersion Include="Avalonia.Headless" Version="12.1.4" />
     <PackageVersion Include="Avalonia.Skia" Version="12.1.4" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageVersion Include="AngouriMath" Version="2.6.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="All" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
