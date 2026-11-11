@@ -112,7 +112,11 @@ namespace SharpEquations.Avalonia
         private readonly Popup popup;
         private string? dismissedPrefix;
         private readonly InputClient inputClient;
+        private readonly MathLayoutCache layoutCache = new MathLayoutCache();
+        private readonly CaretLayer caretLayer;
         private MathDrawing? drawing;
+        private (MathNode Root, IMathFont Font, double FontSize, double? LineWidth)? laidOut;
+        private MathSelection? drawnSelection;
         private bool caretVisible = true;
         private bool selecting;
         private bool updatingEquation;
@@ -146,12 +150,14 @@ namespace SharpEquations.Avalonia
             };
             LogicalChildren.Add(popup);
             VisualChildren.Add(popup);
+            caretLayer = new CaretLayer(this);
+            VisualChildren.Add(caretLayer);
             AddHandler(ContextRequestedEvent, OnContextRequested);
             blink = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(530) };
             blink.Tick += (_, _) =>
             {
                 caretVisible = !caretVisible;
-                InvalidateVisual();
+                caretLayer.InvalidateVisual();
             };
         }
 
@@ -464,8 +470,12 @@ namespace SharpEquations.Avalonia
                 {
                     blink.Stop();
                 }
-                InvalidateVisual();
+                caretLayer.InvalidateVisual();
                 UpdateQuickBar();
+            }
+            else if (change.Property == CaretBrushProperty || change.Property == ForegroundProperty || change.Property == IsReadOnlyProperty)
+            {
+                caretLayer.InvalidateVisual();
             }
             else if (change.Property == IsQuickBarEnabledProperty)
             {
@@ -480,11 +490,21 @@ namespace SharpEquations.Avalonia
         /// <inheritdoc/>
         protected override Size MeasureOverride(Size availableSize)
         {
-            drawing?.Dispose();
+            caretLayer.Measure(availableSize);
             var line = availableSize.Width - Padding.Left - Padding.Right - BorderThickness * 2;
-            var options = new MathLayoutOptions { FontSize = FontSize, ShowPlaceholders = true, LineWidth = double.IsInfinity(line) ? null : line };
-            var layout = MathLayoutEngine.Layout(Editor.Root, MathFonts.Get(MathFontFamily), options);
-            drawing = new MathDrawing(layout);
+            var lineWidth = double.IsInfinity(line) ? (double?)null : line;
+            var font = MathFonts.Get(MathFontFamily);
+            var key = (Editor.Root, (IMathFont)font, FontSize, lineWidth);
+            if (drawing == null || laidOut != key)
+            {
+                drawing?.Dispose();
+                var options = new MathLayoutOptions { FontSize = FontSize, ShowPlaceholders = true, LineWidth = lineWidth };
+                drawing = new MathDrawing(MathLayoutEngine.Layout(Editor.Root, font, options, layoutCache));
+                laidOut = key;
+                InvalidateVisual();
+                caretLayer.InvalidateVisual();
+            }
+            var layout = drawing.Layout;
             var b = BorderThickness * 2;
             var width = Math.Max(layout.Width, FontSize * 0.6);
             var height = Math.Max(layout.Height, FontSize * 1.2);
@@ -503,6 +523,7 @@ namespace SharpEquations.Avalonia
             var origin = ContentOrigin();
             var layout = drawing.Layout;
 
+            drawnSelection = Editor.Selection;
             if (Editor.Selection is { } selection && SelectionBrush != null)
             {
                 foreach (var rect in layout.GetSelectionRects(selection))
@@ -510,9 +531,14 @@ namespace SharpEquations.Avalonia
             }
 
             drawing.Draw(context, origin, new MathBrushes(Foreground, PlaceholderBrush, MathDrawing.ErrorBrush(ActualThemeVariant)));
+        }
 
-            if (IsFocused && caretVisible && !IsReadOnly && layout.GetCaretRect(Editor.Caret) is { } caret)
+        /// <summary>Draws the caret, over the equation: a layer of its own, so that its blinking draws nothing else again.</summary>
+        private void RenderCaret(DrawingContext context)
+        {
+            if (drawing != null && IsFocused && caretVisible && !IsReadOnly && drawing.Layout.GetCaretRect(Editor.Caret) is { } caret)
             {
+                var origin = ContentOrigin();
                 var brush = CaretBrush ?? Foreground ?? Brushes.Black;
                 context.FillRectangle(brush, new Rect(caret.X + origin.X - 0.5, caret.Y + origin.Y, 1.2, caret.Height));
             }
@@ -528,6 +554,8 @@ namespace SharpEquations.Avalonia
             blink.Stop();
             drawing?.Dispose();
             drawing = null;
+            laidOut = null;
+            layoutCache.Clear();
         }
 
         /// <inheritdoc/>
@@ -687,11 +715,17 @@ namespace SharpEquations.Avalonia
         private void OnEditorChanged(object? sender, EventArgs e)
         {
             caretVisible = true;
-            InvalidateMeasure();
-            InvalidateVisual();
+            if (laidOut is not { } done || !ReferenceEquals(done.Root, Editor.Root))
+                InvalidateMeasure();
+            else if (!SameSelection(drawnSelection, Editor.Selection))
+                InvalidateVisual();
+            caretLayer.InvalidateVisual();
             inputClient.RaiseCursorChanged();
             Dispatcher.UIThread.Post(UpdateQuickBar, DispatcherPriority.Background);
         }
+
+        private static bool SameSelection(MathSelection? a, MathSelection? b) =>
+            a == null ? b == null : b != null && a.StartPosition == b.StartPosition && a.EndPosition == b.EndPosition;
 
         /// <summary>Opens the floating bar at the caret with what fits the place of the caret, or closes it.</summary>
         private void UpdateQuickBar()
@@ -771,6 +805,21 @@ namespace SharpEquations.Avalonia
             if (ViewMode == MathViewMode.Linear != Editor.IsLinear)
                 SetCurrentValue(ViewModeProperty, Editor.IsLinear ? MathViewMode.Linear : MathViewMode.Professional);
             EquationChanged?.Invoke(this, new EquationChangedEventArgs(equation));
+        }
+
+        /// <summary>The layer of the caret, over the whole control.</summary>
+        private sealed class CaretLayer : Control
+        {
+            private readonly MathEditBox owner;
+
+            public CaretLayer(MathEditBox owner)
+            {
+                this.owner = owner;
+                IsHitTestVisible = false;
+                Focusable = false;
+            }
+
+            public override void Render(DrawingContext context) => owner.RenderCaret(context);
         }
 
         /// <summary>The client of the input method: where the caret is, so that the window of the candidates follows it.</summary>

@@ -57,25 +57,34 @@ namespace SharpEquations.Rendering
         /// Lays out the <c>math</c> node of an editor (<see cref="MathEditor.Root"/>), with the geometry of the caret
         /// in every row and run.
         /// </summary>
-        public static MathLayout Layout(MathNode root, IMathFont font, MathLayoutOptions? options)
+        public static MathLayout Layout(MathNode root, IMathFont font, MathLayoutOptions? options) => Layout(root, font, options, null);
+
+        /// <summary>
+        /// Lays out the <c>math</c> node of an editor (<see cref="MathEditor.Root"/>), with the geometry of the caret
+        /// in every row and run, with a cache of the layouts before: the nodes this layout shares with them (those an
+        /// edit did not replace) are not laid out again.
+        /// </summary>
+        public static MathLayout Layout(MathNode root, IMathFont font, MathLayoutOptions? options, MathLayoutCache? cache)
         {
             if (root == null)
                 throw new ArgumentNullException(nameof(root));
             if (font == null)
                 throw new ArgumentNullException(nameof(font));
 
-            var engine = new Engine(font, options ?? new MathLayoutOptions());
+            var engine = new Engine(font, options ?? new MathLayoutOptions(), cache);
             var box = engine.LayoutRoot(root, Array.Empty<int>());
 
             var glyphs = new List<MathGlyph>();
             var shapes = new List<MathShape>();
             var rows = new List<RowGeometry>();
-            Flatten(box, 0, box.Height, null, false, glyphs, shapes, rows);
+            Flatten(box, 0, box.Height, null, false, Array.Empty<int>(), glyphs, shapes, rows);
             return new MathLayout(box.Width, box.Height + box.Depth, box.Height, glyphs, shapes, rows);
         }
 
-        private static void Flatten(Box box, double x, double baseline, string? color, bool invisible, List<MathGlyph> glyphs, List<MathShape> shapes, List<RowGeometry> rows)
+        private static void Flatten(Box box, double x, double baseline, string? color, bool invisible, int[] anchor, List<MathGlyph> glyphs, List<MathShape> shapes, List<RowGeometry> rows)
         {
+            if (box.Anchor != null)
+                anchor = Concat(anchor, box.Anchor);
             color = box.Color ?? color;
             invisible |= box.Invisible;
             if (!invisible)
@@ -113,11 +122,13 @@ namespace SharpEquations.Rendering
                     }
                 }
                 var right = box.Lines?.Right.Select(r => x + r).ToArray() ?? new[] { x + Math.Max(box.Width, 1) };
-                rows.Add(new RowGeometry(box.Path, box.IsRun, caret, top, bottom, line, right, x, baseline - box.Height, baseline + box.Depth));
+                rows.Add(new RowGeometry(Concat(anchor, box.Path), box.IsRun, caret, top, bottom, line, right, x, baseline - box.Height, baseline + box.Depth));
             }
 
             foreach (var (child, cx, shift) in box.Children)
-                Flatten(child, x + cx, baseline - shift, color, invisible, glyphs, shapes, rows);
+                Flatten(child, x + cx, baseline - shift, color, invisible, anchor, glyphs, shapes, rows);
         }
+
+        private static int[] Concat(int[] path, int[] more) => path.Length == 0 ? more : more.Length == 0 ? path : MathTreePaths.Append(path, more);
     }
 }

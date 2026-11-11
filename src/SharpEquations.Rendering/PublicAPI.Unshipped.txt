@@ -34,6 +34,10 @@ SharpEquations.Rendering.MathLayout.Height.get -> double
 SharpEquations.Rendering.MathLayout.HitTest(double x, double y) -> SharpEquations.Editing.MathPosition?
 SharpEquations.Rendering.MathLayout.Shapes.get -> System.Collections.Generic.IReadOnlyList<SharpEquations.Rendering.MathShape>!
 SharpEquations.Rendering.MathLayout.Width.get -> double
+SharpEquations.Rendering.MathLayoutCache
+SharpEquations.Rendering.MathLayoutCache.Clear() -> void
+SharpEquations.Rendering.MathLayoutCache.Count.get -> int
+SharpEquations.Rendering.MathLayoutCache.MathLayoutCache() -> void
 SharpEquations.Rendering.MathLayoutEngine
 SharpEquations.Rendering.MathLayoutOptions
 SharpEquations.Rendering.MathLayoutOptions.BreakLines.get -> bool
@@ -165,6 +169,7 @@ SharpEquations.Rendering.OpenType.ScriptStyles
 SharpEquations.Rendering.OpenType.ScriptStyles.Variant(ushort glyph, int level) -> ushort
 override SharpEquations.Rendering.MathRect.ToString() -> string!
 static SharpEquations.Rendering.MathLayoutEngine.Layout(SharpEquations.Editing.MathNode! root, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options) -> SharpEquations.Rendering.MathLayout!
+static SharpEquations.Rendering.MathLayoutEngine.Layout(SharpEquations.Editing.MathNode! root, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options, SharpEquations.Rendering.MathLayoutCache? cache) -> SharpEquations.Rendering.MathLayout!
 static SharpEquations.Rendering.MathLayoutEngine.Layout(SharpEquations.Equation! equation, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options) -> SharpEquations.Rendering.MathLayout!
 static SharpEquations.Rendering.MathLayoutEngine.Layout(System.Xml.Linq.XElement! math, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options) -> SharpEquations.Rendering.MathLayout!
 static SharpEquations.Rendering.OpenType.FontFile.Parse(byte[]! data, int glyphCount = -1) -> SharpEquations.Rendering.OpenType.FontFile!

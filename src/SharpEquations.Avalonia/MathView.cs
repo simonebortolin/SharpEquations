@@ -5,6 +5,7 @@ namespace SharpEquations.Avalonia
     using global::Avalonia.Controls;
     using global::Avalonia.Controls.Documents;
     using global::Avalonia.Media;
+    using SharpEquations.Editing;
     using SharpEquations.Rendering;
 
     /// <summary>Shows an equation, laid out after MathML Core with a math font.</summary>
@@ -31,7 +32,9 @@ namespace SharpEquations.Avalonia
         public static readonly StyledProperty<bool> IsDisplayProperty =
             AvaloniaProperty.Register<MathView, bool>(nameof(IsDisplay));
 
+        private readonly MathLayoutCache layoutCache = new MathLayoutCache();
         private MathDrawing? drawing;
+        private (Equation Equation, MathNode Root)? tree;
 
         static MathView()
         {
@@ -92,7 +95,10 @@ namespace SharpEquations.Avalonia
             drawing = null;
             if (Equation is not { } equation)
                 return default;
-            var layout = MathLayoutEngine.Layout(equation, MathFonts.Get(MathFontFamily), new MathLayoutOptions { FontSize = FontSize, Display = IsDisplay, LineWidth = double.IsInfinity(availableSize.Width) ? null : availableSize.Width });
+            if (tree is not { } current || !ReferenceEquals(current.Equation, equation))
+                tree = current = (equation, MathNode.FromMathML(equation.ToMathML()));
+            var options = new MathLayoutOptions { FontSize = FontSize, Display = IsDisplay, LineWidth = double.IsInfinity(availableSize.Width) ? null : availableSize.Width };
+            var layout = MathLayoutEngine.Layout(current.Root, MathFonts.Get(MathFontFamily), options, layoutCache);
             drawing = new MathDrawing(layout);
             return new Size(layout.Width, layout.Height);
         }
@@ -103,6 +109,8 @@ namespace SharpEquations.Avalonia
             base.OnDetachedFromVisualTree(e);
             drawing?.Dispose();
             drawing = null;
+            tree = null;
+            layoutCache.Clear();
         }
 
         /// <inheritdoc/>

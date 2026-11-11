@@ -198,6 +198,12 @@ step with the first).
   row and run for an editor: the caret rectangle of a position, the rectangles of a selection, the position at a point
   (`HitTest`: the deepest row under the point, or the nearest), the nearest position in a row (`IMathGeometry`, which
   the editor uses to move up and down).
+- **Cache** (`MathLayoutCache`): the boxes of the nodes laid out, by node (by reference: the trees are immutable and an
+  edit shares what it does not change) and by style and stretch, with the paths of their rows relative to the node, so
+  that a box serves wherever its node moves; and the advances, ink boxes and glyphs of the font, asked of it once. After
+  a keystroke only the nodes the edit replaced are laid out again. `MathEditBox` and `MathView` keep one each;
+  `MathEditBox` lays out again only when the tree changed, and draws its caret in a layer of its own, so that a move of
+  the caret or its blinking draws nothing else again.
 
 ## The controls (`SharpEquations.Avalonia`)
 
