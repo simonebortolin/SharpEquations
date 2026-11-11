@@ -28,12 +28,25 @@ namespace SharpEquations.Internal.LaTeX
             ["⎵"] = "underbracket", ["⏝"] = "underparen", ["⏟"] = "underbrace", ["⏡"] = "undershell", ["▁"] = "underbar",
         };
 
+        // the enclosures of Word's LaTeX, as TeX.js writes them (the others are boxed)
         private static readonly Dictionary<string, string> Enclosures = new Dictionary<string, string>
         {
-            ["box"] = "boxed", ["top"] = "", ["bottom"] = "", ["roundedbox"] = "", ["circle"] = "circle", ["longdiv"] = "", ["actuarial"] = "",
-            ["cancel"] = "cancel", ["bcancel"] = "bcancel", ["xcancel"] = "xcancel", ["updiagonalstrike"] = "cancel",
+            ["box"] = "boxed", ["circle"] = "circle", ["cancel"] = "cancel", ["bcancel"] = "bcancel", ["xcancel"] = "xcancel", ["updiagonalstrike"] = "cancel",
             ["downdiagonalstrike"] = "bcancel", ["updiagonalstrike downdiagonalstrike"] = "xcancel", ["downdiagonalstrike updiagonalstrike"] = "xcancel",
         };
+
+        // the enclosures of standard LaTeX that have a command: \boxed, those of the cancel package, \sout of ulem (and
+        // KaTeX) and \sqrt; the others are \enclose of MathJax
+        private static readonly Dictionary<string, string> StandardEnclosures = new Dictionary<string, string>
+        {
+            ["box"] = "boxed", ["cancel"] = "cancel", ["bcancel"] = "bcancel", ["xcancel"] = "xcancel", ["updiagonalstrike"] = "cancel",
+            ["downdiagonalstrike"] = "bcancel", ["updiagonalstrike downdiagonalstrike"] = "xcancel", ["downdiagonalstrike updiagonalstrike"] = "xcancel",
+            ["horizontalstrike"] = "sout", ["radical"] = "sqrt",
+        };
+
+        private static readonly char[] NotationSeparators = { ' ' };
+
+        private static readonly string[] Sides = { "top", "bottom", "left", "right" };
 
         private static readonly (string Environment, string Intent)[] MatrixIntents =
         {
@@ -76,12 +89,13 @@ namespace SharpEquations.Internal.LaTeX
             {
                 if (Len(str) == 0)
                     return "{}";
-                if (Len(str) == 1 || SingleCommand().IsMatch(str) || IsGroup(str) || isBase && Ch(str, 0) == "\\" && IsUnit(str))
+                if (Len(str) == 1 && (isBase || !IsBracket(str)) || SingleCommand().IsMatch(str) || IsGroup(str) || isBase && Ch(str, 0) == "\\" && IsUnit(str))
                     return str;
                 return "{" + str + "}";
             }
             int length = Len(str);
-            if (length > 2 && !IsUnit(str) || length == 2)
+            // a script that is a bracket is braced, which the reader would otherwise read as the opening of what follows (x_{(})
+            if (length > 2 && !IsUnit(str) || length == 2 || length == 1 && !isBase && IsBracket(str))
                 str = "{" + str + "}";
             return str;
         }
@@ -333,14 +347,18 @@ namespace SharpEquations.Internal.LaTeX
                         ret = Unary(value, notation == "top" ? "\\bar" : "\\underline");
                         break;
                     }
-                    if (standard && notation == "circle")
+                    // no notation is a box, as UnicodeMath writes it (▭), and so are the four sides
+                    var notations = (notation ?? "").Split(NotationSeparators, StringSplitOptions.RemoveEmptyEntries);
+                    if (notations.Length == 0 || notations.Length == 4 && Sides.All(notations.Contains))
                         notation = "box";
-                    if (!string.IsNullOrEmpty(notation) && Enclosures.TryGetValue(notation, out var enclosure) && enclosure.Length > 0)
+                    if ((standard ? StandardEnclosures : Enclosures).TryGetValue(notation, out var enclosure))
                     {
                         ret = Unary(value, "\\" + enclosure);
                         break;
                     }
-                    ret = Unary(value, "\\boxed");
+                    // in standard LaTeX the others (longdiv, roundedbox, circle, left, verticalstrike...) are \enclose of
+                    // MathJax, with its notations parted by commas
+                    ret = standard ? "\\enclose{" + string.Join(",", notations) + "}{" + Nary(value, "", cNode) + "}" : Unary(value, "\\boxed");
                     break;
                 }
 
@@ -456,6 +474,11 @@ namespace SharpEquations.Internal.LaTeX
                     break;
 
                 case "munder":
+                    if (VarLimit(value) is { } varLimit)
+                    {
+                        ret = varLimit;
+                        break;
+                    }
                     if (Name(Last(value)) == "mo" && AccentsBelow.TryGetValue(Text(Last(value)), out var below))
                     {
                         if (standard && below == "underbar")
@@ -558,7 +581,7 @@ namespace SharpEquations.Internal.LaTeX
                     if (standard && val == "&")
                         return "\\&";
                     if (standard && IsFunctionName(val))
-                        return "\\" + val + " ";
+                        return FunctionName(val);
                     if (OperatorMap.TryGetValue(val, out var mapped))
                         return mapped;
                     // escaped for the reader, in standard LaTeX its command if it has one (Ⓢ, \circledS)
@@ -569,11 +592,19 @@ namespace SharpEquations.Internal.LaTeX
                         ret = "\\$";
                         break;
                     }
-                    // a bar alone before another bar parted from it by \!, a zero space: the reader pairs bars with
-                    // nothing between them, which UnicodeMath reads as one double bar
+                    // a bar alone before the bar of an absolute value parted from it by \!, a zero space: the reader
+                    // pairs bars with nothing between them, which UnicodeMath reads as one double bar
                     if (val == "|" && Attr(value, "intent") == ":text" &&
-                        value.ElementsAfterSelf().FirstOrDefault()?.DescendantsAndSelf().FirstOrDefault(d => !d.HasElements) is { } nextLeaf && IsBar(nextLeaf) && Text(nextLeaf) == "|")
+                        value.ElementsAfterSelf().FirstOrDefault()?.DescendantsAndSelf().FirstOrDefault(d => !d.HasElements) is { } nextLeaf && IsBar(nextLeaf) &&
+                        Text(nextLeaf) == "|" && Attr(nextLeaf, "intent") != ":text")
                         return "|\\!";
+                    // a bar alone before other bars, which the reader would pair it with: {|}, the ordinary bar of TeX;
+                    // or between brackets, where the reader would read it as their separator ({𝑥│𝑥>0})
+                    if (val == "|" && Attr(value, "intent") == ":text" && (value.ElementsAfterSelf().Concat(value.Ancestors().SelectMany(a => a.ElementsAfterSelf()))
+                        .SelectMany(e => e.DescendantsAndSelf()).Any(d => IsBar(d) && Text(d) == "|") ||
+                        value.Ancestors().Any(a => Name(a) == "mrow" && First(a) is { } open && open != value && Name(open) == "mo" &&
+                            IsOpenDelimiter(Text(open)) && Attr(open, "intent") != ":text")))
+                        return "{|}";
                     if (Attr(value, "intent") == ":text" && !standard)
                     {
                         // a bracket or a bar that pairs with nothing: the reader escapes the brackets that close nothing and
@@ -647,9 +678,14 @@ namespace SharpEquations.Internal.LaTeX
                             break;
                         }
                     }
+                    else if (LimitNames.TryGetValue(Text(value), out var limitName))
+                    {
+                        ret = limitName;
+                        break;
+                    }
                     else if (IsFunctionName(Text(value)))
                     {
-                        ret = "\\" + Text(value) + " ";
+                        ret = FunctionName(Text(value));
                         break;
                     }
                     else if (Len(Text(value)) > 1 && SharpEquations.Internal.Text.AsciiPatterns.Letters().IsMatch(Text(value)))
@@ -805,8 +841,14 @@ namespace SharpEquations.Internal.LaTeX
                 middle.Any(e => e.DescendantsAndSelf().Any(d => TallElements.Contains(Name(d))));
         }
 
-        private const string OpeningFences = "([{⟨|‖⌈⌊";
-        private const string ClosingFences = ")]}⟩|‖⌉⌋";
+        // the angle brackets also as MTEF writes them, 〈 and 〉 (U+2329 and U+232A), and as CJK brackets (U+3008 and U+3009)
+        private const string OpeningFences = "([{⟨〈〈|‖⌈⌊";
+        private const string ClosingFences = ")]}⟩〉〉|‖⌉⌋";
+
+        /// <summary>
+        /// A function name as its command (\sin); Re and Im as \operatorname, \Re and \Im being the symbols ℜ and ℑ.
+        /// </summary>
+        private static string FunctionName(string name) => name is "Re" or "Im" ? "\\operatorname{" + name + "}" : "\\" + name + " ";
 
         /// <summary>An mrow between fences that do not pair (]𝑎[, or one side only), read back only with \left and \right.</summary>
         private static bool IsUnpairedFence(XElement value, string intent)
@@ -838,6 +880,8 @@ namespace SharpEquations.Internal.LaTeX
 
         /// <summary>The operators that build a structure in UnicodeMath (▭, √, ¦…), escaped when they are alone: \▭.</summary>
         internal static bool IsStructureOperator(string text) => text != null && Len(text) == 1 && "▭▁▢◯⟌⬭╱╲╳√∛∜⒭¦⒞⒜ⓒ□⟡⬄⇳⬍⬆⬇⬌■⒨⒩ⓢⓈ⒱█ⓘⓐⓡⓜⓓⓑ▒".Contains(text);
+
+        private static bool IsBracket(string str) => str is "(" or ")" or "[" or "]";
 
         private static bool IsBar(XElement element) => element != null && Name(element) == "mo" && (Text(element) == "|" || Text(element) == "‖");
 
@@ -878,6 +922,23 @@ namespace SharpEquations.Internal.LaTeX
         private static bool IsZeroThickness(string thickness) =>
             thickness != null && ZeroThickness().IsMatch(thickness.Trim()) && thickness.Trim().Length > 0;
 
+        // the operator names of amsmath of two words, with the thin space of TeX
+        private static readonly Dictionary<string, string> LimitNames = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["lim\u2009inf"] = "\\liminf ", ["lim\u2009sup"] = "\\limsup ", ["inj\u2009lim"] = "\\injlim ",
+            ["proj\u2009lim"] = "\\projlim ",
+        };
+
+        /// <summary>lim with an arrow under it, as amsmath writes it (\varinjlim, \varprojlim), or null.</summary>
+        private static string VarLimit(XElement element) =>
+            Name(element) == "munder" && ChildCount(element) == 2 && Name(First(element)) == "mi" && Text(First(element)) == "lim" &&
+            Name(Last(element)) == "mo" ? Text(Last(element)) switch
+            {
+                "→" => "\\varinjlim ",
+                "←" => "\\varprojlim ",
+                _ => null,
+            } : null;
+
         /// <summary>Whether limits under or over the element are its subscript and superscript: an operator or a function name.</summary>
         private static bool TakesLimits(XElement element)
         {
@@ -885,8 +946,10 @@ namespace SharpEquations.Internal.LaTeX
                 element = First(element);
             if (Name(element) == "mo")
                 return IsLargeOperator(element) || IsFunctionName(Text(element));
+            if (VarLimit(element) != null)
+                return true;
             // a name that is not a function's, \operatorname{argmax}, takes its scripts at its side: \underset puts them under
-            return Name(element) == "mi" && IsFunctionName(Text(element));
+            return Name(element) == "mi" && (IsFunctionName(Text(element)) || LimitNames.ContainsKey(Text(element)));
         }
 
         /// <summary>Whether an operator is large (∑, ∫, ⋃…) or a horizontal brace, whose limits go under and over it.</summary>
@@ -915,8 +978,10 @@ namespace SharpEquations.Internal.LaTeX
                 // an empty identifier, which holds a place (the base of {}^3, the left side of &=)
                 if (text.Length == 0)
                     return "{}";
+                if (LimitNames.TryGetValue(text, out var limitName))
+                    return limitName;
                 if (IsFunctionName(text))
-                    return "\\" + text + " ";
+                    return FunctionName(text);
                 var plain = string.Concat(Characters(text).Where(c => c.Length == 1 && (c[0] >= 'A' && c[0] <= 'Z' || c[0] >= 'a' && c[0] <= 'z')));
                 return plain.Length == text.Length ? "\\operatorname{" + text + "}" : LaTeXSymbols.Math(text);
             }

@@ -172,12 +172,9 @@ namespace SharpEquations.Tests
             return string.Concat(math.Elements().Select(e => e.ToString(SaveOptions.DisableFormatting))).Replace(" xmlns=\"" + M.NamespaceName + "\"", "");
         }
 
-        // what does not read back as it was written, through the UnicodeMath that LaTeX is read as: bars with nothing
-        // between them (|\,|\:|, \{\middle|\}), a parenthesis alone in a phantom (\mathstrut, \phantom{(})
-        private static readonly HashSet<string> NotWrittenBack = new HashSet<string>
-        {
-            "spaces", "middle", "mathstrut",
-        };
+        // what does not read back as it was written, through the UnicodeMath that LaTeX is read as: nothing now; a case
+        // that fails MathMLWritesLaTeXThatReadsBack and cannot be fixed is listed here, with why
+        private static readonly HashSet<string> NotWrittenBack = new HashSet<string>();
 
         // what the reader does not read as latex2mathml does, in four groups; a case that starts to pass must leave its
         // group, and the union of the groups is what LaTeXReadsAsLatex2MathMLReadsIt allows
@@ -200,13 +197,8 @@ namespace SharpEquations.Tests
             "argmax", "widecheck",
         };
 
-        // LaTeX and amsmath that the reader does not read yet: an operator name with nothing after it (\lg, \liminf,
-        // \injlim, \operatorname*{argmax}_x), which UnicodeMath reads as letters, and the names of amsmath that are two
-        // words (lim inf)
-        private static readonly HashSet<string> NotReadYet = new HashSet<string>
-        {
-            "lg", "liminf", "limsup", "injlim", "projlim", "varinjlim", "operatornamewithlimits", "operatorname-star",
-        };
+        // LaTeX and amsmath that the reader does not read yet: none left
+        private static readonly HashSet<string> NotReadYet = new HashSet<string>();
 
         // the same equation, which SharpEquations holds otherwise: an equation number as the label of its row (\tag),
         // and none for aligned equations, whose numbers latex2mathml writes as cells; the alignment of align, split and
@@ -227,12 +219,9 @@ namespace SharpEquations.Tests
 
         private static readonly HashSet<string> ReadOtherwise = new HashSet<string>(NotInWordLaTeX.Concat(NotReadYet).Concat(HeldOtherwise).Concat(NotLaTeX));
 
-        // the macros the reader does not expand as LaTeX does: \DeclareMathOperator, the default of an optional argument,
-        // and an empty body (which leaves an empty group)
-        private static readonly HashSet<string> NotExpanded = new HashSet<string>
-        {
-            "declare-math-operator", "newcommand-optional-default", "newcommand-empty-body",
-        };
+        // the macros that latex2mathml expands otherwise than LaTeX: \greeting{world}, whose one argument is optional,
+        // which LaTeX gives its default (Hello), leaving {world} after it, where latex2mathml takes world as the argument
+        private static readonly HashSet<string> ExpandedOtherwise = new HashSet<string> { "newcommand-optional-default" };
 
         private static string? Check(Func<string?> check)
         {
@@ -297,7 +286,7 @@ namespace SharpEquations.Tests
         [Test]
         public async Task MacrosExpandToTheirEquivalent()
         {
-            var unexpected = Unexpected(Macros(), m => m.id, m => m.latex, NotExpanded, m =>
+            var unexpected = Unexpected(Macros(), m => m.id, m => m.latex, ExpandedOtherwise, m =>
             {
                 var expected = Equation.Parse(m.equivalent, EquationFormat.LaTeX, Options(m.display));
                 var actual = Equation.Parse(m.latex, EquationFormat.LaTeX, Options(m.display));

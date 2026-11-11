@@ -79,8 +79,10 @@ namespace SharpEquations.Internal.MathML
                 return ":function";
             if (children.Count == 2 && IsNaryHead(children[0]))
                 return ":largeop";
+            // a bracket or a bar that is text pairs with nothing
             if (children[0].Name != Mml + "mo" || children[children.Count - 1].Name != Mml + "mo" || children[0].HasElements ||
-                children[children.Count - 1].HasElements)
+                children[children.Count - 1].HasElements || (string?)children[0].Attribute("intent") == ":text" ||
+                (string?)children[children.Count - 1].Attribute("intent") == ":text")
                 return null;
             var open = children[0].Value;
             var close = children[children.Count - 1].Value;
