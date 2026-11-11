@@ -24,6 +24,9 @@ namespace SharpEquations.Avalonia.MathTools
                 ["KeyBrush"] = Solid(0xF1F5F4),
                 ["DigitBrush"] = Solid(0xFFFFFF),
                 ["EditorBorderBrush"] = Solid(0x14B8A6),
+                ["GraphBrush"] = Solid(0xFFFFFF),
+                ["GridBrush"] = Solid(0xE6EDEC),
+                ["AxisBrush"] = Solid(0x475569),
             };
             resources.ThemeDictionaries[ThemeVariant.Dark] = new ResourceDictionary
             {
@@ -36,6 +39,9 @@ namespace SharpEquations.Avalonia.MathTools
                 ["KeyBrush"] = Solid(0x1A2427),
                 ["DigitBrush"] = Solid(0x222E31),
                 ["EditorBorderBrush"] = Solid(0x0D9488),
+                ["GraphBrush"] = Solid(0x0F1618),
+                ["GridBrush"] = Solid(0x1E292C),
+                ["AxisBrush"] = Solid(0x94A3B8),
             };
         }
 
