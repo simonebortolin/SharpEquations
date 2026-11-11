@@ -1008,7 +1008,8 @@ namespace SharpEquations.Editing
             if (!BuildUp.IsBalanced(text, InputFormat) || InputFormat == EquationFormat.LaTeX && BuildUp.AwaitsArguments(text))
                 return false;
 
-            var nodes = BuildUp.Parse(row.Children.Take(j).ToList(), text, InputFormat, IsDisplay);
+            var start = BuildUp.OperandStart(row.Children, j);
+            var nodes = BuildUp.Parse(row.Children.Skip(start).Take(j - start).ToList(), text, InputFormat, IsDisplay);
             if (nodes == null || space && BuildUp.EndsWithPendingCommand(text, nodes))
                 return false;
 
@@ -1017,14 +1018,14 @@ namespace SharpEquations.Editing
                 undo.Push(Snapshot());
                 redo.Clear();
             }
-            var children = nodes.ToList();
+            var children = row.Children.Take(start).Concat(nodes).ToList();
             if (after.Length > 0)
                 children.Add(MathNode.Run(after));
             children.AddRange(row.Children.Skip(j + 1));
             Root = MathTree.Replace(Root, rowPath, row.WithChildren(children));
             Caret = Anchor = held > 0
-                ? new MathPosition(MathTree.Append(rowPath, nodes.Count), held)
-                : Canonical(new MathPosition(rowPath, nodes.Count));
+                ? new MathPosition(MathTree.Append(rowPath, start + nodes.Count), held)
+                : Canonical(new MathPosition(rowPath, start + nodes.Count));
             return true;
         }
 
