@@ -251,6 +251,26 @@ namespace SharpEquations.Editing
             return used.All(u => u) ? nodes : null;
         }
 
+        /// <summary>
+        /// Where the nodes a run at an index of a row builds up with start: after the opening fence when the row is a pair
+        /// of fences and the run is between them, since the opening fence alone does not always parse (<c>|x</c>).
+        /// </summary>
+        public static int OperandStart(IReadOnlyList<MathNode> row, int index)
+        {
+            if (index <= 0 || index >= row.Count - 1)
+                return 0;
+            var open = row[0];
+            var close = row[row.Count - 1];
+            if (open.Name != "mo" || close.Name != "mo" || !IsFence(open.Text) || !IsFence(close.Text))
+                return 0;
+            for (var i = 1; i < row.Count - 1; i++)
+            {
+                if (row[i].Name == "mo" && (row[i].Text == open.Text || row[i].Text == close.Text))
+                    return 0;
+            }
+            return 1;
+        }
+
         /// <summary>The nodes of the row with every run built up where it parses.</summary>
         public static MathNode BuildAll(MathNode node, EquationFormat format, bool display)
         {
@@ -264,12 +284,13 @@ namespace SharpEquations.Editing
                 {
                     if (!children[j].IsRun)
                         continue;
-                    var built = Parse(children.Take(j).ToList(), children[j].Text, format, display);
+                    var start = OperandStart(children, j);
+                    var built = Parse(children.Skip(start).Take(j - start).ToList(), children[j].Text, format, display);
                     if (built == null)
                         continue;
                     var after = children.Skip(j + 1).ToList();
-                    children = built.Concat(after).ToList();
-                    j = built.Count - 1;
+                    children = children.Take(start).Concat(built).Concat(after).ToList();
+                    j = start + built.Count - 1;
                 }
             }
             return node.WithChildren(children);
