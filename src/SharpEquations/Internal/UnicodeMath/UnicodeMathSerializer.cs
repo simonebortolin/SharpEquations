@@ -507,8 +507,9 @@ namespace SharpEquations.Internal.UnicodeMath
             if (retd.Length == 0)
                 retd = "〖〗";
 
-            // a scripted base (𝑎_𝑏 under ^𝑐) is grouped, as 𝑎_𝑏^𝑐 is one subsup
-            if ((op == "^" || op == "_" || IsPrime(Text(Last(node)))) && IsScripted(First(node)) && functionName == null)
+            // a scripted base (𝑎_𝑏 under ^𝑐) is grouped, as 𝑎_𝑏^𝑐 is one subsup, and so is a matrix in brackets (⒨(…)),
+            // which a script after it would not apply to
+            if ((op == "^" || op == "_" || IsPrime(Text(Last(node)))) && (IsScripted(First(node)) || IsBracketedMatrix(First(node))) && functionName == null)
                 ret = "〖" + ret.TrimEnd(' ') + "〗";
             if (op == "^" && Name(Last(node)) == "msub" || op == "_" && Name(Last(node)) == "msup")
                 return ret + op + "(" + retd + ")";
@@ -521,6 +522,14 @@ namespace SharpEquations.Internal.UnicodeMath
                 ret = "(" + ret.Trim(' ') + ")";
             // a script that applies a function (log_(𝑏⁡𝑎)): the space before the function name would end the script
             if ((op == "^" || op == "_") && Name(Last(node)) == "mrow" && Role(Last(node)) == ":function")
+                retd = "(" + retd.Trim(' ') + ")";
+            // a denominator that applies a function (𝑎/sin⁡𝛼): a space after the fraction bar would end the fraction
+            if (Name(node) == "mfrac" && Name(Last(node)) == "mrow" && Role(Last(node)) == ":function")
+                retd = retd.TrimStart(' ');
+            // a denominator that ends with a script, before an operand that follows the fraction (1/(4𝜋𝜀₀) 𝑞₁𝑞₂/𝑟²): the
+            // space after it would end the script, not the denominator (an operator after it ends both)
+            if (Name(node) == "mfrac" && op == "/" && EndsWithSpacedScript(Last(node)) && node.ElementsAfterSelf().FirstOrDefault() is { } next && Name(next) != "mo" &&
+                !(Ch(retd, 0) == "(" && RemoveOuterParens(retd) != retd))
                 retd = "(" + retd.Trim(' ') + ")";
             if (IsMathMLObject(node, false) && ChildCount(node) > 0)
             {
@@ -757,10 +766,20 @@ namespace SharpEquations.Internal.UnicodeMath
             return Name(node) is "msub" or "msup" or "msubsup" or "mover" or "munder" or "munderover";
         }
 
+        private static bool IsBracketedMatrix(XElement node) => Name(node) == "mrow" && MatrixIntents.Any(m => m.Intent == Attr(node, "intent"));
+
+        // a script that a space after it ends, but not what is before it: all but the superscript digits (𝑥²)
+        private static bool EndsWithSpacedScript(XElement node)
+        {
+            while (Name(node) == "mrow" && ChildCount(node) > 0 && !HasAttr(node, "intent"))
+                node = Last(node);
+            return IsScripted(node) && !(Name(node) == "msup" && IsDigitArg(node));
+        }
+
         private string ScriptBase(XElement node)
         {
             var ret = Dump(node);
-            if (IsScripted(node) || Name(node) == "mrow" && ChildCount(node) > 1 && !HasAttr(node, "intent"))
+            if (IsScripted(node) || Name(node) == "mrow" && ChildCount(node) > 1 && !HasAttr(node, "intent") || IsBracketedMatrix(node))
                 ret = "〖" + ret.TrimEnd(' ') + "〗";
             return ret;
         }
