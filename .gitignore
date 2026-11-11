@@ -7,3 +7,4 @@
 [Tt]est[Rr]esult*/
 *.nupkg
 *.snupkg
+BenchmarkDotNet.Artifacts/
