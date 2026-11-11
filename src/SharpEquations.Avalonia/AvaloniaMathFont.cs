@@ -16,6 +16,7 @@ namespace SharpEquations.Avalonia
     public sealed class AvaloniaMathFont : IMathFont
     {
         private readonly Dictionary<string, AvaloniaMathFont?> fallbacks = new Dictionary<string, AvaloniaMathFont?>(StringComparer.Ordinal);
+        private readonly Dictionary<int, AvaloniaMathFont?> fallbackOf = new Dictionary<int, AvaloniaMathFont?>();
         private readonly FontFile file;
         private readonly Lazy<MathTable?> math;
         private readonly Lazy<GlyphOutlines?> outlines;
@@ -79,29 +80,40 @@ namespace SharpEquations.Avalonia
         public ushort GetScriptVariant(ushort glyph, int scriptLevel) => scriptStyles.Value?.Variant(glyph, scriptLevel) ?? glyph;
 
         /// <inheritdoc/>
+        /// <remarks>
+        /// The font Avalonia matches to a code point can change with the fonts it has loaded since: the first one is
+        /// kept, so that a character is drawn with one font, whatever was laid out before.
+        /// </remarks>
         public IMathFont? GetFallback(int codePoint)
+        {
+            lock (fallbacks)
+            {
+                if (!fallbackOf.TryGetValue(codePoint, out var font))
+                    fallbackOf[codePoint] = font = MatchFallback(codePoint);
+                return font;
+            }
+        }
+
+        private AvaloniaMathFont? MatchFallback(int codePoint)
         {
             if (!FontManager.Current.TryMatchCharacter(codePoint, FontStyle.Normal, FontWeight.Normal, FontStretch.Normal, null, null, out var typeface))
                 return null;
             var key = typeface.FontFamily.Name;
-            lock (fallbacks)
+            if (!fallbacks.TryGetValue(key, out var font))
             {
-                if (!fallbacks.TryGetValue(key, out var font))
+                try
                 {
-                    try
-                    {
-                        font = new AvaloniaMathFont(typeface);
-                        if (font.familyName == familyName)
-                            font = null;
-                    }
-                    catch (ArgumentException)
-                    {
+                    font = new AvaloniaMathFont(typeface);
+                    if (font.familyName == familyName)
                         font = null;
-                    }
-                    fallbacks[key] = font;
                 }
-                return font;
+                catch (ArgumentException)
+                {
+                    font = null;
+                }
+                fallbacks[key] = font;
             }
+            return font;
         }
 
         private static MathTable? TryParse(byte[] table)

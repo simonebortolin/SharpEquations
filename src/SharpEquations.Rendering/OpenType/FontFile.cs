@@ -137,9 +137,8 @@ namespace SharpEquations.Rendering.OpenType
         {
             if (cmapAt != int.MinValue)
                 return cmapAt;
-            cmapAt = -1;
             if (!tables.TryGetValue("cmap", out var cmap))
-                return cmapAt;
+                return cmapAt = -1;
             var count = U16(data, cmap.Offset + 2);
             var best = -1;
             var bestRank = 0;
