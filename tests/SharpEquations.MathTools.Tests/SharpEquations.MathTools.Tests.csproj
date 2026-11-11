@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The tests of the math tools without a user interface: the computer algebra, the formulas, the units, the
+       triangles and the graphs (the views are tested in SharpEquations.Avalonia.Tests). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>SharpEquations.MathTools.Tests</RootNamespace>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TUnit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\samples\SharpEquations.MathTools.Core\SharpEquations.MathTools.Core.csproj" />
+    <ProjectReference Include="..\..\samples\SharpEquations.MathTools.Graphing\SharpEquations.MathTools.Graphing.csproj" />
+  </ItemGroup>
+
+</Project>

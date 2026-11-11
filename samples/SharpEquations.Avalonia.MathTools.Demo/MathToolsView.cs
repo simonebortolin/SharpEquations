@@ -1,25 +1,37 @@
 namespace SharpEquations.Avalonia.MathTools
 {
     using System;
+    using System.Globalization;
     using global::Avalonia;
     using global::Avalonia.Controls;
     using global::Avalonia.Layout;
     using global::Avalonia.Media;
     using global::Avalonia.Styling;
     using SharpEquations;
+    using SharpEquations.MathTools;
 
     /// <summary>
     /// The math tools, a page each: the scientific keypad around the equation editor, the library of formulas, the
-    /// unit converter and the solver of triangles. The desktop window and the WebAssembly page show the same view.
+    /// unit converter and the solver of triangles. The desktop window and the WebAssembly page show the same view, each
+    /// with the services of its platform: where the settings are kept (the page shown, the equation of the calculator,
+    /// the theme), and the computer algebra system.
     /// </summary>
     public sealed class MathToolsView : UserControl
     {
         private const string RepositoryUrl = "https://github.com/simonebortolin/SharpEquations";
 
-        public MathToolsView()
+        private const string TabKey = "tab";
+        private const string EquationKey = "equation";
+        private const string ThemeKey = "theme";
+
+        private readonly ISettingsStore settings;
+
+        public MathToolsView(ISettingsStore? settings = null, ICasEngine? engine = null)
         {
+            this.settings = settings ?? new MemorySettingsStore();
+            Engine = engine ?? new AngouriMathEngine();
             Ui.AddBrushes(Resources);
-            Calculator = new CalculatorPage();
+            Calculator = new CalculatorPage(Engine);
             Converter = new UnitsPage();
             TriangleSolver = new TrianglePage();
             Tabs = new TabControl { Margin = new Thickness(20, 12, 20, 0) };
@@ -37,10 +49,17 @@ namespace SharpEquations.Avalonia.MathTools
                 Tab("Triangles", TriangleSolver),
             };
 
+            Restore();
+            Tabs.SelectionChanged += (_, _) => this.settings.Set(TabKey, Tabs.SelectedIndex.ToString(CultureInfo.InvariantCulture));
+            Calculator.Editor.EquationChanged += (_, _) => this.settings.Set(EquationKey, Calculator.Editor.Equation?.ToString(EquationFormat.UnicodeMath));
+
             var root = new DockPanel { Children = { Ui.Docked(Header(), Dock.Top), Tabs } };
             root.Bind(Panel.BackgroundProperty, root.GetResourceObservable("PageBrush"));
             Content = root;
         }
+
+        /// <summary>The computer algebra system of the calculator.</summary>
+        public ICasEngine Engine { get; }
 
         /// <summary>The page of the scientific keypad.</summary>
         public CalculatorPage Calculator { get; }
@@ -56,6 +75,17 @@ namespace SharpEquations.Avalonia.MathTools
 
         /// <summary>The tabs of the pages.</summary>
         public TabControl Tabs { get; }
+
+        // the page, the equation and the theme of the last session
+        private void Restore()
+        {
+            if (int.TryParse(settings.Get(TabKey), NumberStyles.None, CultureInfo.InvariantCulture, out var tab) && tab < Tabs.ItemCount)
+                Tabs.SelectedIndex = tab;
+            if (settings.Get(EquationKey) is { } text && Equation.TryParse(text, EquationFormat.UnicodeMath, new EquationOptions { Display = true }, out var equation))
+                Calculator.Editor.Equation = equation;
+            if (Application.Current is { } app && settings.Get(ThemeKey) is { } theme)
+                app.RequestedThemeVariant = theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light;
+        }
 
         private static TabItem Tab(string header, Control page) => new TabItem
         {
@@ -99,7 +129,11 @@ namespace SharpEquations.Avalonia.MathTools
             theme.Click += (_, _) =>
             {
                 if (Application.Current is { } app)
-                    app.RequestedThemeVariant = app.ActualThemeVariant == ThemeVariant.Dark ? ThemeVariant.Light : ThemeVariant.Dark;
+                {
+                    var dark = app.ActualThemeVariant != ThemeVariant.Dark;
+                    app.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+                    settings.Set(ThemeKey, dark ? "dark" : "light");
+                }
             };
             var github = HeaderButton("GitHub ↗", RepositoryUrl);
             github.Click += async (_, _) =>

@@ -10,6 +10,7 @@ namespace SharpEquations.Avalonia.Tests.MathTools
     using global::Avalonia.VisualTree;
     using SharpEquations;
     using SharpEquations.Avalonia.MathTools;
+    using SharpEquations.MathTools;
 
     /// <summary>The window of the math tools opens, and its pages work (a picture of each with SHARPEQUATIONS_SCREENSHOTS).</summary>
     [NotInParallel("headless")]
@@ -44,6 +45,30 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             });
             await Assert.That(equation).IsEqualTo(Equation.Parse("sin(x)^2+cos(x)^2=1", EquationFormat.UnicodeMath, new EquationOptions { Display = true }));
             await Assert.That(unicodeMath).IsNotNull();
+        }
+
+        /// <summary>The page and the equation of the last session come back from the settings, and the new ones go there.</summary>
+        [Test]
+        public async Task SettingsAreKept()
+        {
+            var settings = new MemorySettingsStore();
+            settings.Set("tab", "3");
+            settings.Set("equation", "x^2-1");
+            var (tab, equation, savedTab, savedEquation) = await Headless.Run(() =>
+            {
+                var window = new MainWindow(settings);
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                var restored = (view.Tabs.SelectedIndex, view.Calculator.Editor.Equation);
+                view.Tabs.SelectedIndex = 1;
+                view.Calculator.Editor.Equation = Equation.Parse("a+b", EquationFormat.UnicodeMath);
+                window.Close();
+                return (restored.SelectedIndex, restored.Equation, settings.Get("tab"), settings.Get("equation"));
+            });
+            await Assert.That(tab).IsEqualTo(3);
+            await Assert.That(equation).IsEqualTo(Equation.Parse("x^2-1", EquationFormat.UnicodeMath, new EquationOptions { Display = true }));
+            await Assert.That(savedTab).IsEqualTo("1");
+            await Assert.That(Equation.Parse(savedEquation!, EquationFormat.UnicodeMath)).IsEqualTo(Equation.Parse("a+b", EquationFormat.UnicodeMath));
         }
 
         [Test]
@@ -145,10 +170,10 @@ namespace SharpEquations.Avalonia.Tests.MathTools
                 var first = page.Solver.Answer;
                 page.Editor.Equation = Equation.Parse("x^2-5x+6=0", EquationFormat.UnicodeMath, display);
                 await page.Solver.RefreshAnswer();
-                var second = await page.Solver.RunAsync(Algebra.Solve);
+                var second = await page.Solver.RunAsync(CasAction.Solve);
                 page.Editor.Equation = Equation.Parse("x^3 sin x", EquationFormat.UnicodeMath, display);
                 await page.Solver.RefreshAnswer();
-                var third = await page.Solver.RunAsync(Algebra.Differentiate);
+                var third = await page.Solver.RunAsync(CasAction.Differentiate);
                 window.Height = 1500;
                 Save(window, "math-tools-compute");
                 page.Editor.Equation = Equation.Parse("\"text\"", EquationFormat.UnicodeMath, display);

@@ -3,6 +3,7 @@ namespace SharpEquations.Avalonia.MathTools
     using System;
     using global::Avalonia;
     using global::Avalonia.Controls.ApplicationLifetimes;
+    using SharpEquations.MathTools;
 
     public static class Program
     {
@@ -19,7 +20,7 @@ namespace SharpEquations.Avalonia.MathTools
         public override void OnFrameworkInitializationCompleted()
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-                desktop.MainWindow = new MainWindow();
+                desktop.MainWindow = new MainWindow(new FileSettingsStore(FileSettingsStore.DefaultPath));
             base.OnFrameworkInitializationCompleted();
         }
     }

@@ -9,6 +9,7 @@ namespace SharpEquations.Avalonia.MathTools
     using global::Avalonia.Layout;
     using global::Avalonia.Media;
     using SharpEquations;
+    using SharpEquations.MathTools;
 
     /// <summary>
     /// The library of formulas: each one drawn by a <see cref="MathView"/>, filtered by subject and by name, and opened in

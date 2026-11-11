@@ -9,6 +9,7 @@ namespace SharpEquations.Avalonia.MathTools
     using global::Avalonia.Layout;
     using global::Avalonia.Media;
     using SharpEquations;
+    using SharpEquations.MathTools;
 
     /// <summary>
     /// The solver of triangles: three of the sides and angles give the others, the area, the perimeter and the radii of
@@ -107,11 +108,6 @@ namespace SharpEquations.Avalonia.MathTools
             Solve();
         }
 
-        /// <summary>The values of a triangle as UnicodeMath: <c>a=3, b=4, c=5</c> and <c>α=36.8699°, β=53.1301°, γ=90°</c>.</summary>
-        public static (string Sides, string Angles) Describe(Triangle triangle) => (
-            string.Join(",  ", Enumerable.Range(0, 3).Select(i => Triangles.SideNames[i] + "=" + Units.Format(triangle.Side(i)))),
-            string.Join(",  ", Enumerable.Range(0, 3).Select(i => Triangles.AngleNames[i] + "=" + Units.Format(triangle.Angle(i)) + "°")));
-
         private void Solve()
         {
             if (updating)
@@ -160,7 +156,7 @@ namespace SharpEquations.Avalonia.MathTools
 
         private static Grid Result(Triangle triangle, string? title)
         {
-            var (sides, angles) = Describe(triangle);
+            var (sides, angles) = Triangles.Describe(triangle);
             var values = new StackPanel { Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
             if (title != null)
                 values.Children.Add(Ui.Small(title));

@@ -1,4 +1,4 @@
-namespace SharpEquations.Avalonia.MathTools
+namespace SharpEquations.MathTools
 {
     using System;
     using System.Collections.Generic;
@@ -43,6 +43,11 @@ namespace SharpEquations.Avalonia.MathTools
         public static double Radians(double degrees) => degrees * Math.PI / 180;
 
         public static double Degrees(double radians) => radians * 180 / Math.PI;
+
+        /// <summary>The values of a triangle as UnicodeMath: <c>a=3, b=4, c=5</c> and <c>α=36.8699°, β=53.1301°, γ=90°</c>.</summary>
+        public static (string Sides, string Angles) Describe(Triangle triangle) => (
+            string.Join(",  ", Enumerable.Range(0, 3).Select(i => Triangles.SideNames[i] + "=" + Units.Format(triangle.Side(i)))),
+            string.Join(",  ", Enumerable.Range(0, 3).Select(i => Triangles.AngleNames[i] + "=" + Units.Format(triangle.Angle(i)) + "°")));
 
         /// <summary>Solves the triangle of the values given (sides, and angles in degrees; null for the unknown ones).</summary>
         public static TriangleSolution Solve(double? a, double? b, double? c, double? alpha, double? beta, double? gamma)

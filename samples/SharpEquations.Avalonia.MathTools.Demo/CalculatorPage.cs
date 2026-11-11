@@ -8,6 +8,7 @@ namespace SharpEquations.Avalonia.MathTools
     using global::Avalonia.Layout;
     using global::Avalonia.Media;
     using SharpEquations;
+    using SharpEquations.MathTools;
 
     /// <summary>
     /// The scientific keypad: the keys type into the equation editor, which the keyboard types into too; what the
@@ -18,7 +19,7 @@ namespace SharpEquations.Avalonia.MathTools
         private readonly TextBox unicodeMath = Code();
         private readonly TextBox latex = Code();
 
-        public CalculatorPage()
+        public CalculatorPage(ICasEngine engine)
         {
             Editor = new MathEditBox
             {
@@ -54,7 +55,7 @@ namespace SharpEquations.Avalonia.MathTools
             foreach (var key in CalculatorKeys.Editing)
                 editing.Children.Add(Key(key, "KeyBrush"));
 
-            Solver = new AlgebraPanel(Editor);
+            Solver = new AlgebraPanel(Editor, engine);
 
             var formats = new Grid
             {
@@ -72,7 +73,7 @@ namespace SharpEquations.Avalonia.MathTools
                         Spacing = 16,
                         Children = { frame, keypad, editing },
                     }),
-                    Ui.Card("Compute", "With AngouriMath: the value of what is typed, and its solutions, simpler forms, derivative and antiderivative", Solver),
+                    Ui.Card("Compute", "With " + engine.Name + ": the value of what is typed, and its solutions, simpler forms, derivative and antiderivative", Solver),
                     Ui.Card("As text", "The equation in the linear formats, as it is typed", formats),
                 },
             };

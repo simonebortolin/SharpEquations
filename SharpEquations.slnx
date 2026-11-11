@@ -9,6 +9,8 @@
     </Project>
     <Project Path="samples/SharpEquations.Avalonia.Demo/SharpEquations.Avalonia.Demo.csproj" />
     <Project Path="samples/SharpEquations.Avalonia.MathTools.Demo/SharpEquations.Avalonia.MathTools.Demo.csproj" />
+    <Project Path="samples/SharpEquations.MathTools.Core/SharpEquations.MathTools.Core.csproj" />
+    <Project Path="samples/SharpEquations.MathTools.Graphing/SharpEquations.MathTools.Graphing.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="AGENTS.md" />
@@ -32,6 +34,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SharpEquations.Avalonia.Tests/SharpEquations.Avalonia.Tests.csproj" />
+    <Project Path="tests/SharpEquations.MathTools.Tests/SharpEquations.MathTools.Tests.csproj" />
     <Project Path="tests/SharpEquations.Tests/SharpEquations.Tests.csproj" />
   </Folder>
 </Solution>

@@ -1,12 +1,11 @@
-#if NET10_0_OR_GREATER
-namespace SharpEquations.Avalonia.Tests.MathTools
+namespace SharpEquations.MathTools.Tests
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
     using SharpEquations;
-    using SharpEquations.Avalonia.MathTools;
+    using SharpEquations.MathTools;
 
     /// <summary>The cases of the solver of triangles, and the laws it writes as UnicodeMath.</summary>
     public class TrianglesTests
@@ -136,7 +135,7 @@ namespace SharpEquations.Avalonia.Tests.MathTools
                 texts.AddRange(solution.Steps);
                 foreach (var t in solution.Triangles)
                 {
-                    var (sides, angles) = TrianglePage.Describe(t);
+                    var (sides, angles) = Triangles.Describe(t);
                     texts.Add(sides);
                     texts.Add(angles);
                 }
@@ -147,8 +146,7 @@ namespace SharpEquations.Avalonia.Tests.MathTools
                 await Assert.That(equation.ToMathML().Descendants().Any(e => e.Name.LocalName == "merror")).IsFalse().Because(text);
                 await Assert.That(Equation.Parse(equation.ToString(EquationFormat.UnicodeMath), EquationFormat.UnicodeMath)).IsEqualTo(equation).Because(text);
             }
-            await Assert.That(TrianglePage.Describe(Triangles.Solve(3, 4, 5, null, null, null).Triangles[0])).IsEqualTo(("a=3,  b=4,  c=5", "α=36.8699°,  β=53.1301°,  γ=90°"));
+            await Assert.That(Triangles.Describe(Triangles.Solve(3, 4, 5, null, null, null).Triangles[0])).IsEqualTo(("a=3,  b=4,  c=5", "α=36.8699°,  β=53.1301°,  γ=90°"));
         }
     }
 }
-#endif

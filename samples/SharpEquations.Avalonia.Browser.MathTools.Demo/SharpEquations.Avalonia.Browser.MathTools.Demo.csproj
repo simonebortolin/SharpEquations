@@ -17,7 +17,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- every file of the desktop app but its window and its entry point -->
+    <!-- the views of the desktop app (every file but its window and its entry point); the engine and the tools are
+         in SharpEquations.MathTools.Core, the graphs in SharpEquations.MathTools.Graphing -->
     <Compile Include="..\SharpEquations.Avalonia.MathTools.Demo\*.cs" Exclude="..\SharpEquations.Avalonia.MathTools.Demo\Program.cs;..\SharpEquations.Avalonia.MathTools.Demo\MainWindow.cs" LinkBase="MathTools" />
   </ItemGroup>
 
@@ -25,11 +26,12 @@
     <PackageReference Include="Avalonia.Browser" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
-    <PackageReference Include="AngouriMath" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SharpEquations.Avalonia\SharpEquations.Avalonia.csproj" />
+    <ProjectReference Include="..\SharpEquations.MathTools.Core\SharpEquations.MathTools.Core.csproj" />
+    <ProjectReference Include="..\SharpEquations.MathTools.Graphing\SharpEquations.MathTools.Graphing.csproj" />
   </ItemGroup>
 
 </Project>
