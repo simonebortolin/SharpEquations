@@ -102,6 +102,34 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(celsius).IsEqualTo("98.6 \"\u00A0°F\"=37 \"\u00A0°C\"");
             await Assert.That(invalid).IsNull();
         }
+
+        [Test]
+        public async Task TrianglesSolve()
+        {
+            var (right, two, error) = await Headless.Run(() =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                view.Tabs.SelectedIndex = 3;
+                var page = view.TriangleSolver;
+                window.UpdateLayout();
+                var first = page.Solution;
+                page.Fill(new[] { "6", "8", "", "40", "", "" });
+                window.UpdateLayout();
+                Save(window, "math-tools-triangles");
+                var second = page.Solution;
+                page.Inputs[2].Text = "x";
+                var third = page.Solution;
+                window.Close();
+                return (first, second, third);
+            });
+            await Assert.That(right!.Case).IsEqualTo("SSS");
+            await Assert.That(right.Triangles.Single().Gamma).IsEqualTo(90).Within(1e-9);
+            await Assert.That(two!.Case).IsEqualTo("SSA");
+            await Assert.That(two.Triangles.Count).IsEqualTo(2);
+            await Assert.That(error!.Error).IsEqualTo("“x” is not a number.");
+        }
     }
 }
 #endif
