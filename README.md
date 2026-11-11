@@ -88,7 +88,8 @@ three projects, so that the core keeps no dependency: `SharpEquations.Editing` (
 UnicodeMath and LaTeX, and `samples/SharpEquations.Avalonia.Browser.Demo` the same demo in the browser, on WebAssembly
 (published to GitHub Pages from `main`; to run it locally: `dotnet workload install wasm-tools`, then
 `dotnet run --project samples/SharpEquations.Avalonia.Browser.Demo`). `samples/SharpEquations.Avalonia.MathTools.Demo` is a
-second app around the editor, a set of math tools (a scientific keypad that types into the editor), with
+second app around the editor, a set of math tools (a scientific keypad that types into the editor, a library of
+formulas), with
 `samples/SharpEquations.Avalonia.Browser.MathTools.Demo` in the browser (published under `math/` of the same site).
 
 ## Architecture
