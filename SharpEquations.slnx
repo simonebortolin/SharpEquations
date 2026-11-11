@@ -4,7 +4,11 @@
     <Project Path="samples/SharpEquations.Avalonia.Browser.Demo/SharpEquations.Avalonia.Browser.Demo.csproj">
       <Build Project="false" />
     </Project>
+    <Project Path="samples/SharpEquations.Avalonia.Browser.MathTools.Demo/SharpEquations.Avalonia.Browser.MathTools.Demo.csproj">
+      <Build Project="false" />
+    </Project>
     <Project Path="samples/SharpEquations.Avalonia.Demo/SharpEquations.Avalonia.Demo.csproj" />
+    <Project Path="samples/SharpEquations.Avalonia.MathTools.Demo/SharpEquations.Avalonia.MathTools.Demo.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="AGENTS.md" />

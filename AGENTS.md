@@ -19,6 +19,8 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | `src/SharpEquations.Avalonia/` | The controls for Avalonia: `MathEditBox` (the editor), `MathView`; embeds Libertinus Math |
 | `samples/SharpEquations.Avalonia.Demo/` | A window with the editor (`DemoView`, shared with the web demo) |
 | `samples/SharpEquations.Avalonia.Browser.Demo/` | The same demo on WebAssembly (needs the `wasm-tools` workload, so not in the solution; `.github/workflows/demo.yml` publishes it to GitHub Pages) |
+| `samples/SharpEquations.Avalonia.MathTools.Demo/` | A second app, math tools around the editor (`MathToolsView`, a page each: the scientific keypad) |
+| `samples/SharpEquations.Avalonia.Browser.MathTools.Demo/` | The math tools on WebAssembly (as the web demo, not in the solution build; `demo.yml` publishes them under `math/`) |
 | `benchmarks/SharpEquations.Benchmarks/` | BenchmarkDotNet benchmarks of reading, writing and converting the corpora |
 | `tests/SharpEquations.Tests/` | TUnit tests, in folders by subject (PublicApi, MathML, Omml, Mtef, UnicodeMath, LaTeX, Property, Regression) |
 | `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia) |
