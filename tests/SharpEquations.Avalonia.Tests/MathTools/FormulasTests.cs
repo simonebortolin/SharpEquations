@@ -6,7 +6,7 @@ namespace SharpEquations.Avalonia.Tests.MathTools
     using SharpEquations;
     using SharpEquations.Avalonia.MathTools;
 
-    /// <summary>The formulas of the library parse without errors, and their LaTeX reads back.</summary>
+    /// <summary>The formulas of the library parse without errors, and their UnicodeMath and LaTeX read back.</summary>
     public class FormulasTests
     {
         private static readonly EquationOptions Display = new EquationOptions { Display = true };
@@ -20,6 +20,7 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             var formula = Formulas.All.Single(f => f.Name == name);
             var equation = Equation.Parse(formula.UnicodeMath, EquationFormat.UnicodeMath, Display);
             await Assert.That(equation.ToMathML().Descendants().Any(e => e.Name.LocalName == "merror")).IsFalse();
+            await Assert.That(Equation.Parse(equation.ToString(EquationFormat.UnicodeMath), EquationFormat.UnicodeMath, Display)).IsEqualTo(equation);
             await Assert.That(Equation.TryParse(equation.ToString(EquationFormat.LaTeX), EquationFormat.LaTeX, out _)).IsTrue();
         }
 
