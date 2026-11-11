@@ -89,12 +89,13 @@ namespace SharpEquations.Internal.LaTeX
             {
                 if (Len(str) == 0)
                     return "{}";
-                if (Len(str) == 1 || SingleCommand().IsMatch(str) || IsGroup(str) || isBase && Ch(str, 0) == "\\" && IsUnit(str))
+                if (Len(str) == 1 && (isBase || !IsBracket(str)) || SingleCommand().IsMatch(str) || IsGroup(str) || isBase && Ch(str, 0) == "\\" && IsUnit(str))
                     return str;
                 return "{" + str + "}";
             }
             int length = Len(str);
-            if (length > 2 && !IsUnit(str) || length == 2)
+            // a script that is a bracket is braced, which the reader would otherwise read as the opening of what follows (x_{(})
+            if (length > 2 && !IsUnit(str) || length == 2 || length == 1 && !isBase && IsBracket(str))
                 str = "{" + str + "}";
             return str;
         }
@@ -597,9 +598,12 @@ namespace SharpEquations.Internal.LaTeX
                         value.ElementsAfterSelf().FirstOrDefault()?.DescendantsAndSelf().FirstOrDefault(d => !d.HasElements) is { } nextLeaf && IsBar(nextLeaf) &&
                         Text(nextLeaf) == "|" && Attr(nextLeaf, "intent") != ":text")
                         return "|\\!";
-                    // a bar alone before other bars, which the reader would pair it with: {|}, the ordinary bar of TeX
-                    if (val == "|" && Attr(value, "intent") == ":text" && value.ElementsAfterSelf().Concat(value.Ancestors().SelectMany(a => a.ElementsAfterSelf()))
-                        .SelectMany(e => e.DescendantsAndSelf()).Any(d => IsBar(d) && Text(d) == "|"))
+                    // a bar alone before other bars, which the reader would pair it with: {|}, the ordinary bar of TeX;
+                    // or between brackets, where the reader would read it as their separator ({𝑥│𝑥>0})
+                    if (val == "|" && Attr(value, "intent") == ":text" && (value.ElementsAfterSelf().Concat(value.Ancestors().SelectMany(a => a.ElementsAfterSelf()))
+                        .SelectMany(e => e.DescendantsAndSelf()).Any(d => IsBar(d) && Text(d) == "|") ||
+                        value.Ancestors().Any(a => Name(a) == "mrow" && First(a) is { } open && open != value && Name(open) == "mo" &&
+                            IsOpenDelimiter(Text(open)) && Attr(open, "intent") != ":text")))
                         return "{|}";
                     if (Attr(value, "intent") == ":text" && !standard)
                     {
@@ -876,6 +880,8 @@ namespace SharpEquations.Internal.LaTeX
 
         /// <summary>The operators that build a structure in UnicodeMath (▭, √, ¦…), escaped when they are alone: \▭.</summary>
         internal static bool IsStructureOperator(string text) => text != null && Len(text) == 1 && "▭▁▢◯⟌⬭╱╲╳√∛∜⒭¦⒞⒜ⓒ□⟡⬄⇳⬍⬆⬇⬌■⒨⒩ⓢⓈ⒱█ⓘⓐⓡⓜⓓⓑ▒".Contains(text);
+
+        private static bool IsBracket(string str) => str is "(" or ")" or "[" or "]";
 
         private static bool IsBar(XElement element) => element != null && Name(element) == "mo" && (Text(element) == "|" || Text(element) == "‖");
 
