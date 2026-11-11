@@ -29,7 +29,15 @@ namespace SharpEquations.MathTools
     }
 
     /// <summary>A result of an <see cref="ICasEngine"/>: what was done, the result as an equation (null if it cannot be drawn) and as text.</summary>
-    public sealed record CasResult(CasAction Action, Equation? Math, string Text);
+    public sealed record CasResult(CasAction Action, Equation? Math, string Text)
+    {
+        /// <summary>
+        /// The result one value at a time, for what compares it with another engine or with the reference tests: the
+        /// exact value of <see cref="CasAction.Evaluate"/>, each solution of <see cref="CasAction.Solve"/> (none when
+        /// there is none, or when they are not a finite set), the expression of the other actions.
+        /// </summary>
+        public IReadOnlyList<Equation> Values { get; init; } = Array.Empty<Equation>();
+    }
 
     /// <summary>
     /// A computer algebra system behind the math tools: it reads what an equation of the editor means and computes with

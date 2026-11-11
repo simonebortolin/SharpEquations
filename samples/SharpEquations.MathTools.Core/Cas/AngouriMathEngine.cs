@@ -35,7 +35,10 @@ namespace SharpEquations.MathTools
                 case CasAction.Solve:
                     var equation = expression is Entity.Equalsf ? expression : expression.Equalizes(0);
                     var solutions = equation.Solve(x).Simplify();
-                    return Result(action, Latex(x) + @"\in " + Latex(solutions), x.ToString() + " ∈ " + solutions.ToString());
+                    return Result(action, Latex(x) + @"\in " + Latex(solutions), x.ToString() + " ∈ " + solutions.ToString()) with
+                    {
+                        Values = solutions is Entity.Set.FiniteSet set ? Equations(set.Elements) : Array.Empty<Equation>(),
+                    };
                 case CasAction.Simplify:
                     return Result(action, expression.Simplify());
                 case CasAction.Expand:
@@ -61,9 +64,10 @@ namespace SharpEquations.MathTools
             var approximate = Decimal(exact.EvalNumerical());
             var exactLatex = Latex(exact);
             var exactText = exact.ToString();
+            var values = Equations(new[] { exact });
             if (approximate == null || approximate == exactText)
-                return Result(CasAction.Evaluate, exactLatex, exactText);
-            return Result(CasAction.Evaluate, exactLatex + @"\approx " + approximate, exactText + " ≈ " + approximate);
+                return Result(CasAction.Evaluate, exactLatex, exactText) with { Values = values };
+            return Result(CasAction.Evaluate, exactLatex + @"\approx " + approximate, exactText + " ≈ " + approximate) with { Values = values };
         }
 
         /// <summary>A number of AngouriMath as the calculator shows it: ten significant digits, <c>a+bi</c> for a complex one; null for what is not a number.</summary>
@@ -88,16 +92,31 @@ namespace SharpEquations.MathTools
         private static string Format(double value) =>
             double.IsInfinity(value) ? (value > 0 ? "∞" : "-∞") : value.ToString("G10", CultureInfo.InvariantCulture);
 
-        private static CasResult Result(CasAction action, Entity value) => Result(action, Latex(value), value.ToString());
+        private static CasResult Result(CasAction action, Entity value) =>
+            Result(action, Latex(value), value.ToString()) with { Values = Equations(new[] { value }) };
+
+        // the values that read back from their LaTeX (all, or none)
+        private static IReadOnlyList<Equation> Equations(IEnumerable<Entity> values)
+        {
+            var equations = new List<Equation>();
+            foreach (var value in values)
+            {
+                if (Parse(Latex(value)) is not { } equation)
+                    return Array.Empty<Equation>();
+                equations.Add(equation);
+            }
+            return equations;
+        }
+
+        private static Equation? Parse(string latex) =>
+            Equation.TryParse(latex, EquationFormat.LaTeX, new EquationOptions { Display = true }, out var parsed)
+            && !parsed!.ToMathML().Descendants().Any(e => e.Name.LocalName == "merror")
+                ? parsed
+                : null;
 
         private static CasResult Result(CasAction action, string latex, string text)
         {
-            var options = new EquationOptions { Display = true };
-            var math = Equation.TryParse(latex, EquationFormat.LaTeX, options, out var parsed)
-                && !parsed!.ToMathML().Descendants().Any(e => e.Name.LocalName == "merror")
-                ? parsed
-                : null;
-            return new CasResult(action, math, text);
+            return new CasResult(action, Parse(latex), text);
         }
 
         // the LaTeX of AngouriMath, with its constants as the LaTeX reader knows them
