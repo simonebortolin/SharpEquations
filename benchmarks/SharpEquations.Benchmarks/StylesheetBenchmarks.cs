@@ -22,9 +22,11 @@ namespace SharpEquations.Benchmarks
         private XElement[] omml = [];
         private XElement[] mathML = [];
         private XElement[] mtef = [];
+        private XElement[] contentMathML = [];
         private XslCompiledTransform omml2mml = null!;
         private XslCompiledTransform mml2omml = null!;
         private XslCompiledTransform mtef2mml = null!;
+        private XslCompiledTransform ctop = null!;
 
         [GlobalSetup]
         public void Setup()
@@ -43,6 +45,8 @@ namespace SharpEquations.Benchmarks
             omml = omml.Where(oMath => Converts(omml2mml, oMath)).ToArray();
             mml2omml = Load("mml2omml.xsl");
             mtef2mml = Load("mtef2mml.xsl");
+            contentMathML = Samples.ContentMathMLCorpus();
+            ctop = Load("ctop.xsl");
         }
 
         // an equation written in the text of another is two document elements for the stylesheet, and
@@ -139,5 +143,17 @@ namespace SharpEquations.Benchmarks
 
         [Benchmark]
         public int Mtef2MathMLXslCompiledTransform() => Run(mtef2mml, mtef);
+
+        [Benchmark]
+        public int ContentMathML2MathML()
+        {
+            var count = 0;
+            foreach (var input in contentMathML)
+                count += Count(CtopStylesheet.Transform(input));
+            return count;
+        }
+
+        [Benchmark]
+        public int ContentMathML2MathMLXslCompiledTransform() => Run(ctop, contentMathML);
     }
 }

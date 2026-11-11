@@ -80,29 +80,49 @@ caught, so `EquationStylesheets` rejects input nested more than 512 levels deep 
 
 ## The stylesheets compiled to C# (`src/SharpEquations.XsltGenerator/`, `Internal/Xslt/`)
 
-The three XSLT 1.0 stylesheets of `Resources/` (`omml2mml.xsl`, `mml2omml.xsl`, `mtef2mml.xsl`) are compiled to C# at
-build time by `SharpEquations.XsltGenerator`, a source generator that reads them as additional files. Nothing is
+The XSLT 1.0 stylesheets of `Resources/` (`omml2mml.xsl`, `mml2omml.xsl`, `mtef2mml.xsl`, `ctop.xsl`) are compiled to
+C# at build time by `SharpEquations.XsltGenerator`, a source generator that reads them as additional files. Nothing is
 generated at run time, unlike `XslCompiledTransform`, which emits IL: so the library runs under Native AOT, and the
 stylesheets are not embedded in it.
 
 - Each stylesheet becomes a class named after its file (`Omml2mmlStylesheet`), declared partial in
   `Internal/Xslt/Stylesheets.cs`, with a method for each template, a lazy property for each global variable and, for
   each mode, the dispatch of `xsl:apply-templates`: by the name of the element first, then the rules in the order of
-  XSLT (highest priority, then the last in the stylesheet), then the built-in templates.
-- Each XPath expression becomes a C# expression over `XPathFunctions` (the data model of XPath over LINQ to XML, its
-  functions and conversions). Its type is known when it can be (a string, a number, a boolean, a node-set, a result
-  tree fragment), and is `object` otherwise (a parameter).
+  XSLT (highest priority, then the last in the stylesheet), then the built-in templates. The many rules of an element
+  whose pattern asks for a child with a text (`char[mt_code_value='0x2211' and ...]` of `mtef2mml.xsl`) are found by a
+  switch on the text of that child.
+- A location path becomes loops over the nodes (first child and next sibling, the node test inlined, the names
+  compared as static `XName` fields), written where the path is used (`xsl:for-each`, `xsl:apply-templates`) or in a
+  method of its own, whose parameters are what the expression reads: the context node, the variables. What uses the
+  path tells the loop: a test stops at the first node, a string is the value of the first node, a comparison stops at
+  the node that compares so, and a list of the nodes is built only for a variable of more than one node, or to sort
+  the nodes when the loops do not reach them in document order. `position()` and `last()` are counted only for the
+  predicates, the contents and the templates that read them.
+- The type of an expression is known when it can be: a string, a number, a boolean, a node-set (the node, or null,
+  when it has at most one; a list otherwise), a result tree fragment (a string, when its content only writes text).
+  The parameters of a named template have the type of the values the calls give them, and are `object` only when the
+  calls differ. For this, and to know which templates read the context node, its position or the number of nodes,
+  which only write text and which do not depend on the input, the generator compiles the stylesheet again with what
+  the compilation before learnt (`Facts`), until nothing new is learnt: every fact starts as the one that gives the
+  best code and only moves to the one that is always right.
+- A global variable that is a string and does not depend on the input is computed once, not for each equation; the
+  map of a `translate()` is built once.
 - `XsltOutput` builds the result as LINQ to XML, as `XslCompiledTransform` gave it when its output was written as text
   and parsed again: text written with `disable-output-escaping` is markup, with the text next to it (`mtef2mml.xsl`
-  writes character references in pieces), and empty text leaves `<t></t>` rather than `<t />`.
+  writes character references in pieces: they are read as they are, and a parser reads any other markup), and empty
+  text leaves `<t></t>` rather than `<t />`.
 - Strings are counted, cut and translated by code points, as XPath defines them (`XslCompiledTransform` counted UTF-16
   units).
 - What the stylesheets do not use (keys, `xsl:sort`, `xsl:number`, imports, extension functions, the `following` and
   `preceding` axes) is an error of the build (XSLT001).
 
 `Xslt/CompiledStylesheetTests` checks that the compiled stylesheets give what `XslCompiledTransform` gives for the
-corpora: the OMML of Word documents and of the UnicodeMathML examples, their MathML, and the MTEF of the test data. It
-leaves out the inputs with characters outside the basic plane, where the two count differently.
+corpora: the OMML of Word documents and of the UnicodeMathML examples, their MathML, the MTEF of the test data and the
+Content MathML of the tests of ctop. It leaves out the inputs with characters outside the basic plane, where the two
+count differently. `Xslt/conformance.xsl`, compiled into the tests, does the same for what the generator compiles
+beyond what the stylesheets of the library use of it on the corpora (the axes, the predicates that count, the
+parameters of mixed types). `StylesheetBenchmarks` measures the stylesheets alone, compiled and run by
+`XslCompiledTransform`.
 
 ## The normalized MathML (`Internal/MathML/MathMLParser.cs`)
 

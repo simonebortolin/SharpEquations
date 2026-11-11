@@ -66,8 +66,12 @@ init-only record: `Display`, `Strict`, `PreserveFormatting`, `LaTeXFlavor` stand
   (no code generated at run time, so the library runs under Native AOT, `IsAotCompatible` on net10.0): the XPath data
   model over LINQ to XML (`XPathFunctions`), the result tree (`XsltOutput`), and the partial classes the generator
   implements (`Stylesheets.cs`; the generated code goes to `obj/`, and is declared there so that Parlot, which compiles
-  the project without the other generators, sees it). `Xslt/CompiledStylesheetTests` compares them with
-  `XslCompiledTransform` on the corpora.
+  the project without the other generators, sees it). The generated code is static: a location path is loops over the
+  nodes, in a method whose parameters are what it reads, and builds a list only where one is needed; the parameters of
+  the named templates are typed by the values the calls give them, which the generator learns by compiling the
+  stylesheet until nothing new is learnt (`Facts`). `Xslt/CompiledStylesheetTests` compares the stylesheets with
+  `XslCompiledTransform` on the corpora, and the generator on `Xslt/conformance.xsl`; `StylesheetBenchmarks` measures
+  them against it.
 - `Internal/Mtef/`: MTEF of Equation Editor 3.0 and MathType, read only; a C# port of the jure/mathtype gem, converted
   with `mtef2mml.xsl`. It reads the "Equation Native" stream of the OLE object; opening the OLE object is the caller's.
 - `Internal/UnicodeMath/`: a port of UnicodeMathML. Its PEG grammar is `UnicodeMathGrammar.parlot.cs`, compiled at

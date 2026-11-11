@@ -42,6 +42,10 @@ namespace SharpEquations.Benchmarks
         public static byte[][] MtefCorpus() =>
             Directory.GetFiles(DataPath("mtef"), "*.*", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal).Select(File.ReadAllBytes).ToArray();
 
+        public static XElement[] ContentMathMLCorpus() =>
+            Directory.GetFiles(DataPath("contentmathml"), "*.mml").OrderBy(path => path, StringComparer.Ordinal)
+                .SelectMany(path => XElement.Load(path, LoadOptions.PreserveWhitespace).DescendantsAndSelf().Where(e => e.Name.LocalName == "math")).ToArray();
+
         public static string Stylesheet(string name) => DataPath("xsl", name);
 
         public static XElement[] OmmlCorpus() =>

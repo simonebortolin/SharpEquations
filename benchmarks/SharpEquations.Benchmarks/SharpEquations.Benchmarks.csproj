@@ -21,6 +21,7 @@
     <None Include="..\..\tests\data\omml\*.omml" Link="data\omml\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\tests\data\mtef\**\*" Link="data\mtef\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\src\SharpEquations\Resources\*.xsl" Link="data\xsl\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\tests\data\contentmathml\*.mml" Link="data\contentmathml\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\tests\data\unicodemath\unicodemathml-examples.json" Link="data\unicodemath\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
