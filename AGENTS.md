@@ -26,7 +26,7 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | `benchmarks/SharpEquations.Benchmarks/` | BenchmarkDotNet benchmarks of reading, writing and converting the corpora |
 | `tests/SharpEquations.Tests/` | TUnit tests, in folders by subject (PublicApi, MathML, Omml, Mtef, UnicodeMath, LaTeX, Property, Regression) |
 | `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia), and of the views of the math tools |
-| `tests/SharpEquations.MathTools.Tests/` | TUnit tests of `SharpEquations.MathTools.Core` and `.Graphing` (net10.0) |
+| `tests/SharpEquations.MathTools.Tests/` | TUnit tests of `SharpEquations.MathTools.Core` and `.Graphing` (net10.0), with the reference tests of the computer algebra and the units (`tests/data/mathtools/`: cases compared by their value, the ones not reached yet `pending` with the reason; a change makes no passing case fail) |
 | `tests/data/` | Test data and its provenance (`tests/data/README.md`) |
 
 ## Code Style

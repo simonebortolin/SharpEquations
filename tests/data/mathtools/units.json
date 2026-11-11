@@ -1,0 +1,317 @@
+[
+ {
+  "quantity": "Length",
+  "value": 1,
+  "from": "in",
+  "to": "m",
+  "expected": 0.0254
+ },
+ {
+  "quantity": "Length",
+  "value": 1,
+  "from": "ft",
+  "to": "m",
+  "expected": 0.3048
+ },
+ {
+  "quantity": "Length",
+  "value": 1,
+  "from": "mi",
+  "to": "m",
+  "expected": 1609.344
+ },
+ {
+  "quantity": "Length",
+  "value": 1,
+  "from": "nmi",
+  "to": "m",
+  "expected": 1852
+ },
+ {
+  "quantity": "Length",
+  "value": 1,
+  "from": "au",
+  "to": "m",
+  "expected": 149597870700
+ },
+ {
+  "quantity": "Length",
+  "value": 1,
+  "from": "ly",
+  "to": "m",
+  "expected": 9460730472580800.0
+ },
+ {
+  "quantity": "Length",
+  "value": 1,
+  "from": "mi",
+  "to": "km",
+  "expected": 1.609344
+ },
+ {
+  "quantity": "Area",
+  "value": 1,
+  "from": "ac",
+  "to": "m²",
+  "expected": 4046.8564224
+ },
+ {
+  "quantity": "Area",
+  "value": 1,
+  "from": "ha",
+  "to": "m²",
+  "expected": 10000.0
+ },
+ {
+  "quantity": "Area",
+  "value": 1,
+  "from": "mi²",
+  "to": "ac",
+  "expected": 640
+ },
+ {
+  "quantity": "Volume",
+  "value": 1,
+  "from": "gal",
+  "to": "L",
+  "expected": 3.785411784
+ },
+ {
+  "quantity": "Volume",
+  "value": 1,
+  "from": "imp gal",
+  "to": "L",
+  "expected": 4.54609
+ },
+ {
+  "quantity": "Volume",
+  "value": 1,
+  "from": "fl oz",
+  "to": "mL",
+  "expected": 29.5735295625
+ },
+ {
+  "quantity": "Volume",
+  "value": 1,
+  "from": "ft³",
+  "to": "m³",
+  "expected": 0.028316846592
+ },
+ {
+  "quantity": "Mass",
+  "value": 1,
+  "from": "lb",
+  "to": "kg",
+  "expected": 0.45359237
+ },
+ {
+  "quantity": "Mass",
+  "value": 1,
+  "from": "oz",
+  "to": "g",
+  "expected": 28.349523125
+ },
+ {
+  "quantity": "Mass",
+  "value": 1,
+  "from": "st",
+  "to": "kg",
+  "expected": 6.35029318
+ },
+ {
+  "quantity": "Mass",
+  "value": 1,
+  "from": "ton",
+  "to": "kg",
+  "expected": 907.18474
+ },
+ {
+  "quantity": "Mass",
+  "value": 1,
+  "from": "ct",
+  "to": "g",
+  "expected": 0.2
+ },
+ {
+  "quantity": "Time",
+  "value": 1,
+  "from": "yr",
+  "to": "s",
+  "expected": 31557600
+ },
+ {
+  "quantity": "Time",
+  "value": 1,
+  "from": "wk",
+  "to": "h",
+  "expected": 168
+ },
+ {
+  "quantity": "Speed",
+  "value": 1,
+  "from": "mph",
+  "to": "m/s",
+  "expected": 0.44704
+ },
+ {
+  "quantity": "Speed",
+  "value": 1,
+  "from": "kn",
+  "to": "m/s",
+  "expected": 0.5144444444444444
+ },
+ {
+  "quantity": "Speed",
+  "value": 100,
+  "from": "km/h",
+  "to": "m/s",
+  "expected": 27.77777777777778
+ },
+ {
+  "quantity": "Temperature",
+  "value": 100,
+  "from": "°C",
+  "to": "°F",
+  "expected": 212
+ },
+ {
+  "quantity": "Temperature",
+  "value": -40,
+  "from": "°C",
+  "to": "°F",
+  "expected": -40
+ },
+ {
+  "quantity": "Temperature",
+  "value": 0,
+  "from": "°C",
+  "to": "K",
+  "expected": 273.15
+ },
+ {
+  "quantity": "Temperature",
+  "value": 32,
+  "from": "°F",
+  "to": "°C",
+  "expected": 0
+ },
+ {
+  "quantity": "Temperature",
+  "value": 491.67,
+  "from": "°R",
+  "to": "K",
+  "expected": 273.15
+ },
+ {
+  "quantity": "Energy",
+  "value": 1,
+  "from": "cal",
+  "to": "J",
+  "expected": 4.184
+ },
+ {
+  "quantity": "Energy",
+  "value": 1,
+  "from": "kWh",
+  "to": "J",
+  "expected": 3600000.0
+ },
+ {
+  "quantity": "Energy",
+  "value": 1,
+  "from": "eV",
+  "to": "J",
+  "expected": 1.602176634e-19
+ },
+ {
+  "quantity": "Energy",
+  "value": 1,
+  "from": "BTU",
+  "to": "J",
+  "expected": 1055.05585262
+ },
+ {
+  "quantity": "Pressure",
+  "value": 1,
+  "from": "atm",
+  "to": "Pa",
+  "expected": 101325
+ },
+ {
+  "quantity": "Pressure",
+  "value": 1,
+  "from": "psi",
+  "to": "Pa",
+  "expected": 6894.757293168361
+ },
+ {
+  "quantity": "Pressure",
+  "value": 1,
+  "from": "mmHg",
+  "to": "Pa",
+  "expected": 133.322387415
+ },
+ {
+  "quantity": "Pressure",
+  "value": 1,
+  "from": "bar",
+  "to": "kPa",
+  "expected": 100
+ },
+ {
+  "quantity": "Angle",
+  "value": 180,
+  "from": "°",
+  "to": "rad",
+  "expected": 3.141592653589793
+ },
+ {
+  "quantity": "Angle",
+  "value": 1,
+  "from": "tr",
+  "to": "°",
+  "expected": 360
+ },
+ {
+  "quantity": "Angle",
+  "value": 400,
+  "from": "grad",
+  "to": "°",
+  "expected": 360
+ },
+ {
+  "quantity": "Angle",
+  "value": 60,
+  "from": "′",
+  "to": "°",
+  "expected": 1
+ },
+ {
+  "quantity": "Angle",
+  "value": 3600,
+  "from": "″",
+  "to": "°",
+  "expected": 1
+ },
+ {
+  "quantity": "Data",
+  "value": 1,
+  "from": "KiB",
+  "to": "B",
+  "expected": 1024
+ },
+ {
+  "quantity": "Data",
+  "value": 1,
+  "from": "B",
+  "to": "bit",
+  "expected": 8
+ },
+ {
+  "quantity": "Data",
+  "value": 1,
+  "from": "GiB",
+  "to": "GB",
+  "expected": 1.073741824
+ }
+]
