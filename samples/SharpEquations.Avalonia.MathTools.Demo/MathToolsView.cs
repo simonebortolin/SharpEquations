@@ -9,8 +9,8 @@ namespace SharpEquations.Avalonia.MathTools
     using SharpEquations;
 
     /// <summary>
-    /// The math tools, a page each: the scientific keypad around the equation editor. The desktop window and the
-    /// WebAssembly page show the same view.
+    /// The math tools, a page each: the scientific keypad around the equation editor, and the library of formulas. The
+    /// desktop window and the WebAssembly page show the same view.
     /// </summary>
     public sealed class MathToolsView : UserControl
     {
@@ -20,23 +20,32 @@ namespace SharpEquations.Avalonia.MathTools
         {
             Ui.AddBrushes(Resources);
             Calculator = new CalculatorPage();
-
-            var tabs = new TabControl
+            Tabs = new TabControl { Margin = new Thickness(20, 12, 20, 0) };
+            FormulaLibrary = new FormulasPage(equation =>
             {
-                Margin = new Thickness(20, 12, 20, 0),
-                ItemsSource = new[]
-                {
-                    Tab("Calculator", Calculator),
-                },
+                Calculator.Editor.Equation = equation;
+                Tabs.SelectedIndex = 0;
+                Calculator.Editor.Focus();
+            });
+            Tabs.ItemsSource = new[]
+            {
+                Tab("Calculator", Calculator),
+                Tab("Formulas", FormulaLibrary),
             };
 
-            var root = new DockPanel { Children = { Ui.Docked(Header(), Dock.Top), tabs } };
+            var root = new DockPanel { Children = { Ui.Docked(Header(), Dock.Top), Tabs } };
             root.Bind(Panel.BackgroundProperty, root.GetResourceObservable("PageBrush"));
             Content = root;
         }
 
         /// <summary>The page of the scientific keypad.</summary>
         public CalculatorPage Calculator { get; }
+
+        /// <summary>The page of the library of formulas.</summary>
+        public FormulasPage FormulaLibrary { get; }
+
+        /// <summary>The tabs of the pages.</summary>
+        public TabControl Tabs { get; }
 
         private static TabItem Tab(string header, Control page) => new TabItem
         {

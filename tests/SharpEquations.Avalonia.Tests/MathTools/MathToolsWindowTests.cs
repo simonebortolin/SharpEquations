@@ -45,6 +45,29 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(equation).IsEqualTo(Equation.Parse("sin(x)^2+cos(x)^2=1", EquationFormat.UnicodeMath, new EquationOptions { Display = true }));
             await Assert.That(unicodeMath).IsNotNull();
         }
+
+        [Test]
+        public async Task FormulaOpensInTheCalculator()
+        {
+            var (shown, equation, tab) = await Headless.Run(() =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                view.Tabs.SelectedIndex = 1;
+                view.FormulaLibrary.Search.Text = "law";
+                Save(window, "math-tools-formulas");
+                var names = view.FormulaLibrary.Shown.Select(f => f.Name).ToList();
+                view.FormulaLibrary.Open(Formulas.All.Single(f => f.Name == "Law of cosines"));
+                var result = (names, view.Calculator.Editor.Equation, view.Tabs.SelectedIndex);
+                window.Close();
+                return result;
+            });
+            await Assert.That(shown).Contains("Law of sines");
+            await Assert.That(shown).DoesNotContain("Pythagorean theorem");
+            await Assert.That(equation).IsEqualTo(Equation.Parse("c^2=a^2+b^2-2ab cos⁡γ", EquationFormat.UnicodeMath, new EquationOptions { Display = true }));
+            await Assert.That(tab).IsEqualTo(0);
+        }
     }
 }
 #endif
