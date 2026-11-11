@@ -443,6 +443,8 @@ namespace SharpEquations.Internal.LaTeX
             ["intop"] = "\\int", ["smallint"] = "\\int", ["diagup"] = "\\╱", ["diagdown"] = "\\╲", ["thickspace"] = "\\;",
             ["And"] = "\\&", ["lvert"] = "|", ["rvert"] = "|", ["vert"] = "|", ["idotsint"] = "\\∫⋯\\∫",
             ["mathscr"] = "\\mathcal", ["operatornamewithlimits"] = "\\operatorname", ["mathstrut"] = "\\vphantom{\\(}",
+            // \Re and \Im, the symbols ℜ and ℑ of LaTeX, which UnicodeMath reads as the function names Re and Im
+            ["Re"] = "ℜ", ["Im"] = "ℑ",
         };
 
         private static readonly HashSet<string> OpeningBrackets = new HashSet<string>(StringComparer.Ordinal) { "(", "[", "{", "⟨", "⌈", "⌊" };
@@ -972,6 +974,21 @@ namespace SharpEquations.Internal.LaTeX
                         continue;
                     }
                 }
+                else if (cw is "sout" or "hcancel" && Argument(tex, j) is var (struck, afterStruck) && afterStruck >= 0)
+                {
+                    // a horizontal strike: \sout of ulem (and of KaTeX), \hcancel
+                    result.Append(Enclosure("horizontalstrike", RewriteTeXOnly(struck)));
+                    i = afterStruck;
+                    continue;
+                }
+                else if (cw == "enclose" && BracedArgument(tex, j) is var (notation, afterNotation) && afterNotation >= 0 &&
+                    BracedArgument(tex, OptionalArgument(tex, afterNotation).Next) is var (enclosed, afterEnclosed) && afterEnclosed >= 0)
+                {
+                    // \enclose{notation}[attributes]{body} of MathJax: the notations of MathML menclose, parted by commas
+                    result.Append(Enclosure(notation, RewriteTeXOnly(enclosed)));
+                    i = afterEnclosed;
+                    continue;
+                }
                 else if (FontSwitches.TryGetValue(cw, out var font))
                 {
                     // an old font switch, {\rm rxn}, styles the rest of its group: \mathrm{rxn}
@@ -984,6 +1001,40 @@ namespace SharpEquations.Internal.LaTeX
                 i = j;
             }
             return result.ToString();
+        }
+
+        // the notations of menclose that UnicodeMath has an operator for
+        private static readonly Dictionary<string, string> EnclosureOperators = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["box"] = "▭", ["roundedbox"] = "▢", ["circle"] = "◯", ["longdiv"] = "⟌",
+        };
+
+        // the notations of menclose that UnicodeMath writes as the bits of the mask of ▭ (the sides are those it hides)
+        private static readonly Dictionary<string, int> EnclosureBits = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["top"] = 1, ["bottom"] = 2, ["left"] = 4, ["right"] = 8, ["horizontalstrike"] = 16, ["verticalstrike"] = 32,
+            ["downdiagonalstrike"] = 64, ["updiagonalstrike"] = 128, ["box"] = 15, ["madruwb"] = 10,
+        };
+
+        private static readonly char[] NotationSeparators = { ',', ' ' };
+
+        /// <summary>
+        /// The UnicodeMath of a body in an enclosure of MathML notations (\enclose{top,bottom}{x}): its operator (⟌{x}), the
+        /// mask of ▭ (▭(28&amp;{x})), or the square root of the radical; a box when none is known.
+        /// </summary>
+        private static string Enclosure(string notation, string body)
+        {
+            var notations = notation.Split(NotationSeparators, StringSplitOptions.RemoveEmptyEntries);
+            if (notations.Length == 1 && notations[0] == "radical")
+                return "\\sqrt{" + body + "}";
+            if (notations.Length == 1 && EnclosureOperators.TryGetValue(notations[0], out var op))
+                return op + "{" + body + "}";
+            // the actuarial, a combining mark before its body in UnicodeMath, and the ▭ of a mask, held through the passes
+            // (which would put the mark after a base, and take the mask for the argument of ▭) in a group of their own
+            if (notations.Length == 1 && notations[0] == "actuarial")
+                return "{{" + HoldMark("⃧") + "(" + body + ")}}";
+            int mask = notations.Sum(n => EnclosureBits.TryGetValue(n, out var bits) ? bits : 0);
+            return mask == 0 || mask == 15 ? "▭{" + body + "}" : "{" + HoldMark("▭") + "(" + (mask ^ 15) + "&{" + body + "})}";
         }
 
         // the font switches of plain TeX, which style the rest of their group, as the LaTeX commands with an argument

@@ -28,12 +28,25 @@ namespace SharpEquations.Internal.LaTeX
             ["⎵"] = "underbracket", ["⏝"] = "underparen", ["⏟"] = "underbrace", ["⏡"] = "undershell", ["▁"] = "underbar",
         };
 
+        // the enclosures of Word's LaTeX, as TeX.js writes them (the others are boxed)
         private static readonly Dictionary<string, string> Enclosures = new Dictionary<string, string>
         {
-            ["box"] = "boxed", ["top"] = "", ["bottom"] = "", ["roundedbox"] = "", ["circle"] = "circle", ["longdiv"] = "", ["actuarial"] = "",
-            ["cancel"] = "cancel", ["bcancel"] = "bcancel", ["xcancel"] = "xcancel", ["updiagonalstrike"] = "cancel",
+            ["box"] = "boxed", ["circle"] = "circle", ["cancel"] = "cancel", ["bcancel"] = "bcancel", ["xcancel"] = "xcancel", ["updiagonalstrike"] = "cancel",
             ["downdiagonalstrike"] = "bcancel", ["updiagonalstrike downdiagonalstrike"] = "xcancel", ["downdiagonalstrike updiagonalstrike"] = "xcancel",
         };
+
+        // the enclosures of standard LaTeX that have a command: \boxed, those of the cancel package, \sout of ulem (and
+        // KaTeX) and \sqrt; the others are \enclose of MathJax
+        private static readonly Dictionary<string, string> StandardEnclosures = new Dictionary<string, string>
+        {
+            ["box"] = "boxed", ["cancel"] = "cancel", ["bcancel"] = "bcancel", ["xcancel"] = "xcancel", ["updiagonalstrike"] = "cancel",
+            ["downdiagonalstrike"] = "bcancel", ["updiagonalstrike downdiagonalstrike"] = "xcancel", ["downdiagonalstrike updiagonalstrike"] = "xcancel",
+            ["horizontalstrike"] = "sout", ["radical"] = "sqrt",
+        };
+
+        private static readonly char[] NotationSeparators = { ' ' };
+
+        private static readonly string[] Sides = { "top", "bottom", "left", "right" };
 
         private static readonly (string Environment, string Intent)[] MatrixIntents =
         {
@@ -334,14 +347,18 @@ namespace SharpEquations.Internal.LaTeX
                         ret = Unary(value, notation == "top" ? "\\bar" : "\\underline");
                         break;
                     }
-                    if (standard && notation == "circle")
+                    // no notation is a box, as UnicodeMath writes it (▭), and so are the four sides
+                    var notations = (notation ?? "").Split(NotationSeparators, StringSplitOptions.RemoveEmptyEntries);
+                    if (notations.Length == 0 || notations.Length == 4 && Sides.All(notations.Contains))
                         notation = "box";
-                    if (!string.IsNullOrEmpty(notation) && Enclosures.TryGetValue(notation, out var enclosure) && enclosure.Length > 0)
+                    if ((standard ? StandardEnclosures : Enclosures).TryGetValue(notation, out var enclosure))
                     {
                         ret = Unary(value, "\\" + enclosure);
                         break;
                     }
-                    ret = Unary(value, "\\boxed");
+                    // in standard LaTeX the others (longdiv, roundedbox, circle, left, verticalstrike...) are \enclose of
+                    // MathJax, with its notations parted by commas
+                    ret = standard ? "\\enclose{" + string.Join(",", notations) + "}{" + Nary(value, "", cNode) + "}" : Unary(value, "\\boxed");
                     break;
                 }
 
@@ -564,7 +581,7 @@ namespace SharpEquations.Internal.LaTeX
                     if (standard && val == "&")
                         return "\\&";
                     if (standard && IsFunctionName(val))
-                        return "\\" + val + " ";
+                        return FunctionName(val);
                     if (OperatorMap.TryGetValue(val, out var mapped))
                         return mapped;
                     // escaped for the reader, in standard LaTeX its command if it has one (Ⓢ, \circledS)
@@ -668,7 +685,7 @@ namespace SharpEquations.Internal.LaTeX
                     }
                     else if (IsFunctionName(Text(value)))
                     {
-                        ret = "\\" + Text(value) + " ";
+                        ret = FunctionName(Text(value));
                         break;
                     }
                     else if (Len(Text(value)) > 1 && SharpEquations.Internal.Text.AsciiPatterns.Letters().IsMatch(Text(value)))
@@ -824,8 +841,14 @@ namespace SharpEquations.Internal.LaTeX
                 middle.Any(e => e.DescendantsAndSelf().Any(d => TallElements.Contains(Name(d))));
         }
 
-        private const string OpeningFences = "([{⟨|‖⌈⌊";
-        private const string ClosingFences = ")]}⟩|‖⌉⌋";
+        // the angle brackets also as MTEF writes them, 〈 and 〉 (U+2329 and U+232A), and as CJK brackets (U+3008 and U+3009)
+        private const string OpeningFences = "([{⟨〈〈|‖⌈⌊";
+        private const string ClosingFences = ")]}⟩〉〉|‖⌉⌋";
+
+        /// <summary>
+        /// A function name as its command (\sin); Re and Im as \operatorname, \Re and \Im being the symbols ℜ and ℑ.
+        /// </summary>
+        private static string FunctionName(string name) => name is "Re" or "Im" ? "\\operatorname{" + name + "}" : "\\" + name + " ";
 
         /// <summary>An mrow between fences that do not pair (]𝑎[, or one side only), read back only with \left and \right.</summary>
         private static bool IsUnpairedFence(XElement value, string intent)
@@ -958,7 +981,7 @@ namespace SharpEquations.Internal.LaTeX
                 if (LimitNames.TryGetValue(text, out var limitName))
                     return limitName;
                 if (IsFunctionName(text))
-                    return "\\" + text + " ";
+                    return FunctionName(text);
                 var plain = string.Concat(Characters(text).Where(c => c.Length == 1 && (c[0] >= 'A' && c[0] <= 'Z' || c[0] >= 'a' && c[0] <= 'z')));
                 return plain.Length == text.Length ? "\\operatorname{" + text + "}" : LaTeXSymbols.Math(text);
             }
