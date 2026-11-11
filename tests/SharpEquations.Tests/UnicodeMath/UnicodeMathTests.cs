@@ -16,7 +16,7 @@ namespace SharpEquations.Tests.UnicodeMath
         [Arguments(@"a=b#(1)", @"𝑎=𝑏#(1)", @"a=b\tag{1}")]
         [Arguments(@"⒱(a&b@c&d)", @"⒱(𝑎&𝑏@𝑐&𝑑)", @"\begin{vmatrix}a&b\\c&d\end{vmatrix}")]
         [Arguments(@"⬍x+⬆y+⬇z+⬌w", @"⬍𝑥+⬆𝑦+⬇𝑧+⬌𝑤", @"\smash{x}+\smash[t]{y}+\smash[b]{z}+\mathrlap{w}")]
-        [Arguments(@"▭(1&x)+▭(2&x)+▭(4&x)+▭(8&x)+▭(16&x)+▭(32&x)", @"▭(1&𝑥)+▭(2&𝑥)+▭(4&𝑥)+▭(8&𝑥)+▭(16&𝑥)+▭(32&𝑥)", @"\boxed{x}+\boxed{x}+\boxed{x}+\boxed{x}+\boxed{x}+\boxed{x}")]
+        [Arguments(@"▭(1&x)+▭(2&x)+▭(4&x)+▭(8&x)+▭(16&x)+▭(32&x)", @"▭(1&𝑥)+▭(2&𝑥)+▭(4&𝑥)+▭(8&𝑥)+▭(16&𝑥)+▭(32&𝑥)", @"\enclose{right,left,bottom}{x}+\enclose{right,left,top}{x}+\enclose{right,bottom,top}{x}+\enclose{left,bottom,top}{x}+\enclose{horizontalstrike,right,left,bottom,top}{x}+\enclose{verticalstrike,right,left,bottom,top}{x}")]
         [Arguments(@"_a^b x", @"_𝑎^𝑏 𝑥", @"{}_a^bx")]
         [Arguments(@"_a x", @"_𝑎 𝑥", @"{}_ax")]
         [Arguments(@"^b x", @"^𝑏 𝑥", @"{}^bx")]
@@ -125,6 +125,19 @@ namespace SharpEquations.Tests.UnicodeMath
         public async Task WritesWhatReadsBack(string unicodeMath, string expected)
         {
             var equation = Equation.Parse(unicodeMath, EquationFormat.UnicodeMath);
+            await Assert.That(equation.ToString(EquationFormat.UnicodeMath)).IsEqualTo(expected);
+            await Assert.That(Equation.Parse(expected, EquationFormat.UnicodeMath)).IsEqualTo(equation);
+        }
+
+        // a fraction after a function or a script, which UnicodeMath would make its numerator
+        [Test]
+        [Arguments(@"\lim_{h\to0}\frac{f(x)}{h}", "lim_(ℎ→0) ⁡〖𝑓(𝑥)/ℎ〗")]
+        [Arguments(@"\sin\frac{x}{2}", "sin⁡〖𝑥/2〗")]
+        [Arguments(@"a\stackrel{n\to\infty}{\longrightarrow}\frac{1}{2}", "𝑎⟶┴(𝑛→∞) 〖1/2〗")]
+        [Arguments(@"x_i\frac{1}{2}+x^n\frac{1}{2}", "𝑥_𝑖 〖1/2〗+𝑥^𝑛 〖1/2〗")]
+        [Arguments(@"x^2\frac{1}{2}+\hat{x}\frac{1}{2}", "𝑥² 1/2+𝑥̂ 1/2")]        public async Task WritesFractionsApartFromWhatPrecedes(string latex, string expected)
+        {
+            var equation = Equation.Parse(latex, EquationFormat.LaTeX);
             await Assert.That(equation.ToString(EquationFormat.UnicodeMath)).IsEqualTo(expected);
             await Assert.That(Equation.Parse(expected, EquationFormat.UnicodeMath)).IsEqualTo(equation);
         }

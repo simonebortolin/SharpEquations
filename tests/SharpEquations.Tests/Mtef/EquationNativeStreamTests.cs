@@ -70,6 +70,43 @@ namespace SharpEquations.Tests
         }
 
         /// <summary>
+        /// MathType objects of the palettes of strikes, symbols, fractions and fences, as standard LaTeX: the horizontal
+        /// strike (\sout), the long division (\enclose{longdiv}), the letterlike symbols (ℓ, ℑ, ℜ, ℘) and the angle brackets
+        /// of MTEF (〈 and 〉, U+2329 and U+232A); the LaTeX reads back to itself.
+        /// </summary>
+        [Test]
+        [Arguments("overlines.eqn", @"\sout{a}\sout{b}\sout{c}")]
+        [Arguments("symbols.eqn", @"a\partial b\nabla c\infty d\Im e\Re f\aleph g\angle h\perp i\diamond l\ell m\wp n\degree o\hbar pƛq\int r\hbar sƛt\int u\sum a\prod b\coprod c")]
+        [Arguments("fraction-and-rad.eqn", @"\frac{a}{b}\frac{a}{b}\frac{a}{b}\frac{a}{b}a/b\sqrt{a}\sqrt[b]{a}\enclose{longdiv}{a}\begin{matrix}a\\\enclose{longdiv}{b}\end{matrix}")]
+        [Arguments("operators.eqn", @"a\pm b\mp c\times d\div e\ast f\cdot g\circ h•i\otimes l\oplus m\langle n\rangle")]
+        [Arguments("bra-ket.eqn", @"\langle a|b\rangle")]
+        [Arguments("parentheses.eqn", @"(ab)[ab]\{ab\}\langle ab\rangle|ab|\|ab\||a\rangle\langle b|")]
+        public async Task WritesMathTypePalettesAsLaTeX(string file, string latex)
+        {
+            var equation = Read("npoi/" + file);
+            await Assert.That(equation.ToString(EquationFormat.LaTeX)).IsEqualTo(latex);
+            await Assert.That(Equation.Parse(latex, EquationFormat.LaTeX).ToString(EquationFormat.LaTeX)).IsEqualTo(latex);
+        }
+
+        /// <summary>Angle brackets of MTEF around other fences, one of them a bar alone.</summary>
+        [Test]
+        public async Task WritesTheAngleBracketsOfMathTypeAmongOtherFences()
+        {
+            await Assert.That(Read("npoi/nested-fences.eqn").ToString(EquationFormat.LaTeX))
+                .IsEqualTo(@"(0[a\{b\langle c\left|d\|e\lfloor f\lceil gc\rceil d\rfloor e\|f\right|g\rangle h\}i]0)");
+        }
+
+        [Test]
+        public async Task ReadsTheLetterlikeSymbolsOfMathType()
+        {
+            var identifiers = Read("npoi/symbols.eqn").ToMathML().Descendants(Mml + "mi").Select(e => e.Value).ToList();
+            await Assert.That(identifiers).Contains("ℓ");
+            await Assert.That(identifiers).Contains("℘");
+            await Assert.That(identifiers).DoesNotContain("𝓁");
+            await Assert.That(identifiers).DoesNotContain("𝒫");
+        }
+
+        /// <summary>
         /// The spaces of Equation Editor 3.0 (0xEB00 to 0xEB08 in the space typeface), also in MathType equations first
         /// written with it, are spaces, not the arrows of MathType's encoding with the same codes.
         /// </summary>

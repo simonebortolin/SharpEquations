@@ -13,6 +13,10 @@ namespace SharpEquations.Internal.Text
         [GeneratedRegex(@"^[A-Za-z]+\z")]
         public static partial Regex Letters();
 
+        /// <summary>A name: a letter and letters or digits after it (sharet1).</summary>
+        [GeneratedRegex(@"^[A-Za-z][A-Za-z0-9]*\z")]
+        public static partial Regex Name();
+
         /// <summary>Digits only, or nothing.</summary>
         [GeneratedRegex(@"^[0-9]*\z")]
         public static partial Regex Digits();

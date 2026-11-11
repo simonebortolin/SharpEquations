@@ -1,0 +1,12 @@
+<math display="block">
+ <apply><ci>f</ci>
+ <apply id="t1"><ci>f</ci>
+ <apply id="t11"><ci>f</ci>
+ <ci>a</ci>
+ <ci>a</ci>
+ </apply>
+ <share href="#t11"/>
+ </apply>
+ <share href="#t1"/>
+ </apply>
+</math>

@@ -1,0 +1,5 @@
+<math display="block">
+<apply><inverse/><ci> f </ci></apply>
+<mo>&#x27f6;</mo>
+<apply><eq/><apply><factorial/><cn>4</cn></apply><cn>24</cn></apply>
+</math>
