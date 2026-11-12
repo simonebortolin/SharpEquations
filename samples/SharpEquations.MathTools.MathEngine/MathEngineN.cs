@@ -164,7 +164,7 @@ namespace SharpEquations.MathTools.MathEngine
         // as Microsoft Mathematics does: each equation read in the linear format and written as a formula, all of them
         // in SymbolicSolve[List[…]], read as a formula and solved through a request, which takes the letters to solve for
         // among the complex numbers, else among the real ones when that fails (|x-1|=3) or gives a family of values
-        // with a parameter (eˣ=5); the letter asked for even when the request does not ask, else without it
+        // with a parameter (eˣ=5) or in polar form (y²=25-x²); the letter asked for even when the request does not ask, else without it
         private CasResult Solve(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns, bool named, string[]? swap)
         {
             if (!Complex)
@@ -180,7 +180,7 @@ namespace SharpEquations.MathTools.MathEngine
                 return Attempt(equations, unknowns, named, false, swap);
             }
 
-            if (!complex.Text.Contains("𝒩", StringComparison.Ordinal) && complex.Values.Count > 0)
+            if (!complex.Text.Contains("𝒩", StringComparison.Ordinal) && !complex.Text.Contains("arg(", StringComparison.Ordinal) && complex.Values.Count > 0)
                 return complex;
             try
             {
