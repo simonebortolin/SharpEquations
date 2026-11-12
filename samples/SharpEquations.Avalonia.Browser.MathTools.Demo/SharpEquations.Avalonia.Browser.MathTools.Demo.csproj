@@ -26,6 +26,7 @@
     <PackageReference Include="Avalonia.Browser" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Silk.NET.OpenGL" />
   </ItemGroup>
 
   <ItemGroup>
