@@ -15,16 +15,13 @@ namespace SharpEquations.MathTools
     public sealed record WorksheetEntry(string Input, CasAction Action, string? Letter, string? Output, string Text, bool Failed = false)
     {
         /// <summary>What was typed, as an equation.</summary>
-        [JsonIgnore]
         public Equation InputEquation => Equation.Parse(Input, EquationFormat.UnicodeMath, Worksheet.Display);
 
         /// <summary>The result, as an equation, or null.</summary>
-        [JsonIgnore]
         public Equation? OutputEquation =>
             Output != null && Equation.TryParse(Output, EquationFormat.UnicodeMath, Worksheet.Display, out var equation) ? equation : null;
 
         /// <summary>What was done, as the worksheet shows it: Solve for x, Derivative by t.</summary>
-        [JsonIgnore]
         public string Label => Action switch
         {
             CasAction.Solve => "Solve for " + (Letter ?? "x"),
@@ -120,7 +117,7 @@ namespace SharpEquations.MathTools
         }
 
         /// <summary>The worksheet as JSON, to keep it.</summary>
-        public string Serialize() => JsonSerializer.Serialize(entries, WorksheetJson.Default.ListWorksheetEntry);
+        public string Serialize() => JsonSerializer.Serialize(entries, MathToolsJson.Default.ListWorksheetEntry);
 
         /// <summary>A worksheet kept with <see cref="Serialize"/>; an empty one when the text is null or cannot be read.</summary>
         public static Worksheet Deserialize(string? json)
@@ -130,7 +127,7 @@ namespace SharpEquations.MathTools
                 return worksheet;
             try
             {
-                foreach (var entry in JsonSerializer.Deserialize(json, WorksheetJson.Default.ListWorksheetEntry) ?? new List<WorksheetEntry>())
+                foreach (var entry in JsonSerializer.Deserialize(json, MathToolsJson.Default.ListWorksheetEntry) ?? new List<WorksheetEntry>())
                 {
                     if (entry?.Input != null && Equation.TryParse(entry.Input, EquationFormat.UnicodeMath, Display, out _))
                         worksheet.entries.Add(entry with { Text = entry.Text ?? "" });
@@ -162,9 +159,13 @@ namespace SharpEquations.MathTools
         }
     }
 
-    /// <summary>The JSON of a worksheet, written at compile time so that it survives trimming (the browser).</summary>
+    /// <summary>
+    /// The JSON of the math tools, generated when they are built: what is trimmed on WebAssembly has no reflection to
+    /// serialize with.
+    /// </summary>
     [JsonSerializable(typeof(List<WorksheetEntry>))]
-    internal sealed partial class WorksheetJson : JsonSerializerContext
+    [JsonSerializable(typeof(Dictionary<string, string>))]
+    internal sealed partial class MathToolsJson : JsonSerializerContext
     {
     }
 }
