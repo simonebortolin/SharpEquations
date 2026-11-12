@@ -278,11 +278,22 @@ namespace SharpEquations.MathTools.MathEngine
             return new[] { piece };
         }
 
+        /// <summary>The text with two letters swapped, where they are not part of a longer name.</summary>
+        public static string Swapped(string text, string a, string b) =>
+            Regex.Replace(text, "(?<!\\p{L})(" + Regex.Escape(a) + "|" + Regex.Escape(b) + ")(?!\\p{L})", m => m.Value == a ? b : a);
+
+        /// <summary>MathML with the identifiers of two letters swapped.</summary>
+        public static string SwappedMathML(string mathML, string a, string b) =>
+            Regex.Replace(mathML, "(<mi[^>]*>)\\s*(" + Regex.Escape(a) + "|" + Regex.Escape(b) + ")\\s*(</mi>)",
+                m => m.Groups[1].Value + (m.Groups[2].Value == a ? b : a) + m.Groups[3].Value);
+
         // the text without the invisible brackets and with the letters AngouriMath reads
         private static string Plain(string text)
         {
             // ⦗⦗sin⦘^⦗-1⦘⦘(x) is arcsin(x), ⦗⦗sin⦘^⦗2⦘⦘(x) is (sin(x))^2
             text = Regex.Replace(text, "⦗⦗(sinh|cosh|tanh|coth|sin|cos|tan|cot|sec|csc)⦘\\^⦗-1⦘⦘(?=\\()", "arc$1");
+            // b⦗⦗c⦘^⦗-1⦘⦘ is b/c
+            text = Regex.Replace(text, "(?<=[\\p{L}\\p{N})⦘!π∞])⦗⦗([^⦗⦘]+)⦘\\^⦗-([^⦗⦘]+)⦘⦘(?!\\()", m => "/(" + m.Groups[1].Value + (m.Groups[2].Value == "1" ? ")" : ")^(" + m.Groups[2].Value + ")"));
             text = Bars(text);
             for (var m = Regex.Match(text, "⦗⦗([a-z]+)⦘\\^⦗([^⦗⦘]+)⦘⦘\\("); m.Success; m = Regex.Match(text, "⦗⦗([a-z]+)⦘\\^⦗([^⦗⦘]+)⦘⦘\\("))
             {

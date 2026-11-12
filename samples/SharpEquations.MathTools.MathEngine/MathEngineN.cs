@@ -144,10 +144,16 @@ namespace SharpEquations.MathTools.MathEngine
                 ObjectDisposedException.ThrowIf(context == Guid.Empty, this);
                 if (action == CasAction.Solve)
                 {
+                    // the engine solves for its own first letter: the one asked for takes its place, and back
+                    var swap = variable != null && system.Count == 1 && letters.Count > 1 && letters[0] != variable
+                        ? new[] { MathReader.Symbol(variable), MathReader.Symbol(letters[0]) }
+                        : null;
+                    if (swap != null)
+                        system = system.Select(e => Swapped(e, variable!, letters[0])).ToList();
                     var equations = MathEngineText.Equations(system);
-                    var unknowns = system.Count > 1 ? letters : x != null ? new[] { x } : letters;
+                    var unknowns = swap != null ? new[] { letters[0] } : system.Count > 1 ? letters : x != null ? new[] { x } : letters;
                     var named = variable != null && system.Count == 1;
-                    return OnEngineThread(() => Solve(equations, unknowns, named));
+                    return OnEngineThread(() => Solve(equations, unknowns, named, swap));
                 }
                 var command = MathEngineText.Command(action, system, x);
                 var imaginary = system.Any(e => e.Nodes.Any(n => n is Entity.Number.Complex c && c.ImaginaryPart != 0));
@@ -159,26 +165,26 @@ namespace SharpEquations.MathTools.MathEngine
         // in SymbolicSolve[List[…]], read as a formula and solved through a request, which takes the letters to solve for
         // among the complex numbers, else among the real ones when that fails (|x-1|=3) or gives a family of values
         // with a parameter (eˣ=5); the letter asked for even when the request does not ask, else without it
-        private CasResult Solve(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns, bool named)
+        private CasResult Solve(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns, bool named, string[]? swap)
         {
             if (!Complex)
-                return Attempt(equations, unknowns, named, false);
+                return Attempt(equations, unknowns, named, false, swap);
 
             CasResult complex;
             try
             {
-                complex = Attempt(equations, unknowns, named, true);
+                complex = Attempt(equations, unknowns, named, true, swap);
             }
             catch (InvalidOperationException)
             {
-                return Attempt(equations, unknowns, named, false);
+                return Attempt(equations, unknowns, named, false, swap);
             }
 
             if (!complex.Text.Contains("𝒩", StringComparison.Ordinal) && complex.Values.Count > 0)
                 return complex;
             try
             {
-                var real = Attempt(equations, unknowns, named, false);
+                var real = Attempt(equations, unknowns, named, false, swap);
                 return real.Values.Count > 0 ? real : complex;
             }
             catch (InvalidOperationException)
@@ -187,21 +193,21 @@ namespace SharpEquations.MathTools.MathEngine
             }
         }
 
-        private CasResult Attempt(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns, bool named, bool complex)
+        private CasResult Attempt(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns, bool named, bool complex, string[]? swap)
         {
             if (!named)
-                return Request(equations, unknowns, false, complex);
+                return Request(equations, unknowns, false, complex, swap);
             try
             {
-                return Request(equations, unknowns, true, complex);
+                return Request(equations, unknowns, true, complex, swap);
             }
             catch (SEHException)
             {
-                return Request(equations, unknowns, false, complex);
+                return Request(equations, unknowns, false, complex, swap);
             }
         }
 
-        private CasResult Request(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns, bool named, bool complex)
+        private CasResult Request(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns, bool named, bool complex, string[]? swap)
         {
             var created = new List<int>();
             try
@@ -230,7 +236,7 @@ namespace SharpEquations.MathTools.MathEngine
                     return new CasResult(CasAction.Solve, null, "") { Values = Array.Empty<Equation>() };
                 Check(code);
                 created.Add(result);
-                return Result(CasAction.Solve, result);
+                return Result(CasAction.Solve, result, swap);
             }
             finally
             {
@@ -296,11 +302,19 @@ namespace SharpEquations.MathTools.MathEngine
             throw new NotSupportedException(MathEngineText.Error(code) + where + ": " + text);
         }
 
+        private static Entity Swapped(Entity e, string a, string b)
+        {
+            var spare = MathS.Var("swapped" + a + b);
+            return e.Substitute(MathS.Var(a), spare).Substitute(MathS.Var(b), MathS.Var(a)).Substitute(spare, MathS.Var(b));
+        }
+
         // the values of a result: from its linear text, read by AngouriMath, else from its MathML
-        private CasResult Result(CasAction action, int result)
+        private CasResult Result(CasAction action, int result, string[]? swap = null)
         {
             var mathML = MathEngineText.DecodeEntities(Serialize(result, MathML));
             var text = Serialize(result, Linear);
+            if (swap != null)
+                (text, mathML) = (MathEngineText.Swapped(text, swap[0], swap[1]), MathEngineText.SwappedMathML(mathML, swap[0], swap[1]));
             var display = new EquationOptions { Display = true };
             var math = Equation.TryParse(mathML, EquationFormat.MathML, display, out var parsedResult) ? parsedResult : null;
 

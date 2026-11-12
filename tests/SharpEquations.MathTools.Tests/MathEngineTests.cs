@@ -94,6 +94,21 @@ namespace SharpEquations.MathTools.Tests
         }
 
         [Test]
+        public async Task ReadsNegativePowersAsQuotients()
+        {
+            await Assert.That(MathEngineText.ReadLinear("b⦗⦗c⦘^⦗-1⦘⦘")[0]).IsTypeOf<Entity.Divf>();
+            await Assert.That(MathEngineText.ReadLinear("x⦗⦗y⦘^⦗-2⦘⦘")[0]).IsTypeOf<Entity.Divf>();
+        }
+
+        [Test]
+        public async Task SwapsLetters()
+        {
+            await Assert.That(MathEngineText.Swapped("x=√(25-y^2) or x=exp(y)", "x", "y")).IsEqualTo("y=√(25-x^2) or y=exp(x)");
+            await Assert.That(MathEngineText.SwappedMathML("<mi>x</mi><mo>=</mo><mi>y</mi><mi>max</mi>", "x", "y"))
+                .IsEqualTo("<mi>y</mi><mo>=</mo><mi>x</mi><mi>max</mi>");
+        }
+
+        [Test]
         public async Task DecodesNamedEntities()
         {
             await Assert.That(MathEngineText.DecodeEntities("<mi>&ImaginaryI;</mi><mo>&InvisibleTimes;</mo><mo>&amp;</mo>"))
