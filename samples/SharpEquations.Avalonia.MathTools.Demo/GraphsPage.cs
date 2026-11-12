@@ -207,7 +207,7 @@ namespace SharpEquations.Avalonia.MathTools
         {
             var swatch = new Border { Width = 16, Height = 16, CornerRadius = new CornerRadius(8), Background = new SolidColorBrush(curve.Color), VerticalAlignment = VerticalAlignment.Center };
             var view = new MathView { FontSize = 18, Equation = curve.Equation, VerticalAlignment = VerticalAlignment.Center };
-            var remove = new Button { Content = "✕", CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 2), VerticalAlignment = VerticalAlignment.Center };
+            var remove = new Button { Content = "×", CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 2), VerticalAlignment = VerticalAlignment.Center };
             ToolTip.SetTip(remove, "Removes this graph");
 
             var parameters = new StackPanel { Spacing = 4, Margin = new Thickness(28, 0, 0, 0) };

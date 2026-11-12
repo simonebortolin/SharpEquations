@@ -200,7 +200,7 @@ namespace SharpEquations.Avalonia.MathTools
             var graph = new Button { Content = "Graph", CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 3) };
             ToolTip.SetTip(graph, "Draws what was typed on the page of the graphs");
             graph.Click += (_, _) => GraphRequested?.Invoke(this, entry.InputEquation);
-            var remove = new Button { Content = "✕", CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 2) };
+            var remove = new Button { Content = "×", CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 2) };
             ToolTip.SetTip(remove, "Removes this entry");
             remove.Click += (_, _) => Sheet.Remove(entry);
 
