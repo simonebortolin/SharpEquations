@@ -8,17 +8,18 @@ namespace SharpEquations.Avalonia.MathTools
     using global::Avalonia.Layout;
     using global::Avalonia.Media;
     using SharpEquations;
+    using SharpEquations.MathTools;
 
     /// <summary>
-    /// The scientific keypad: the keys type into the equation editor, which the keyboard types into too, and the equation
-    /// is shown as UnicodeMath and LaTeX as it is typed.
+    /// The scientific keypad: the keys type into the equation editor, which the keyboard types into too; what the
+    /// equation means is computed as it is typed, and the equation is shown as UnicodeMath and LaTeX.
     /// </summary>
     public sealed class CalculatorPage : UserControl
     {
         private readonly TextBox unicodeMath = Code();
         private readonly TextBox latex = Code();
 
-        public CalculatorPage()
+        public CalculatorPage(ICasEngine engine)
         {
             Editor = new MathEditBox
             {
@@ -54,6 +55,8 @@ namespace SharpEquations.Avalonia.MathTools
             foreach (var key in CalculatorKeys.Editing)
                 editing.Children.Add(Key(key, "KeyBrush"));
 
+            Solver = new AlgebraPanel(Editor, engine);
+
             var formats = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("*,16,*"),
@@ -70,6 +73,7 @@ namespace SharpEquations.Avalonia.MathTools
                         Spacing = 16,
                         Children = { frame, keypad, editing },
                     }),
+                    Ui.Card("Compute", "With " + engine.Name + ": the value of what is typed, and its solutions, simpler forms, derivative and antiderivative", Solver),
                     Ui.Card("As text", "The equation in the linear formats, as it is typed", formats),
                 },
             };
@@ -77,6 +81,9 @@ namespace SharpEquations.Avalonia.MathTools
 
         /// <summary>The equation editor the keys type into.</summary>
         public MathEditBox Editor { get; }
+
+        /// <summary>What is computed from the equation of the editor.</summary>
+        public AlgebraPanel Solver { get; }
 
         /// <summary>Presses a key, as a click on it does.</summary>
         public void Press(CalculatorKey key)

@@ -29,7 +29,7 @@ namespace SharpEquations.Avalonia.MathTools
         public override void OnFrameworkInitializationCompleted()
         {
             if (ApplicationLifetime is ISingleViewApplicationLifetime view)
-                view.MainView = new MathToolsView();
+                view.MainView = new MathToolsView(new BrowserSettingsStore());
             base.OnFrameworkInitializationCompleted();
         }
     }

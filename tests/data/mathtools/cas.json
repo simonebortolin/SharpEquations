@@ -1,0 +1,1214 @@
+[
+ {
+  "action": "Evaluate",
+  "input": "2+3×4",
+  "expected": [
+   "14"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "(2+3)×4",
+  "expected": [
+   "20"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "7-10",
+  "expected": [
+   "-3"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "2^(-3)",
+  "expected": [
+   "1/8"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "1/2+1/3",
+  "expected": [
+   "5/6"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "3/4×8/9",
+  "expected": [
+   "2/3"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "(1/2)/(3/4)",
+  "expected": [
+   "2/3"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "0.1+0.2",
+  "expected": [
+   "3/10"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "1.5×4",
+  "expected": [
+   "6"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "10^(-2)",
+  "expected": [
+   "1/100"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "2^10",
+  "expected": [
+   "1024"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "-2^2",
+  "expected": [
+   "-4"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "√2×√8",
+  "expected": [
+   "4"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "√50",
+  "expected": [
+   "5√2"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∜81",
+  "expected": [
+   "3"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∛27",
+  "expected": [
+   "3"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∛(-8)",
+  "expected": [
+   "-2"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "5!",
+  "expected": [
+   "120"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "0!",
+  "expected": [
+   "1"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "|-7|",
+  "expected": [
+   "7"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "⌊-2.5⌋",
+  "expected": [
+   "-3"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "⌈2.1⌉",
+  "expected": [
+   "3"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "(10¦3)",
+  "expected": [
+   "120"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "sin(π/6)",
+  "expected": [
+   "1/2"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "cos(π/3)",
+  "expected": [
+   "1/2"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "tan(π/4)",
+  "expected": [
+   "1"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "sin π",
+  "expected": [
+   "0"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "cos(2π/3)",
+  "expected": [
+   "-1/2"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "sec(π/3)",
+  "expected": [
+   "2"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "cot(π/4)",
+  "expected": [
+   "1"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "sin^(-1) (1/2)",
+  "expected": [
+   "π/6"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "tan^(-1) 1",
+  "expected": [
+   "π/4"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "cos^(-1) (-1)",
+  "expected": [
+   "π"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "sinh 0",
+  "expected": [
+   "0"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "cosh 0",
+  "expected": [
+   "1"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "ln e^3",
+  "expected": [
+   "3"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "log 100",
+  "expected": [
+   "2"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "log_2 32",
+  "expected": [
+   "5"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "log_3 (1/9)",
+  "expected": [
+   "-2"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "ln 1",
+  "expected": [
+   "0"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "e^(ln 5)",
+  "expected": [
+   "5"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "i^2",
+  "expected": [
+   "-1"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "(1+i)^2",
+  "expected": [
+   "2i"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "(3+4i)(3-4i)",
+  "expected": [
+   "25"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "|3+4i|",
+  "expected": [
+   "5"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "1/i",
+  "expected": [
+   "-i"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "√(-4)",
+  "expected": [
+   "2i"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "e^(iπ)+1",
+  "expected": [
+   "0"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∑_(k=1)^100 k",
+  "expected": [
+   "5050"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∑_(k=0)^10 2^k",
+  "expected": [
+   "2047"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∑_(k=1)^∞ 1/k^2",
+  "expected": [
+   "π^2/6"
+  ],
+  "pending": "AngouriMath does not sum the series"
+ },
+ {
+  "action": "Evaluate",
+  "input": "∏_(k=1)^6 k",
+  "expected": [
+   "720"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∫_0^1 x^3 dx",
+  "expected": [
+   "1/4"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∫_1^e 1/x dx",
+  "expected": [
+   "1"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∫_0^(π/2) cos x dx",
+  "expected": [
+   "1"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∫_0^1 e^x dx",
+  "expected": [
+   "e-1"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "∫_(-1)^1 |x| dx",
+  "expected": [
+   "1"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "sin(30°)",
+  "expected": [
+   "1/2"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "x+x",
+  "expected": [
+   "2x"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "(x^2-1)/(x-1)",
+  "expected": [
+   "x+1"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "2x+1=7",
+  "expected": [
+   "3"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "3(x-2)=x+4",
+  "expected": [
+   "5"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x/2+x/3=5",
+  "expected": [
+   "6"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^2-5x+6=0",
+  "expected": [
+   "2",
+   "3"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^2=9",
+  "expected": [
+   "3",
+   "-3"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^2+2x+1=0",
+  "expected": [
+   "-1"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^2+1=0",
+  "expected": [
+   "i",
+   "-i"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^2-2=0",
+  "expected": [
+   "√2",
+   "-√2"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "2x^2-3x-2=0",
+  "expected": [
+   "2",
+   "-1/2"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^2+x+1=0",
+  "expected": [
+   "(-1+i√3)/2",
+   "(-1-i√3)/2"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^3-6x^2+11x-6=0",
+  "expected": [
+   "1",
+   "2",
+   "3"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^3=8",
+  "expected": [
+   "2",
+   "-1+i√3",
+   "-1-i√3"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^4-5x^2+4=0",
+  "expected": [
+   "1",
+   "-1",
+   "2",
+   "-2"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^4=16",
+  "expected": [
+   "2",
+   "-2",
+   "2i",
+   "-2i"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "1/x=4",
+  "expected": [
+   "1/4"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "(x+1)/(x-1)=3",
+  "expected": [
+   "2"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "√x=3",
+  "expected": [
+   "9"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "√(x+3)=x+1",
+  "expected": [
+   "1"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "2^x=8",
+  "expected": [
+   "3"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "e^x=5",
+  "expected": [
+   "ln 5"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "ln x=2",
+  "expected": [
+   "e^2"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "log_2 x=5",
+  "expected": [
+   "32"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "|x-1|=3",
+  "expected": [
+   "4",
+   "-2"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x^2-5x+6",
+  "expected": [
+   "2",
+   "3"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "a x+b=0",
+  "expected": [
+   "-b/a"
+  ],
+  "variable": "x"
+ },
+ {
+  "action": "Solve",
+  "input": "y^2-4y=0",
+  "expected": [
+   "0",
+   "4"
+  ],
+  "variable": "y"
+ },
+ {
+  "action": "Solve",
+  "input": "x^2+y^2=25",
+  "expected": [
+   "√(25-x^2)",
+   "-√(25-x^2)"
+  ],
+  "variable": "y"
+ },
+ {
+  "action": "Simplify",
+  "input": "(x^2-1)/(x-1)",
+  "expected": [
+   "x+1"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "x+2x+3x",
+  "expected": [
+   "6x"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "x^2 x^3",
+  "expected": [
+   "x^5"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "(x^3)^2",
+  "expected": [
+   "x^6"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "sin^2 x+cos^2 x",
+  "expected": [
+   "1"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "(2x+4)/2",
+  "expected": [
+   "x+2"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "(x^2+2x+1)/(x+1)",
+  "expected": [
+   "x+1"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "e^(ln x)",
+  "expected": [
+   "x"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "ln(e^x)",
+  "expected": [
+   "x"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "2 sin x cos x",
+  "expected": [
+   "sin(2x)"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "(a b)/(a c)",
+  "expected": [
+   "b/c"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "x(x+1)-x^2",
+  "expected": [
+   "x"
+  ]
+ },
+ {
+  "action": "Expand",
+  "input": "(x+1)^2",
+  "expected": [
+   "x^2+2x+1"
+  ]
+ },
+ {
+  "action": "Expand",
+  "input": "(x+1)^3",
+  "expected": [
+   "x^3+3x^2+3x+1"
+  ]
+ },
+ {
+  "action": "Expand",
+  "input": "(x-2)(x+3)",
+  "expected": [
+   "x^2+x-6"
+  ]
+ },
+ {
+  "action": "Expand",
+  "input": "(a+b)(a-b)",
+  "expected": [
+   "a^2-b^2"
+  ]
+ },
+ {
+  "action": "Expand",
+  "input": "2x(x-4)",
+  "expected": [
+   "2x^2-8x"
+  ]
+ },
+ {
+  "action": "Expand",
+  "input": "(x+y+1)^2",
+  "expected": [
+   "x^2+y^2+2x y+2x+2y+1"
+  ]
+ },
+ {
+  "action": "Expand",
+  "input": "(2x-1)^2",
+  "expected": [
+   "4x^2-4x+1"
+  ]
+ },
+ {
+  "action": "Factor",
+  "input": "x^2-1",
+  "expected": [
+   "(x-1)(x+1)"
+  ]
+ },
+ {
+  "action": "Factor",
+  "input": "x^2-5x+6",
+  "expected": [
+   "(x-2)(x-3)"
+  ]
+ },
+ {
+  "action": "Factor",
+  "input": "x^2+2x+1",
+  "expected": [
+   "(x+1)^2"
+  ]
+ },
+ {
+  "action": "Factor",
+  "input": "x^3-x",
+  "expected": [
+   "x(x-1)(x+1)"
+  ]
+ },
+ {
+  "action": "Factor",
+  "input": "2x^2+4x",
+  "expected": [
+   "2x(x+2)"
+  ]
+ },
+ {
+  "action": "Factor",
+  "input": "a^2-b^2",
+  "expected": [
+   "(a-b)(a+b)"
+  ]
+ },
+ {
+  "action": "Factor",
+  "input": "x^3-8",
+  "expected": [
+   "(x-2)(x^2+2x+4)"
+  ]
+ },
+ {
+  "action": "Factor",
+  "input": "6x^2-x-2",
+  "expected": [
+   "(2x+1)(3x-2)"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "x^3",
+  "expected": [
+   "3x^2"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "5x^2-3x+2",
+  "expected": [
+   "10x-3"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "sin x",
+  "expected": [
+   "cos x"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "cos x",
+  "expected": [
+   "-sin x"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "tan x",
+  "expected": [
+   "1/cos^2 x"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "e^(2x)",
+  "expected": [
+   "2e^(2x)"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "ln x",
+  "expected": [
+   "1/x"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "x sin x",
+  "expected": [
+   "sin x+x cos x"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "x^2 e^x",
+  "expected": [
+   "(x^2+2x)e^x"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "sin(x^2)",
+  "expected": [
+   "2x cos(x^2)"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "√x",
+  "expected": [
+   "1/(2√x)"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "1/x",
+  "expected": [
+   "-1/x^2"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "(x+1)/(x-1)",
+  "expected": [
+   "-2/(x-1)^2"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "ln(sin x)",
+  "expected": [
+   "cos x/sin x"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "tan^(-1) x",
+  "expected": [
+   "1/(1+x^2)"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "a x^2",
+  "expected": [
+   "2a x"
+  ],
+  "variable": "x"
+ },
+ {
+  "action": "Differentiate",
+  "input": "2^x",
+  "expected": [
+   "2^x ln 2"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "x^x",
+  "expected": [
+   "x^x (ln x+1)"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "x y^2",
+  "expected": [
+   "2x y"
+  ],
+  "variable": "y"
+ },
+ {
+  "action": "Integrate",
+  "input": "x^2",
+  "expected": [
+   "x^3/3"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "1",
+  "expected": [
+   "x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "1/x",
+  "expected": [
+   "ln x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "e^x",
+  "expected": [
+   "e^x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "sin x",
+  "expected": [
+   "-cos x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "cos x",
+  "expected": [
+   "sin x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "x e^x",
+  "expected": [
+   "(x-1)e^x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "x sin x",
+  "expected": [
+   "sin x-x cos x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "ln x",
+  "expected": [
+   "x ln x-x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "1/(1+x^2)",
+  "expected": [
+   "tan^(-1) x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "e^(3x)",
+  "expected": [
+   "e^(3x)/3"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "1/cos^2 x",
+  "expected": [
+   "tan x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "3x^2+2x+1",
+  "expected": [
+   "x^3+x^2+x"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "x/(x^2+1)",
+  "expected": [
+   "ln(x^2+1)/2"
+  ]
+ },
+ {
+  "action": "Integrate",
+  "input": "1/√(1-x^2)",
+  "expected": [
+   "sin^(-1) x"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "sin 30",
+  "expected": [
+   "1/2"
+  ],
+  "angles": "Degrees"
+ },
+ {
+  "action": "Evaluate",
+  "input": "cos 60+tan 45",
+  "expected": [
+   "3/2"
+  ],
+  "angles": "Degrees"
+ },
+ {
+  "action": "Evaluate",
+  "input": "sin^(-1) 1",
+  "expected": [
+   "90"
+  ],
+  "angles": "Degrees"
+ },
+ {
+  "action": "Evaluate",
+  "input": "tan^(-1) √3",
+  "expected": [
+   "60"
+  ],
+  "angles": "Degrees"
+ },
+ {
+  "action": "Evaluate",
+  "input": "cos(180°)",
+  "expected": [
+   "-1"
+  ],
+  "angles": "Degrees"
+ },
+ {
+  "action": "Evaluate",
+  "input": "cos(180°)",
+  "expected": [
+   "-1"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x+y=3, x-y=1",
+  "expected": [
+   "2",
+   "1"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "{█(2x+3y=12@x-y=1)┤",
+  "expected": [
+   "3",
+   "2"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x+y+z=6, x-y=0, 2x+z=5",
+  "expected": []
+ },
+ {
+  "action": "Evaluate",
+  "input": "a^2+1",
+  "expected": [
+   "10"
+  ],
+  "definitions": [
+   "a≔3"
+  ]
+ },
+ {
+  "action": "Evaluate",
+  "input": "2a+b",
+  "expected": [
+   "10"
+  ],
+  "definitions": [
+   "a≔3",
+   "b≔a+1"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "a x+b=0",
+  "expected": [
+   "-2"
+  ],
+  "variable": "x",
+  "definitions": [
+   "a≔2",
+   "b≔4"
+  ]
+ },
+ {
+  "action": "Differentiate",
+  "input": "k x^2",
+  "expected": [
+   "6x"
+  ],
+  "variable": "x",
+  "definitions": [
+   "k≔3"
+  ]
+ },
+ {
+  "action": "Define",
+  "input": "r≔2",
+  "expected": [
+   "2"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "|2x+1|=5",
+  "expected": [
+   "2",
+   "-3"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "|x|+x=4",
+  "expected": [
+   "2"
+  ]
+ },
+ {
+  "action": "Simplify",
+  "input": "ln(e^(2x))",
+  "expected": [
+   "2x"
+  ]
+ },
+ {
+  "action": "Solve",
+  "input": "x+y+z=6, x-y=0, 2x-z=-2",
+  "expected": [
+   "1",
+   "1",
+   "4"
+  ]
+ }
+]

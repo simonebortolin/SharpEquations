@@ -98,3 +98,12 @@ whitespace removed). Copyright (c) 2015, transpect.io, BSD 2-Clause License.
 [Wyatt915/treeblood](https://github.com/Wyatt915/treeblood) (commit 83ddf845ee4aafc040ea4639dae0f8536aeda071), the
 `\ce` formulas of mhchem, as a list of strings; their MathML, which treeblood writes in its own form, is not kept.
 Copyright (c) 2024 Wyatt Sheffield, MIT License.
+
+`mathtools/cas.json`: the reference cases of the computer algebra of the math tools, written for this repository: an
+action (`Evaluate`, `Solve`, `Simplify`, `Expand`, `Factor`, `Differentiate`, `Integrate`), its input in UnicodeMath,
+the letter it is done by (`variable`, optional) and the expected values in UnicodeMath (the solutions, for `Solve`),
+which `SharpEquations.MathTools.Tests` compares by their value, not by how they are written. A case with `pending` is a
+goal the engine does not reach yet, and says why; it is skipped until it passes.
+
+`mathtools/units.json`: conversions of the unit converter, with the exact factors of NIST SP 811 (2008), Appendix B,
+and of the SI Brochure (9th edition) for the defined constants.

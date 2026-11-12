@@ -19,11 +19,14 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | `src/SharpEquations.Avalonia/` | The controls for Avalonia: `MathEditBox` (the editor), `MathView`; embeds Libertinus Math |
 | `samples/SharpEquations.Avalonia.Demo/` | A window with the editor (`DemoView`, shared with the web demo) |
 | `samples/SharpEquations.Avalonia.Browser.Demo/` | The same demo on WebAssembly (needs the `wasm-tools` workload, so not in the solution; `.github/workflows/demo.yml` publishes it to GitHub Pages) |
-| `samples/SharpEquations.Avalonia.MathTools.Demo/` | A second app, math tools around the editor (`MathToolsView`, a page each: the scientific keypad) |
+| `samples/SharpEquations.Avalonia.MathTools.Demo/` | A second app, math tools around the editor: its views (`MathToolsView`, a page each: the scientific keypad, the library of formulas, the unit converter, the solver of triangles, the graphs: `GraphsPage` on a `GraphView`, a slider for each parameter; the worksheet: `WorksheetPage`) and the desktop window |
+| `samples/SharpEquations.MathTools.Core/` | The math tools without a user interface: `ICasEngine` (`AngouriMathEngine`, through `MathReader`, which reads what the normalized presentation MathML means: in radians or degrees, systems of equations, definitions `a≔5`), the formulas, units and triangles, the `Worksheet` (the history of what was computed, kept as JSON in the settings, its definitions made again when it is read back), and the services the views ask the platform for (`ISettingsStore`: a file on the desktop, the local storage in the browser) |
+| `samples/SharpEquations.MathTools.Graphing/` | The graphs of the math tools without a user interface: the region shown (`Viewport`), the marks of the axes, the points of a curve (`Sampler`: closer where it bends, broken at asymptotes and steps) and where a relation of x and y holds (`Contours`) |
 | `samples/SharpEquations.Avalonia.Browser.MathTools.Demo/` | The math tools on WebAssembly (as the web demo, not in the solution build; `demo.yml` publishes them under `math/`) |
 | `benchmarks/SharpEquations.Benchmarks/` | BenchmarkDotNet benchmarks of reading, writing and converting the corpora |
 | `tests/SharpEquations.Tests/` | TUnit tests, in folders by subject (PublicApi, MathML, Omml, Mtef, UnicodeMath, LaTeX, Property, Regression) |
-| `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia) |
+| `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia), and of the views of the math tools |
+| `tests/SharpEquations.MathTools.Tests/` | TUnit tests of `SharpEquations.MathTools.Core` and `.Graphing` (net10.0), with the reference tests of the computer algebra and the units (`tests/data/mathtools/`: cases compared by their value, the ones not reached yet `pending` with the reason; a change makes no passing case fail) |
 | `tests/data/` | Test data and its provenance (`tests/data/README.md`) |
 
 ## Code Style

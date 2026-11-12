@@ -29,6 +29,7 @@ env:
     src/SharpEquations.Avalonia/SharpEquations.Avalonia.csproj
   TEST_PROJECT: tests/SharpEquations.Tests/SharpEquations.Tests.csproj
   EDITOR_TEST_PROJECT: tests/SharpEquations.Avalonia.Tests/SharpEquations.Avalonia.Tests.csproj
+  MATH_TOOLS_TEST_PROJECT: tests/SharpEquations.MathTools.Tests/SharpEquations.MathTools.Tests.csproj
   FEED_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
 
 # Stages: Resolve Version -> Test (Linux, Windows, macOS) -> Pack NuGet
@@ -171,6 +172,14 @@ jobs:
               --results-directory "$GITHUB_WORKSPACE/TestResults"
             echo "::endgroup::"
           done
+
+      # the math tools without their views (samples/SharpEquations.MathTools.*, net10.0 only)
+      - name: Run math tools tests
+        shell: bash
+        run: |
+          dotnet run --project "$MATH_TOOLS_TEST_PROJECT" -c Release -f net10.0 --no-build -- \
+            --report-trx --report-trx-filename "${{ matrix.rid }}.mathtools.net10.0.trx" \
+            --results-directory "$GITHUB_WORKSPACE/TestResults"
 
       - name: Upload test results
         if: always()
