@@ -112,3 +112,11 @@ static SharpEquations.Editing.MathNode.Run(string! text) -> SharpEquations.Editi
 static SharpEquations.Editing.MathNode.Token(string! name, string! text, System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>? attributes = null) -> SharpEquations.Editing.MathNode!
 static SharpEquations.Editing.MathPosition.operator !=(SharpEquations.Editing.MathPosition? left, SharpEquations.Editing.MathPosition? right) -> bool
 static SharpEquations.Editing.MathPosition.operator ==(SharpEquations.Editing.MathPosition? left, SharpEquations.Editing.MathPosition? right) -> bool
+SharpEquations.Editing.MathQuickBarMode
+SharpEquations.Editing.MathQuickBarMode.Completions = 1 -> SharpEquations.Editing.MathQuickBarMode
+SharpEquations.Editing.MathQuickBarMode.Hidden = 0 -> SharpEquations.Editing.MathQuickBarMode
+SharpEquations.Editing.MathQuickBarMode.Selection = 2 -> SharpEquations.Editing.MathQuickBarMode
+SharpEquations.Editing.MathQuickBarMode.Symbols = 4 -> SharpEquations.Editing.MathQuickBarMode
+SharpEquations.Editing.MathQuickBarMode.Table = 3 -> SharpEquations.Editing.MathQuickBarMode
+SharpEquations.Editing.MathEditor.DismissCompletions() -> void
+SharpEquations.Editing.MathEditor.GetQuickBarMode(int maxCompletions, out System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>! completions) -> SharpEquations.Editing.MathQuickBarMode

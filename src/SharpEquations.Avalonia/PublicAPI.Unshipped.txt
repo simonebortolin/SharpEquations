@@ -101,15 +101,9 @@ SharpEquations.Avalonia.MathFonts
 SharpEquations.Avalonia.MathQuickBar
 SharpEquations.Avalonia.MathQuickBar.AcceptCompletion() -> bool
 SharpEquations.Avalonia.MathQuickBar.Completions.get -> System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>!
-SharpEquations.Avalonia.MathQuickBar.Mode.get -> SharpEquations.Avalonia.MathQuickBarMode
+SharpEquations.Avalonia.MathQuickBar.Mode.get -> SharpEquations.Editing.MathQuickBarMode
 SharpEquations.Avalonia.MathQuickBar.SelectedIndex.get -> int
 SharpEquations.Avalonia.MathQuickBar.SelectedIndex.set -> void
-SharpEquations.Avalonia.MathQuickBarMode
-SharpEquations.Avalonia.MathQuickBarMode.Completions = 1 -> SharpEquations.Avalonia.MathQuickBarMode
-SharpEquations.Avalonia.MathQuickBarMode.Hidden = 0 -> SharpEquations.Avalonia.MathQuickBarMode
-SharpEquations.Avalonia.MathQuickBarMode.Selection = 2 -> SharpEquations.Avalonia.MathQuickBarMode
-SharpEquations.Avalonia.MathQuickBarMode.Symbols = 4 -> SharpEquations.Avalonia.MathQuickBarMode
-SharpEquations.Avalonia.MathQuickBarMode.Table = 3 -> SharpEquations.Avalonia.MathQuickBarMode
 SharpEquations.Avalonia.MathView
 SharpEquations.Avalonia.MathView.Equation.get -> SharpEquations.Equation?
 SharpEquations.Avalonia.MathView.Equation.set -> void

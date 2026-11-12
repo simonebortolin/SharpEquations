@@ -110,7 +110,6 @@ namespace SharpEquations.Avalonia
 
         private readonly DispatcherTimer blink;
         private readonly Popup popup;
-        private string? dismissedPrefix;
         private readonly InputClient inputClient;
         private readonly MathLayoutCache layoutCache = new MathLayoutCache();
         private readonly CaretLayer caretLayer;
@@ -602,7 +601,7 @@ namespace SharpEquations.Avalonia
                             return;
                         break;
                     case Key.Escape:
-                        dismissedPrefix = Editor.CommandPrefix;
+                        Editor.DismissCompletions();
                         UpdateQuickBar();
                         e.Handled = true;
                         return;
@@ -732,29 +731,8 @@ namespace SharpEquations.Avalonia
         {
             var mode = MathQuickBarMode.Hidden;
             IReadOnlyList<EquationCommand> completions = Array.Empty<EquationCommand>();
-            if (IsQuickBarEnabled && IsFocused && !IsReadOnly && !Editor.IsLinear && drawing != null)
-            {
-                var prefix = Editor.CommandPrefix;
-                if (prefix != dismissedPrefix)
-                    dismissedPrefix = null;
-                if (prefix != null && prefix.Length > 1 && dismissedPrefix == null && Editor.GetCompletions(8) is { Count: > 0 } found)
-                {
-                    mode = MathQuickBarMode.Completions;
-                    completions = found;
-                }
-                else if (prefix == null && Editor.Selection != null)
-                {
-                    mode = MathQuickBarMode.Selection;
-                }
-                else if (prefix == null && Editor.IsInTable)
-                {
-                    mode = MathQuickBarMode.Table;
-                }
-                else if (prefix == null && IsInEmptySlot())
-                {
-                    mode = MathQuickBarMode.Symbols;
-                }
-            }
+            if (IsQuickBarEnabled && IsFocused && !IsReadOnly && drawing != null)
+                mode = Editor.GetQuickBarMode(8, out completions);
 
             if (mode == MathQuickBarMode.Hidden)
             {
@@ -771,23 +749,6 @@ namespace SharpEquations.Avalonia
             // under the whole equation, where the caret is, so that the bar covers nothing of it
             popup.PlacementRect = new Rect(anchor.X + origin.X, origin.Y, Math.Max(1, anchor.Width), Math.Max(layout.Height, anchor.Y + anchor.Height) + Padding.Bottom);
             popup.IsOpen = true;
-        }
-
-        private bool IsInEmptySlot()
-        {
-            var caret = Editor.Caret;
-            return caret.Path.Count > 1 && Editor.Root is { } root && Node(root, caret.Path) is { IsRow: true, Children.Count: 0 };
-
-            static MathNode? Node(MathNode node, IReadOnlyList<int> path)
-            {
-                foreach (var i in path)
-                {
-                    if (i >= node.Children.Count)
-                        return null;
-                    node = node.Children[i];
-                }
-                return node;
-            }
         }
 
         private void OnEditorContentChanged(object? sender, EventArgs e)
