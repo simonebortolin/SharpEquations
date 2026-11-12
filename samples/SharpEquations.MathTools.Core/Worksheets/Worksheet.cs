@@ -15,13 +15,16 @@ namespace SharpEquations.MathTools
     public sealed record WorksheetEntry(string Input, CasAction Action, string? Letter, string? Output, string Text, bool Failed = false)
     {
         /// <summary>What was typed, as an equation.</summary>
+        [JsonIgnore]
         public Equation InputEquation => Equation.Parse(Input, EquationFormat.UnicodeMath, Worksheet.Display);
 
         /// <summary>The result, as an equation, or null.</summary>
+        [JsonIgnore]
         public Equation? OutputEquation =>
             Output != null && Equation.TryParse(Output, EquationFormat.UnicodeMath, Worksheet.Display, out var equation) ? equation : null;
 
         /// <summary>What was done, as the worksheet shows it: Solve for x, Derivative by t.</summary>
+        [JsonIgnore]
         public string Label => Action switch
         {
             CasAction.Solve => "Solve for " + (Letter ?? "x"),
