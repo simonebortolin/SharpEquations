@@ -94,6 +94,18 @@ namespace SharpEquations.MathTools.Tests
         }
 
         [Test]
+        [Arguments("y=10x")]
+        [Arguments("y=x^2/2")]
+        [Arguments("y=e^x")]
+        public async Task SteepCurveIsNotBroken(string unicodeMath)
+        {
+            // steep, but straight between two samples: a line, not a jump
+            var lines = Sampler.Function(Plot(unicodeMath).Y, Viewport.Default, 800, 600);
+            await Assert.That(lines.Count).IsEqualTo(1);
+            await Assert.That(lines[0][^1].X - lines[0][0].X).IsEqualTo(Viewport.Default.Width).Within(1e-9);
+        }
+
+        [Test]
         [Arguments("y=tan x", 7)]
         [Arguments("y=1/x", 2)]
         [Arguments("y=1/(x^2-4)", 3)]

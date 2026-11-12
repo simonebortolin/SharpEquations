@@ -68,8 +68,9 @@ namespace SharpEquations.MathTools.Graphing
                 Refine(f, xm, ym, x1, y1, depth + 1, tolerance, lines);
                 return;
             }
-            // at the finest step a curve moves less than a pixel: a jump of a few pixels is an asymptote or a step, not a line
-            if (finite0 && finite1 && Math.Abs(y1 - y0) > 8 * tolerance)
+            // still bending at the finest step, a curve that jumps a few pixels has an asymptote or a step there, not a line
+            // (a steep straight stretch does not bend, and is drawn)
+            if (bends && finite0 && finite1 && Math.Abs(y1 - y0) > 8 * tolerance)
             {
                 lines.Add(x0, y0);
                 lines.Break();

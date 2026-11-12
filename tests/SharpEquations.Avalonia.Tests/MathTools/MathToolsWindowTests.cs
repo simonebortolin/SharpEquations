@@ -221,6 +221,49 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(sine!.Text).StartsWith("1/2");
             await Assert.That(angles).IsEqualTo("degrees");
         }
+
+        /// <summary>Graphs of each kind are drawn together, with a slider for each parameter; the calculator sends its equation.</summary>
+        [Test]
+        public async Task GraphsDraw()
+        {
+            var (curves, parameters, kinds, none, error, sent, tab) = await Headless.Run(() =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                view.Tabs.SelectedIndex = 4;
+                var page = view.Graphs;
+                var display = new EquationOptions { Display = true };
+                page.Clear();
+                page.AddEquation(Equation.Parse("y=a x^2", EquationFormat.UnicodeMath, display));
+                page.AddEquation(Equation.Parse("x^2+y^2=25", EquationFormat.UnicodeMath, display));
+                page.AddEquation(Equation.Parse("r=1+cos θ", EquationFormat.UnicodeMath, display));
+                var slider = page.Sliders.Single();
+                slider.Value.Value = 0.5;
+                var value = page.Graph.Curves[0].Plot[slider.Key.Parameter];
+                var failed = page.AddEquation(Equation.Parse("2=3", EquationFormat.UnicodeMath, display));
+                window.Height = 1300;
+                Save(window, "math-tools-graphs");
+                var count = page.Graph.Curves.Count;
+                var shown = page.Graph.Curves.Select(c => c.Plot.Kind).ToList();
+                var message = page.Error;
+                view.Tabs.SelectedIndex = 0;
+                view.Calculator.Editor.Equation = Equation.Parse("y=sin x", EquationFormat.UnicodeMath, display);
+                var requested = view.Calculator.Solver.RequestGraph();
+                var result = (count, (slider.Key.Parameter, value), shown, failed, message, (requested, page.Graph.Curves.Count), view.Tabs.SelectedIndex);
+                window.Close();
+                return result;
+            });
+            await Assert.That(curves).IsEqualTo(3);
+            await Assert.That(parameters.Parameter).IsEqualTo("a");
+            await Assert.That(parameters.value).IsEqualTo(0.5);
+            await Assert.That(kinds).IsEquivalentTo(new[] { GraphKind.Function, GraphKind.Implicit, GraphKind.Polar });
+            await Assert.That(none).IsFalse();
+            await Assert.That(error).IsNotNull();
+            await Assert.That(sent.requested).IsTrue();
+            await Assert.That(sent.Count).IsEqualTo(4);
+            await Assert.That(tab).IsEqualTo(4);
+        }
     }
 }
 #endif
