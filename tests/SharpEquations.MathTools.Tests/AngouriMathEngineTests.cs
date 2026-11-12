@@ -45,7 +45,7 @@ namespace SharpEquations.MathTools.Tests
         public async Task Evaluates(string unicodeMath, string expected)
         {
             var value = Read(unicodeMath);
-            if (value.Vars.Any())
+            if (value.Vars.Count > 0)
                 value = value.Simplify();
             await Assert.That(AngouriMathEngine.Decimal(value.EvalNumerical())).IsEqualTo(expected);
         }
