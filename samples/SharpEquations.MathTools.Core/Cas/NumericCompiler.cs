@@ -100,7 +100,7 @@ namespace SharpEquations.MathTools
         private static Func<double[], double> Power(Entity.Powf power, IReadOnlyDictionary<string, int> letters)
         {
             var b = Build(power.Base, letters);
-            switch (power.Exponent.Vars.Any() ? power.Exponent : power.Exponent.Simplify())
+            switch (power.Exponent.Vars.Count > 0 ? power.Exponent : power.Exponent.Simplify())
             {
                 case Entity.Number.Integer n when n.EInteger.CanFitInInt32():
                     var k = n.EInteger.ToInt32Checked();
