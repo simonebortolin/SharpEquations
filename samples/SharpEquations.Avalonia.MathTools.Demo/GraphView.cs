@@ -9,6 +9,7 @@ namespace SharpEquations.Avalonia.MathTools
     using global::Avalonia.Controls;
     using global::Avalonia.Input;
     using global::Avalonia.Media;
+    using global::Avalonia.Media.Imaging;
     using global::Avalonia.Media.Immutable;
     using SharpEquations.MathTools;
     using SharpEquations.MathTools.Graphing;
@@ -56,6 +57,26 @@ namespace SharpEquations.Avalonia.MathTools
             viewport = Viewport.Default;
             Square();
             InvalidateVisual();
+        }
+
+        /// <summary>The graphs as an image, at <paramref name="scale"/> pixels for a pixel of the control, without the point under the pointer.</summary>
+        public RenderTargetBitmap Snapshot(double scale = 2)
+        {
+            var size = Bounds.Size;
+            var bitmap = new RenderTargetBitmap(
+                new PixelSize(Math.Max(1, (int)Math.Ceiling(size.Width * scale)), Math.Max(1, (int)Math.Ceiling(size.Height * scale))),
+                new Vector(96 * scale, 96 * scale));
+            var shown = pointer;
+            pointer = null;
+            try
+            {
+                bitmap.Render(this);
+            }
+            finally
+            {
+                pointer = shown;
+            }
+            return bitmap;
         }
 
         /// <summary>Draws again, after a parameter changed.</summary>
@@ -181,6 +202,8 @@ namespace SharpEquations.Avalonia.MathTools
         protected override void OnPointerPressed(PointerPressedEventArgs e)
         {
             base.OnPointerPressed(e);
+            if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+                return;
             if (e.ClickCount == 2)
             {
                 Reset();

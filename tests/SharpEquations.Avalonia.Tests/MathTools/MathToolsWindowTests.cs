@@ -264,7 +264,8 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(sent.Count).IsEqualTo(4);
             await Assert.That(tab).IsEqualTo(4);
         }
-            [Test]
+
+        [Test]
         public async Task WorksheetComputesAndIsKept()
         {
             var (count, labels, failed, graphed, tab, kept, defined) = await Headless.RunAsync(async () =>
@@ -315,6 +316,42 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(kept).IsNotNull();
             await Assert.That(defined).IsEqualTo(104);
         }
-}
+
+        [Test]
+        public async Task GraphsShareParameters()
+        {
+            var (apart, together, joined, pixels) = await Headless.Run(() =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                view.Tabs.SelectedIndex = 4;
+                var page = view.Graphs;
+                var display = new EquationOptions { Display = true };
+                page.Clear();
+                page.SharedParameters.IsChecked = false;
+                page.AddEquation(Equation.Parse("y=a x", EquationFormat.UnicodeMath, display));
+                page.AddEquation(Equation.Parse("y=a x^2", EquationFormat.UnicodeMath, display));
+                var first = page.Sliders.First(s => s.Key.Curve == page.Graph.Curves[0]).Value;
+                first.Value = 2;
+                var separate = page.Graph.Curves[1].Plot["a"];
+                page.SharedParameters.IsChecked = true;
+                var shared = page.Graph.Curves[1].Plot["a"];
+                first.Value = 3;
+                page.AddEquation(Equation.Parse("y=a+x", EquationFormat.UnicodeMath, display));
+                var values = page.Graph.Curves.Select(c => c.Plot["a"]).ToList();
+                window.UpdateLayout();
+                using var image = page.Graph.Snapshot(2);
+                var size = (image.PixelSize.Width, Expected: (int)Math.Ceiling(page.Graph.Bounds.Width * 2));
+                window.Close();
+                return (separate, shared, values, size);
+            });
+            await Assert.That(apart).IsEqualTo(1);
+            await Assert.That(together).IsEqualTo(2);
+            await Assert.That(joined).IsEquivalentTo(new[] { 3.0, 3.0, 3.0 });
+            await Assert.That(pixels.Width).IsEqualTo(pixels.Expected);
+            await Assert.That(pixels.Width).IsGreaterThan(1);
+        }
+    }
 }
 #endif
