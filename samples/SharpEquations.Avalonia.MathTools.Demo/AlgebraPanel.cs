@@ -67,6 +67,10 @@ namespace SharpEquations.Avalonia.MathTools
                 button.Click += async (_, _) => await RunAsync(action).ConfigureAwait(true);
                 buttons.Add(button);
             }
+            var graph = new Button { Content = "Graph", CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 5) };
+            ToolTip.SetTip(graph, "Draws the equation on the page of the graphs");
+            graph.Click += (_, _) => RequestGraph();
+            buttons.Add(graph);
             var forLabel = Ui.Muted("by", 12.5);
             buttons.Add(forLabel);
             buttons.Add(Letter);
@@ -101,6 +105,21 @@ namespace SharpEquations.Avalonia.MathTools
             Content = new StackPanel { Spacing = 14, Children = { answerFrame, Ui.Row(buttons.ToArray()), definitionsRow, results } };
             ShowDefinitions();
             ShowAnswer(null, "The value of what is typed shows here.");
+        }
+
+        /// <summary>Raised by the Graph button, with the equation of the editor to draw.</summary>
+        public event EventHandler<Equation>? GraphRequested;
+
+        /// <summary>Sends the equation of the editor to be drawn, as the Graph button does; false when it cannot be read.</summary>
+        public bool RequestGraph()
+        {
+            if (!TryRead(out var equation, out _, out var error))
+            {
+                AddMessage(error!);
+                return false;
+            }
+            GraphRequested?.Invoke(this, equation!);
+            return true;
         }
 
         /// <summary>The letter to solve for, and to differentiate and integrate by.</summary>

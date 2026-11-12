@@ -12,7 +12,7 @@ namespace SharpEquations.Avalonia.MathTools
 
     /// <summary>
     /// The math tools, a page each: the scientific keypad around the equation editor, the library of formulas, the
-    /// unit converter and the solver of triangles. The desktop window and the WebAssembly page show the same view, each
+    /// unit converter, the solver of triangles and the graphs. The desktop window and the WebAssembly page show the same view, each
     /// with the services of its platform: where the settings are kept (the page shown, the equation of the calculator,
     /// the unit of angles, the theme), and the computer algebra system.
     /// </summary>
@@ -35,6 +35,7 @@ namespace SharpEquations.Avalonia.MathTools
             Calculator = new CalculatorPage(Engine);
             Converter = new UnitsPage();
             TriangleSolver = new TrianglePage();
+            Graphs = new GraphsPage(Engine);
             Tabs = new TabControl { Margin = new Thickness(20, 12, 20, 0) };
             FormulaLibrary = new FormulasPage(equation =>
             {
@@ -48,6 +49,12 @@ namespace SharpEquations.Avalonia.MathTools
                 Tab("Formulas", FormulaLibrary),
                 Tab("Units", Converter),
                 Tab("Triangles", TriangleSolver),
+                Tab("Graphs", Graphs),
+            };
+            Calculator.Solver.GraphRequested += (_, equation) =>
+            {
+                Graphs.AddEquation(equation, Engine.Angles, Engine.Definitions);
+                Tabs.SelectedIndex = 4;
             };
 
             Restore();
@@ -74,6 +81,9 @@ namespace SharpEquations.Avalonia.MathTools
 
         /// <summary>The page of the solver of triangles.</summary>
         public TrianglePage TriangleSolver { get; }
+
+        /// <summary>The page of the graphs.</summary>
+        public GraphsPage Graphs { get; }
 
         /// <summary>The tabs of the pages.</summary>
         public TabControl Tabs { get; }
@@ -112,7 +122,7 @@ namespace SharpEquations.Avalonia.MathTools
                     new TextBlock { Text = "SharpEquations Math Tools", FontSize = 26, FontWeight = FontWeight.Bold, Foreground = Brushes.White },
                     new TextBlock
                     {
-                        Text = "A scientific keypad, formulas, units and triangles around a real-time equation editor in .NET.",
+                        Text = "A scientific keypad, formulas, units, triangles and graphs around a real-time equation editor in .NET.",
                         FontSize = 14,
                         Foreground = new SolidColorBrush(Colors.White, 0.85),
                         TextWrapping = TextWrapping.Wrap,
