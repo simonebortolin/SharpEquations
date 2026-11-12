@@ -29,9 +29,60 @@ namespace SharpEquations.MathTools.Tests
         [Arguments("log(2, x)", "ln(x)/ln(2)")]
         [Arguments("abs(x-pi)", "abs(x-pi)")]
         [Arguments("x!", "x!")]
+        [Arguments("-x+1", "-x+1")]
+        [Arguments("x-2*y", "x-2*y")]
+        [Arguments("1+(-3)*x", "1-3*x")]
+        [Arguments("floor(x)+ceil(x)", "floor(x)+ceiling(x)")]
+        [Arguments("sign(x)", "sign(x)")]
+        [Arguments("arcsec(x)", "arcsec(x)")]
         public async Task WritesLinearInput(string angouri, string expected)
         {
             await Assert.That(MathEngineText.Linear(MathS.FromString(angouri, useCache: false))).IsEqualTo(expected);
+        }
+
+        [Test]
+        public async Task WritesSumsProductsIntegralsAndCombinations()
+        {
+            Entity k = "k";
+            Entity x = "x";
+            await Assert.That(MathEngineText.Linear(new Entity.Summationf(k.Pow(2), k, 1, 10))).IsEqualTo("sum(k^2,k,1,10)");
+            await Assert.That(MathEngineText.Linear(new Entity.Productf(k, k, 1, 5))).IsEqualTo("product(k,k,1,5)");
+            await Assert.That(MathEngineText.Linear(new Entity.Integralf(x, x, (0, 1)))).IsEqualTo("integral(x,x,0,1)");
+            await Assert.That(MathEngineText.Linear(new Entity.Binomialf(5, 2))).IsEqualTo("combination(5,2)");
+        }
+
+        [Test]
+        [Arguments("x=1, x=-4", new[] { "1", "-4" })]
+        [Arguments("xcos(x)+sin(x)", new[] { "x*cos(x)+sin(x)" })]
+        [Arguments("2xcos(⦗⦗x⦘^⦗2⦘⦘)", new[] { "2*x*cos(x^2)" })]
+        [Arguments("(ln(x)+1)⦗⦗x⦘^⦗x⦘⦘", new[] { "(ln(x)+1)*x^x" })]
+        [Arguments("x(x-1)(x+1)", new[] { "x*(x-1)*(x+1)" })]
+        [Arguments("(x-2)(⦗⦗x⦘^⦗2⦘⦘+2x+4)", new[] { "(x-2)*(x^2+2*x+4)" })]
+        [Arguments("xln(x)-x", new[] { "x*ln(x)-x" })]
+        [Arguments("⦗⦗ln(⦗⦗x⦘^⦗2⦘⦘+1)⦘/⦗2⦘⦘", new[] { "ln(x^2+1)/2" })]
+        [Arguments("⦗⦗(sec(x))⦘^⦗2⦘⦘", new[] { "sec(x)^2" })]
+        [Arguments("ln(⦗⦗e⦘^⦗2x⦘⦘)", new[] { "2*x" })]
+        [Arguments("⦗⦗sin⦘^⦗-1⦘⦘(x)", new[] { "arcsin(x)" })]
+        [Arguments("⦗⦗sin⦘^⦗2⦘⦘(x)", new[] { "sin(x)^2" })]
+        [Arguments("x=1±√2", new[] { "1+sqrt(2)", "1-sqrt(2)" })]
+        [Arguments("x=2π or x=−ⅈ", new[] { "2*pi", "-i" })]
+        [Arguments("x=3, y=1", new[] { "3", "1" })]
+        [Arguments("x=√2≈1.414", new[] { "sqrt(2)" })]
+        public async Task ReadsLinearResults(string text, string[] expected)
+        {
+            var values = MathEngineText.ReadLinear(text);
+            await Assert.That(values.Count).IsEqualTo(expected.Length);
+            for (var i = 0; i < expected.Length; i++)
+                await Assert.That(Reference.Same(values[i], MathS.FromString(expected[i], useCache: false))).IsTrue();
+        }
+
+        [Test]
+        public async Task DecodesNamedEntities()
+        {
+            await Assert.That(MathEngineText.DecodeEntities("<mi>&ImaginaryI;</mi><mo>&InvisibleTimes;</mo><mo>&amp;</mo>"))
+                .IsEqualTo("<mi>ⅈ</mi><mo>\u2062</mo><mo>&amp;</mo>");
+            const string result = "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi>x</mi><mo>=</mo><mn>2</mn><mo>&CenterDot;</mo><mi>&ImaginaryI;</mi></math>";
+            await Assert.That(MathEngineText.Values(result).Count).IsEqualTo(1);
         }
 
         [Test]
@@ -53,6 +104,7 @@ namespace SharpEquations.MathTools.Tests
             Entity b = MathS.Equality("x-y", 1);
             await Assert.That(MathEngineText.Command(CasAction.Solve, new[] { a, b }, null)).IsEqualTo("x+y=3, x-y=1");
             await Assert.That(() => MathEngineText.Command(CasAction.Simplify, new[] { a, b }, null)).Throws<NotSupportedException>();
+            await Assert.That(MathEngineText.SolveCommand(new[] { "Equal[x,1]", "Equal[y,2]" })).IsEqualTo("SymbolicSolve[List[Equal[x,1],Equal[y,2]]]");
         }
 
         [Test]

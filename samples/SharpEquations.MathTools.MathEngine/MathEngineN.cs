@@ -21,6 +21,7 @@ namespace SharpEquations.MathTools.MathEngine
     /// </summary>
     public sealed class MathEngineN : ICasEngine, IDisposable
     {
+        private const int Formula = 0;
         private const int Linear = 2;
         private const int MathML = 4;
         private const int SolveEquation = 0;
@@ -108,9 +109,9 @@ namespace SharpEquations.MathTools.MathEngine
 
         public CasResult Run(CasAction action, Equation equation, string? variable = null)
         {
-            // read in radians: the engine converts the angles itself, by its unit of angles
+            // read in the unit of angles (30° and the trigonometric functions become radians): the engine computes in radians
             List<Entity> system;
-            if (MathReader.TryReadDefinition(equation, AngleUnit.Radians, out var name, out var value))
+            if (MathReader.TryReadDefinition(equation, Angles, out var name, out var value))
             {
                 value = Substitute(value);
                 if (action == CasAction.Define)
@@ -130,79 +131,134 @@ namespace SharpEquations.MathTools.MathEngine
             }
             else
             {
-                system = MathReader.ReadSystem(equation, AngleUnit.Radians).Select(Substitute).ToList();
+                system = MathReader.ReadSystem(equation, Angles).Select(Substitute).ToList();
             }
 
             var letters = AngouriMathEngine.Variables(system.ToArray());
             var x = variable ?? (letters.Count > 0 ? letters[0] : null);
-            var command = MathEngineText.Command(action, system, x);
             lock (gate)
             {
                 ObjectDisposedException.ThrowIf(context == Guid.Empty, this);
-                return action == CasAction.Solve
-                    ? OnEngineThread(() => Execute(action, command, SolveEquation, system.Count > 1 ? letters : x != null ? new[] { x } : letters))
-                    : OnEngineThread(() => Execute(action, command, NonEquation, null));
+                if (action == CasAction.Solve)
+                {
+                    var equations = MathEngineText.Equations(system);
+                    var unknowns = system.Count > 1 ? letters : x != null ? new[] { x } : letters;
+                    return OnEngineThread(() => Solve(equations, unknowns));
+                }
+                var command = MathEngineText.Command(action, system, x);
+                return OnEngineThread(() => Execute(action, command));
             }
         }
 
-        private CasResult Execute(CasAction action, string command, int mode, IReadOnlyList<string>? unknowns)
+        // as Microsoft Mathematics does: each equation read in the linear format and written as a formula, all of them
+        // in SymbolicSolve[List[…]], read as a formula and solved through a request, which takes the letters to solve for
+        private CasResult Solve(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns)
         {
-            Check(NativeMethods.SetParsingOptions(context, Linear, true, true, true, mode));
-            Check(NativeMethods.SetEvaluationProperties(context, Complex ? 1 : 0, Angles == AngleUnit.Degrees ? 1 : 0, false, false, false, true));
             var created = new List<int>();
             try
             {
-                var code = NativeMethods.Parse(context, command, out var parsed);
-                if (code != 0)
+                var formulas = new List<string>();
+                foreach (var equation in equations)
                 {
-                    var where = NativeMethods.GetParsingErrorRange(context, out var start, out var length) == 0 && start >= 0 && start < command.Length
-                        ? " at “" + command.Substring(start, Math.Clamp(length, 1, command.Length - start)) + "”"
-                        : "";
-                    throw new NotSupportedException(MathEngineText.Error(code) + where + ": " + command);
+                    var one = Parse(equation, Linear, SolveEquation);
+                    created.Add(one);
+                    formulas.Add(Serialize(one, Formula));
                 }
+                var command = MathEngineText.SolveCommand(formulas);
+                var parsed = Parse(command, Formula, SolveEquation);
                 created.Add(parsed);
-
-                var target = parsed;
-                if (unknowns != null)
-                {
-                    // the solution is asked through a request of the equation, which takes the letters to solve for
-                    if (NativeMethods.CreateEquationRequest(context, parsed, out var request) != 0)
-                    {
-                        Check(NativeMethods.ExecuteExpression(context, parsed, out var executed));
-                        created.Add(executed);
-                        Check(NativeMethods.CreateEquationRequest(context, executed, out request));
-                    }
-                    created.Add(request);
-                    if (NativeMethods.EquationRequestRequireVariableList(context, request, out var required) == 0 && required && unknowns.Count > 0)
-                        Check(NativeMethods.EquationRequestSetVarNames(context, request, string.Join(",", unknowns.Select(MathReader.Symbol))));
-                    target = request;
-                }
-
-                Check(NativeMethods.ExecuteExpression(context, target, out var result));
+                Check(NativeMethods.CreateEquationRequest(context, parsed, out var request));
+                created.Add(request);
+                if (NativeMethods.EquationRequestRequireVariableList(context, request, out var required) == 0 && required && unknowns.Count > 0)
+                    Check(NativeMethods.EquationRequestSetVarNames(context, request, string.Join(",", unknowns.Select(MathReader.Symbol))));
+                SetEvaluation();
+                Check(NativeMethods.ExecuteExpression(context, request, out var result));
                 created.Add(result);
-                var mathML = Serialize(result, MathML);
-                var text = Serialize(result, Linear);
-
-                var math = Equation.TryParse(mathML, EquationFormat.MathML, new EquationOptions { Display = true }, out var parsedResult) ? parsedResult : null;
-                var values = new List<Equation>();
-                foreach (var piece in MathEngineText.Values(mathML))
-                {
-                    if (!Equation.TryParse(piece.ToString(), EquationFormat.MathML, new EquationOptions { Display = true }, out var one))
-                    {
-                        values.Clear();
-                        break;
-                    }
-                    values.Add(one);
-                }
-                if (action != CasAction.Solve && values.Count > 1)
-                    values.RemoveRange(1, values.Count - 1);
-                return new CasResult(action, math, text) { Values = values };
+                return Result(CasAction.Solve, result);
             }
             finally
             {
                 foreach (var expression in created.Distinct())
                     NativeMethods.DestroyExpression(context, expression);
             }
+        }
+
+        private CasResult Execute(CasAction action, string command)
+        {
+            var created = new List<int>();
+            try
+            {
+                var parsed = Parse(command, Linear, NonEquation);
+                created.Add(parsed);
+                SetEvaluation();
+                Check(NativeMethods.ExecuteExpression(context, parsed, out var result));
+                created.Add(result);
+                return Result(action, result);
+            }
+            finally
+            {
+                foreach (var expression in created.Distinct())
+                    NativeMethods.DestroyExpression(context, expression);
+            }
+        }
+
+        // the input is in radians (see Run): so is the engine
+        private void SetEvaluation() =>
+            Check(NativeMethods.SetEvaluationProperties(context, Complex ? 1 : 0, 0, false, false, false, true));
+
+        private int Parse(string text, int format, int mode)
+        {
+            Check(NativeMethods.SetParsingOptions(context, format, true, true, true, mode));
+            SetEvaluation();
+            var code = NativeMethods.Parse(context, text, out var parsed);
+            if (code == 0)
+                return parsed;
+            var where = NativeMethods.GetParsingErrorRange(context, out var start, out var length) == 0 && start >= 0 && start < text.Length
+                ? " at “" + text.Substring(start, Math.Clamp(length, 1, text.Length - start)) + "”"
+                : "";
+            throw new NotSupportedException(MathEngineText.Error(code) + where + ": " + text);
+        }
+
+        // the values of a result: from its linear text, read by AngouriMath, else from its MathML
+        private CasResult Result(CasAction action, int result)
+        {
+            var mathML = MathEngineText.DecodeEntities(Serialize(result, MathML));
+            var text = Serialize(result, Linear);
+            var display = new EquationOptions { Display = true };
+            var math = Equation.TryParse(mathML, EquationFormat.MathML, display, out var parsedResult) ? parsedResult : null;
+
+            var values = new List<Equation>();
+            try
+            {
+                foreach (var value in MathEngineText.ReadLinear(text))
+                {
+                    if (AngouriMathEngine.ToEquation(value) is not { } one)
+                    {
+                        values.Clear();
+                        break;
+                    }
+                    values.Add(one);
+                }
+            }
+            catch (FormatException)
+            {
+                values.Clear();
+            }
+            if (values.Count == 0)
+            {
+                foreach (var piece in MathEngineText.Values(mathML))
+                {
+                    if (!Equation.TryParse(piece.ToString(), EquationFormat.MathML, display, out var one))
+                    {
+                        values.Clear();
+                        break;
+                    }
+                    values.Add(one);
+                }
+            }
+            if (action != CasAction.Solve && values.Count > 1)
+                values.RemoveRange(1, values.Count - 1);
+            return new CasResult(action, math, text) { Values = values };
         }
 
         private string Serialize(int expression, int format)

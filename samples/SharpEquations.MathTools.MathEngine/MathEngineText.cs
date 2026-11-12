@@ -5,6 +5,8 @@ namespace SharpEquations.MathTools.MathEngine
     using System.Globalization;
     using System.IO;
     using System.Linq;
+    using System.Text;
+    using System.Text.RegularExpressions;
     using System.Xml.Linq;
     using AngouriMath;
     using SharpEquations.MathTools;
@@ -27,8 +29,11 @@ namespace SharpEquations.MathTools.MathEngine
             Entity.Variable v when v == MathS.pi => "pi",
             Entity.Variable v when v == MathS.e => "e",
             Entity.Variable v => MathReader.Symbol(v.Name),
+            Entity.Sumf(var a, var b) when Linear(b) is var right && right.StartsWith('-') => Child(a, 1) + right,
             Entity.Sumf(var a, var b) => Child(a, 1) + "+" + Child(b, 1),
             Entity.Minusf(var a, var b) => Child(a, 1) + "-" + Child(b, 2),
+            Entity.Mulf(Entity.Number.Integer n, var b) when n.EInteger.IsZero == false && n.EInteger.Sign < 0 =>
+                n.EInteger.Abs().Equals(PeterO.Numbers.EInteger.One) ? "-" + Child(b, 2) : "-" + n.EInteger.Abs().ToString() + "*" + Child(b, 2),
             Entity.Mulf(var a, var b) => Child(a, 2) + "*" + Child(b, 2),
             Entity.Divf(var a, var b) => Child(a, 2) + "/" + Child(b, 3),
             Entity.Powf(var a, var b) => Child(a, 4) + "^" + Child(b, 4),
@@ -42,16 +47,26 @@ namespace SharpEquations.MathTools.MathEngine
             Entity.Arccosf(var a) => Call("arccos", a),
             Entity.Arctanf(var a) => Call("arctan", a),
             Entity.Arccotanf(var a) => Call("arccot", a),
+            Entity.Arcsecantf(var a) => Call("arcsec", a),
+            Entity.Arccosecantf(var a) => Call("arccsc", a),
             Entity.Logf(var b, var x) when b == MathS.e => Call("ln", x),
             Entity.Logf(var b, var x) => Call("ln", x) + "/" + Call("ln", b),
             Entity.Absf(var a) => Call("abs", a),
             Entity.Factorialf(var a) => Child(a, 4) + "!",
+            Entity.Signumf(var a) => Call("sign", a),
+            Entity.Floorf(var a) => Call("floor", a),
+            Entity.Ceilf(var a) => Call("ceiling", a),
+            Entity.Binomialf(var n, var k) => "combination(" + Linear(n) + "," + Linear(k) + ")",
+            Entity.Integralf(var f, var x, var range) when range is var (from, to) =>
+                "integral(" + Linear(f) + "," + Linear(x) + "," + Linear(from) + "," + Linear(to) + ")",
+            Entity.Summationf(var f, var k, var from, var to) => "sum(" + Linear(f) + "," + Linear(k) + "," + Linear(from) + "," + Linear(to) + ")",
+            Entity.Productf(var f, var k, var from, var to) => "product(" + Linear(f) + "," + Linear(k) + "," + Linear(from) + "," + Linear(to) + ")",
             Entity.Equalsf(var a, var b) => Linear(a) + "=" + Linear(b),
             _ => throw new NotSupportedException("The engine of Microsoft Mathematics has no input for “" + value.ToString() + "”."),
         };
 
         private static string Real(Entity.Number.Real r) =>
-            r.EDecimal.ToDouble().ToString("R", CultureInfo.InvariantCulture);
+            r.IsFinite ? r.EDecimal.ToDouble().ToString("R", CultureInfo.InvariantCulture) : r.EDecimal.IsNegative ? "-∞" : "∞";
 
         private static string Call(string name, Entity argument) => name + "(" + Linear(argument) + ")";
 
@@ -82,7 +97,7 @@ namespace SharpEquations.MathTools.MathEngine
             if (system.Count == 0)
                 throw new ArgumentException("No equation.", nameof(system));
             if (action == CasAction.Solve)
-                return string.Join(", ", system.Select(e => e is Entity.Equalsf ? Linear(e) : Linear(e) + "=0"));
+                return string.Join(", ", Equations(system));
             if (system.Count > 1)
                 throw new NotSupportedException("A system of equations: it can only be solved.");
             var expression = Linear(system[0]);
@@ -98,6 +113,16 @@ namespace SharpEquations.MathTools.MathEngine
                 _ => throw new NotSupportedException("The engine of Microsoft Mathematics does not do “" + action + "”."),
             };
         }
+
+        /// <summary>The linear input of each equation of a system to solve: an expression is set equal to 0.</summary>
+        public static IReadOnlyList<string> Equations(IReadOnlyList<Entity> system) =>
+            system.Select(e => e is Entity.Equalsf ? Linear(e) : Linear(e) + "=0").ToList();
+
+        /// <summary>
+        /// The command that solves equations in the format of formulas of the engine (as Microsoft Mathematics asks
+        /// for a solution): <c>SymbolicSolve[List[…]]</c>.
+        /// </summary>
+        public static string SolveCommand(IEnumerable<string> formulas) => "SymbolicSolve[List[" + string.Join(",", formulas) + "]]";
 
         /// <summary>What an error code of the engine means, or null for 0.</summary>
         public static string? Error(int code)
@@ -121,7 +146,7 @@ namespace SharpEquations.MathTools.MathEngine
         /// </summary>
         public static IReadOnlyList<XElement> Values(string mathML)
         {
-            var root = XElement.Parse(mathML);
+            var root = XElement.Parse(DecodeEntities(mathML));
             XNamespace ns = root.Name.Namespace;
             var row = root;
             while (row.Elements().Count() == 1 && row.Elements().Single().Name.LocalName is "mrow" or "mstyle" or "semantics")
@@ -154,6 +179,212 @@ namespace SharpEquations.MathTools.MathEngine
                     values.Add(new XElement(ns + "math", new XElement(ns + "mrow", kept.Select(e => new XElement(e)))));
                 piece = new List<XElement>();
             }
+        }
+
+        private static readonly Dictionary<string, string> Entities = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["ApplyFunction"] = "\u2061", ["af"] = "\u2061", ["InvisibleTimes"] = "\u2062", ["it"] = "\u2062",
+            ["InvisibleComma"] = "\u2063", ["ic"] = "\u2063", ["CenterDot"] = "·", ["middot"] = "·", ["times"] = "×",
+            ["ImaginaryI"] = "ⅈ", ["ii"] = "ⅈ", ["ExponentialE"] = "ⅇ", ["ee"] = "ⅇ", ["DifferentialD"] = "ⅆ", ["dd"] = "ⅆ",
+            ["pi"] = "π", ["infin"] = "∞", ["minus"] = "−", ["PlusMinus"] = "±", ["pm"] = "±", ["MinusPlus"] = "∓",
+            ["approx"] = "≈", ["ne"] = "≠", ["le"] = "≤", ["ge"] = "≥", ["Integral"] = "∫", ["Sum"] = "∑", ["Product"] = "∏",
+            ["radic"] = "√", ["Sqrt"] = "√", ["or"] = "∨", ["and"] = "∧", ["deg"] = "°", ["nbsp"] = "\u00A0",
+            ["ThinSpace"] = "\u2009", ["MediumSpace"] = "\u205F", ["NegativeThinSpace"] = "", ["ZeroWidthSpace"] = "",
+            ["LeftBracketingBar"] = "|", ["RightBracketingBar"] = "|", ["VerticalBar"] = "|", ["DoubleRightArrow"] = "⇒",
+            ["RightArrow"] = "→", ["rarr"] = "→", ["Element"] = "∈", ["isin"] = "∈", ["NotElement"] = "∉",
+            ["lceil"] = "⌈", ["rceil"] = "⌉", ["lfloor"] = "⌊", ["rfloor"] = "⌋", ["lang"] = "⟨", ["rang"] = "⟩",
+        };
+
+        /// <summary>
+        /// The MathML of the engine with its named entities (<c>&amp;InvisibleTimes;</c>, <c>&amp;ImaginaryI;</c>…)
+        /// written as their characters, since XML knows only five of them.
+        /// </summary>
+        public static string DecodeEntities(string mathML) =>
+            Regex.Replace(mathML, "&([A-Za-z][A-Za-z0-9]*);", m => Entities.TryGetValue(m.Groups[1].Value, out var c) ? c : m.Value);
+
+        private static readonly string[] Functions =
+        {
+            "arcsin", "arccos", "arctan", "arccot", "arcsec", "arccsc", "sinh", "cosh", "tanh", "coth", "sin", "cos", "tan",
+            "cot", "sec", "csc", "ln", "log", "exp", "abs", "sqrt", "floor", "ceiling", "sign", "pi", "oo",
+        };
+
+        /// <summary>
+        /// The values of a result in the linear format of the engine (<c>x=1, x=-4</c>, <c>xcos(x)+sin(x)</c>,
+        /// <c>⦗⦗sin⦘^⦗-1⦘⦘(x)</c>), read by AngouriMath: the pieces between commas, semicolons, “or” and “and”, each
+        /// the right side of its last <c>=</c>, without what follows <c>≈</c>; ± gives two values.
+        /// </summary>
+        /// <exception cref="FormatException">A piece AngouriMath cannot read.</exception>
+        public static IReadOnlyList<Entity> ReadLinear(string text)
+        {
+            var values = new List<Entity>();
+            foreach (var piece in Pieces(Plain(text)))
+            {
+                var kept = piece;
+                if (kept.IndexOf('≈') is >= 0 and var approximately)
+                    kept = kept[..approximately];
+                if (kept.LastIndexOf('=') is >= 0 and var equals)
+                    kept = kept[(equals + 1)..];
+                if (kept.Length == 0)
+                    continue;
+                foreach (var variant in Signs(kept))
+                {
+                    var input = Implicit(variant);
+                    try
+                    {
+                        values.Add(MathS.FromString(input, useCache: false));
+                    }
+#pragma warning disable CA1031 // any failure of the parser is the same: not a value
+                    catch (Exception e) when (e is not OutOfMemoryException)
+#pragma warning restore CA1031
+                    {
+                        throw new FormatException("Not a value: “" + variant + "” (" + input + ").", e);
+                    }
+                }
+            }
+            return values;
+        }
+
+        // the text without the invisible brackets and with the letters AngouriMath reads
+        private static string Plain(string text)
+        {
+            // ⦗⦗sin⦘^⦗-1⦘⦘(x) is arcsin(x), ⦗⦗sin⦘^⦗2⦘⦘(x) is (sin(x))^2
+            text = Regex.Replace(text, "⦗⦗([a-z]+)⦘\\^⦗-1⦘⦘", "arc$1");
+            for (var m = Regex.Match(text, "⦗⦗([a-z]+)⦘\\^⦗([^⦗⦘]+)⦘⦘\\("); m.Success; m = Regex.Match(text, "⦗⦗([a-z]+)⦘\\^⦗([^⦗⦘]+)⦘⦘\\("))
+            {
+                var open = m.Index + m.Length - 1;
+                var close = Closing(text, open);
+                if (close < 0)
+                    break;
+                text = text[..m.Index] + "((" + m.Groups[1].Value + text[open..(close + 1)] + ")^(" + m.Groups[2].Value + "))" + text[(close + 1)..];
+            }
+            var plain = new StringBuilder(text)
+                .Replace("⦗", "(").Replace("⦘", ")").Replace(" or ", "∨").Replace(" and ", "∧")
+                .Replace("π", "pi").Replace("ⅇ", "e").Replace("ⅈ", "i").Replace("∞", "oo").Replace("−", "-")
+                .Replace("·", "*").Replace("×", "*").Replace("⋅", "*").Replace("\u2062", "*").Replace("\u2061", "")
+                .Replace("\u00A0", "").Replace(" ", "").Replace("\u2009", "");
+            return plain.ToString();
+        }
+
+        private static int Closing(string text, int open)
+        {
+            var depth = 0;
+            for (var i = open; i < text.Length; i++)
+            {
+                if (text[i] is '(' or '⦗')
+                    depth++;
+                else if (text[i] is ')' or '⦘' && --depth == 0)
+                    return i;
+            }
+            return -1;
+        }
+
+        // the pieces between separators outside of brackets
+        private static IEnumerable<string> Pieces(string text)
+        {
+            var depth = 0;
+            var start = 0;
+            for (var i = 0; i < text.Length; i++)
+            {
+                switch (text[i])
+                {
+                    case '(' or '[' or '{':
+                        depth++;
+                        break;
+                    case ')' or ']' or '}':
+                        depth--;
+                        break;
+                    case ',' or ';' or '∨' or '∧' when depth == 0:
+                        yield return text[start..i];
+                        start = i + 1;
+                        break;
+                }
+            }
+            yield return text[start..];
+        }
+
+        private static readonly System.Buffers.SearchValues<char> PlusMinus = System.Buffers.SearchValues.Create("±∓");
+
+        // a ± (or ∓) gives the value with + and the one with -
+        private static IEnumerable<string> Signs(string text)
+        {
+            var at = text.IndexOfAny(PlusMinus);
+            if (at < 0)
+                return new[] { text };
+            var (first, second) = text[at] == '±' ? ('+', '-') : ('-', '+');
+            return Signs(text[..at] + first + text[(at + 1)..]).Concat(Signs(text[..at] + second + text[(at + 1)..]));
+        }
+
+        private enum Token
+        {
+            Value,
+            Function,
+            Open,
+            Close,
+            Other,
+        }
+
+        // the products the engine writes without a sign (2x, xcos(x), (x-1)(x+1)) with *, for AngouriMath
+        private static string Implicit(string text)
+        {
+            var tokens = new List<(Token Kind, string Text)>();
+            for (var i = 0; i < text.Length;)
+            {
+                var c = text[i];
+                if (char.IsDigit(c) || c == '.')
+                {
+                    var end = i;
+                    while (end < text.Length && (char.IsDigit(text[end]) || text[end] == '.'))
+                        end++;
+                    tokens.Add((Token.Value, text[i..end]));
+                    i = end;
+                }
+                else if (char.IsLetter(c))
+                {
+                    var end = i;
+                    while (end < text.Length && char.IsLetter(text[end]))
+                        end++;
+                    for (var p = i; p < end;)
+                    {
+                        var run = text[p..end];
+                        var name = Functions.FirstOrDefault(f => run.StartsWith(f, StringComparison.Ordinal));
+                        if (name is "pi" or "oo")
+                            tokens.Add((Token.Value, name));
+                        else if (name != null)
+                            tokens.Add((Token.Function, name));
+                        else
+                            tokens.Add((Token.Value, run[..1]));
+                        p += name?.Length ?? 1;
+                    }
+                    i = end;
+                }
+                else
+                {
+                    tokens.Add((c switch { '(' => Token.Open, ')' => Token.Close, '√' => Token.Function, _ => Token.Other }, c == '√' ? "sqrt" : c.ToString()));
+                    i++;
+                }
+            }
+
+            var written = new StringBuilder();
+            var previous = Token.Other;
+            var previousText = "";
+            for (var k = 0; k < tokens.Count; k++)
+            {
+                var (kind, word) = tokens[k];
+                var ends = previous is Token.Value or Token.Close || previousText == "!";
+                if (ends && kind is Token.Value or Token.Function or Token.Open)
+                    written.Append('*');
+                // √2 and √x: the root of what follows
+                if (kind == Token.Function && word == "sqrt" && k + 1 < tokens.Count && tokens[k + 1].Kind == Token.Value)
+                {
+                    written.Append("sqrt(").Append(tokens[k + 1].Text).Append(')');
+                    k++;
+                    (previous, previousText) = (Token.Close, ")");
+                    continue;
+                }
+                written.Append(word);
+                (previous, previousText) = (kind, word);
+            }
+            return written.ToString();
         }
 
         private static bool IsSeparator(XElement e) =>
