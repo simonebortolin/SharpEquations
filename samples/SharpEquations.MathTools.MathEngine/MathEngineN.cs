@@ -27,6 +27,9 @@ namespace SharpEquations.MathTools.MathEngine
         private const int SolveEquation = 0;
         private const int NonEquation = 2;
 
+        // the error -8 of a request, what the engine answers for a system with no solution
+        private const int NoSolution = 17;
+
         private static readonly Guid Key = new Guid("15D1265B-8A3C-413a-BF1E-38CC9285C186");
         private static readonly object Loading = new object();
         private static IntPtr handle;
@@ -82,8 +85,8 @@ namespace SharpEquations.MathTools.MathEngine
 
         public AngleUnit Angles { get; set; }
 
-        /// <summary>Whether equations are solved among the complex numbers (true) or the real ones.</summary>
-        public bool Complex { get; set; } = true;
+        /// <summary>Whether equations are solved among the complex numbers (true) or the real ones (false, the default).</summary>
+        public bool Complex { get; set; }
 
         public IReadOnlyDictionary<string, Equation> Definitions
         {
@@ -169,10 +172,19 @@ namespace SharpEquations.MathTools.MathEngine
                 created.Add(parsed);
                 Check(NativeMethods.CreateEquationRequest(context, parsed, out var request));
                 created.Add(request);
-                if (NativeMethods.EquationRequestRequireVariableList(context, request, out var required) == 0 && required && unknowns.Count > 0)
-                    Check(NativeMethods.EquationRequestSetVarNames(context, request, string.Join(",", unknowns.Select(MathReader.Symbol))));
+                // the letters are given even when the request does not ask for them, else it may solve for another one
+                if (unknowns.Count > 0)
+                {
+                    var named = NativeMethods.EquationRequestSetVarNames(context, request, string.Join(",", unknowns.Select(MathReader.Symbol)));
+                    if (NativeMethods.EquationRequestRequireVariableList(context, request, out var required) == 0 && required)
+                        Check(named);
+                }
+
                 SetEvaluation();
-                Check(NativeMethods.ExecuteExpression(context, request, out var result));
+                var code = NativeMethods.ExecuteExpression(context, request, out var result);
+                if (code == NoSolution)
+                    return new CasResult(CasAction.Solve, null, "") { Values = Array.Empty<Equation>() };
+                Check(code);
                 created.Add(result);
                 return Result(CasAction.Solve, result);
             }
@@ -193,6 +205,12 @@ namespace SharpEquations.MathTools.MathEngine
                 SetEvaluation();
                 Check(NativeMethods.ExecuteExpression(context, parsed, out var result));
                 created.Add(result);
+                if (action == CasAction.Simplify)
+                {
+                    // as Microsoft Mathematics simplifies: the evaluated expression, then all of its simplifications
+                    Check(NativeMethods.FullSimplifyExpression(context, result, out result));
+                    created.Add(result);
+                }
                 return Result(action, result);
             }
             finally

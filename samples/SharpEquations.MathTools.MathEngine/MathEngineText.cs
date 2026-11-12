@@ -59,8 +59,8 @@ namespace SharpEquations.MathTools.MathEngine
             Entity.Binomialf(var n, var k) => "combination(" + Linear(n) + "," + Linear(k) + ")",
             Entity.Integralf(var f, var x, var range) when range is var (from, to) =>
                 "integral(" + Linear(f) + "," + Linear(x) + "," + Linear(from) + "," + Linear(to) + ")",
-            Entity.Summationf(var f, var k, var from, var to) => "sum(" + Linear(f) + "," + Linear(k) + "," + Linear(from) + "," + Linear(to) + ")",
-            Entity.Productf(var f, var k, var from, var to) => "product(" + Linear(f) + "," + Linear(k) + "," + Linear(from) + "," + Linear(to) + ")",
+            Entity.Summationf(var f, var k, var from, var to) => "seriesSum(" + Linear(f) + "," + Linear(k) + "," + Linear(from) + "," + Linear(to) + ")",
+            Entity.Productf(var f, var k, var from, var to) => "seriesProduct(" + Linear(f) + "," + Linear(k) + "," + Linear(from) + "," + Linear(to) + ")",
             Entity.Equalsf(var a, var b) => Linear(a) + "=" + Linear(b),
             _ => throw new NotSupportedException("The engine of Microsoft Mathematics has no input for “" + value.ToString() + "”."),
         };
@@ -105,7 +105,7 @@ namespace SharpEquations.MathTools.MathEngine
             return action switch
             {
                 CasAction.Evaluate => expression,
-                CasAction.Simplify => "simplify(" + expression + ")",
+                CasAction.Simplify => expression,
                 CasAction.Expand => "expand(" + expression + ")",
                 CasAction.Factor => "factor(" + expression + ")",
                 CasAction.Differentiate => "deriv(" + expression + "," + (x ?? "x") + ")",
@@ -170,13 +170,20 @@ namespace SharpEquations.MathTools.MathEngine
 
             void Add()
             {
+                if (IsNotValue(string.Concat(piece.Select(e => e.Value))))
+                {
+                    piece = new List<XElement>();
+                    return;
+                }
+
                 var approximately = piece.FindIndex(e => IsOperator(e, "≈"));
                 var kept = approximately >= 0 ? piece.Take(approximately).ToList() : piece;
                 var equals = kept.FindLastIndex(e => IsOperator(e, "="));
                 if (equals >= 0)
                     kept = kept.Skip(equals + 1).ToList();
-                if (kept.Count > 0)
-                    values.Add(new XElement(ns + "math", new XElement(ns + "mrow", kept.Select(e => new XElement(e)))));
+                var value = new XElement(ns + "math", new XElement(ns + "mrow", kept.Select(e => new XElement(e))));
+                if (kept.Count > 0 && !values.Any(v => XNode.DeepEquals(v, value)))
+                    values.Add(value);
                 piece = new List<XElement>();
             }
         }
@@ -193,7 +200,15 @@ namespace SharpEquations.MathTools.MathEngine
             ["LeftBracketingBar"] = "|", ["RightBracketingBar"] = "|", ["VerticalBar"] = "|", ["DoubleRightArrow"] = "⇒",
             ["RightArrow"] = "→", ["rarr"] = "→", ["Element"] = "∈", ["isin"] = "∈", ["NotElement"] = "∉",
             ["lceil"] = "⌈", ["rceil"] = "⌉", ["lfloor"] = "⌊", ["rfloor"] = "⌋", ["lang"] = "⟨", ["rang"] = "⟩",
+            ["NotEqual"] = "≠", ["LessEqual"] = "≤", ["GreaterEqual"] = "≥", ["leq"] = "≤", ["geq"] = "≥",
+            ["Nscr"] = "𝒩", ["Zopf"] = "ℤ", ["integers"] = "ℤ", ["Ropf"] = "ℝ", ["reals"] = "ℝ", ["Copf"] = "ℂ",
+            ["complexes"] = "ℂ", ["Nopf"] = "ℕ", ["naturals"] = "ℕ", ["Qopf"] = "ℚ",
         };
+
+        // a piece that is a condition (a≠0, n∈ℤ) or a family of values with a parameter (2π𝒩₁): not a value
+        private static readonly string[] NotValues = { "≠", "<", ">", "≤", "≥", "∈", "∉", "𝒩", "ℤ", "ℕ", "ℝ", "ℂ", "ℚ" };
+
+        private static bool IsNotValue(string text) => NotValues.Any(n => text.Contains(n, StringComparison.Ordinal));
 
         /// <summary>
         /// The MathML of the engine with its named entities (<c>&amp;InvisibleTimes;</c>, <c>&amp;ImaginaryI;</c>…)
@@ -217,8 +232,11 @@ namespace SharpEquations.MathTools.MathEngine
         public static IReadOnlyList<Entity> ReadLinear(string text)
         {
             var values = new List<Entity>();
-            foreach (var piece in Pieces(Plain(text)))
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var piece in Pieces(Plain(text)).SelectMany(Unwrapped))
             {
+                if (IsNotValue(piece))
+                    continue;
                 var kept = piece;
                 if (kept.IndexOf('≈') is >= 0 and var approximately)
                     kept = kept[..approximately];
@@ -229,9 +247,10 @@ namespace SharpEquations.MathTools.MathEngine
                 foreach (var variant in Signs(kept))
                 {
                     var input = Implicit(variant);
+                    Entity value;
                     try
                     {
-                        values.Add(MathS.FromString(input, useCache: false));
+                        value = MathS.FromString(input, useCache: false);
                     }
 #pragma warning disable CA1031 // any failure of the parser is the same: not a value
                     catch (Exception e) when (e is not OutOfMemoryException)
@@ -239,9 +258,23 @@ namespace SharpEquations.MathTools.MathEngine
                     {
                         throw new FormatException("Not a value: “" + variant + "” (" + input + ").", e);
                     }
+                    if (seen.Add(value.ToString()))
+                        values.Add(value);
                 }
             }
             return values;
+        }
+
+        // the values of a solution of a system, (x=2,y=1), one by one
+        private static IEnumerable<string> Unwrapped(string piece)
+        {
+            if (piece.Length > 1 && piece[0] == '(' && Closing(piece, 0) == piece.Length - 1)
+            {
+                var inner = Pieces(piece[1..^1]).ToList();
+                if (inner.Count > 1 || inner[0].Contains('=', StringComparison.Ordinal))
+                    return inner.SelectMany(Unwrapped);
+            }
+            return new[] { piece };
         }
 
         // the text without the invisible brackets and with the letters AngouriMath reads

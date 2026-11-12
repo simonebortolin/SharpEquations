@@ -83,5 +83,9 @@ namespace SharpEquations.MathTools.MathEngine
         [DllImport(Library, CharSet = CharSet.Unicode)]
         [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         internal static extern int EquationRequestSetVarNames(Guid context, int request, [MarshalAs(UnmanagedType.BStr)] string names);
+
+        [DllImport(Library, CharSet = CharSet.Unicode)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+        internal static extern int FullSimplifyExpression(Guid context, int expression, out int result);
     }
 }

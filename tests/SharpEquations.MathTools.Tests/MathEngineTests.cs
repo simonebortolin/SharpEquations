@@ -45,8 +45,8 @@ namespace SharpEquations.MathTools.Tests
         {
             Entity k = "k";
             Entity x = "x";
-            await Assert.That(MathEngineText.Linear(new Entity.Summationf(k.Pow(2), k, 1, 10))).IsEqualTo("sum(k^2,k,1,10)");
-            await Assert.That(MathEngineText.Linear(new Entity.Productf(k, k, 1, 5))).IsEqualTo("product(k,k,1,5)");
+            await Assert.That(MathEngineText.Linear(new Entity.Summationf(k.Pow(2), k, 1, 10))).IsEqualTo("seriesSum(k^2,k,1,10)");
+            await Assert.That(MathEngineText.Linear(new Entity.Productf(k, k, 1, 5))).IsEqualTo("seriesProduct(k,k,1,5)");
             await Assert.That(MathEngineText.Linear(new Entity.Integralf(x, x, (0, 1)))).IsEqualTo("integral(x,x,0,1)");
             await Assert.That(MathEngineText.Linear(new Entity.Binomialf(5, 2))).IsEqualTo("combination(5,2)");
         }
@@ -68,6 +68,12 @@ namespace SharpEquations.MathTools.Tests
         [Arguments("x=2π or x=−ⅈ", new[] { "2*pi", "-i" })]
         [Arguments("x=3, y=1", new[] { "3", "1" })]
         [Arguments("x=√2≈1.414", new[] { "sqrt(2)" })]
+        [Arguments("x=-⦗⦗b⦘/⦗a⦘⦘,a<>0", new[] { "-b/a" })]
+        [Arguments("x=-⦗⦗b⦘/⦗a⦘⦘ and a≠0", new[] { "-b/a" })]
+        [Arguments("(x=2, y=1)", new[] { "2", "1" })]
+        [Arguments("(x=1, y=2) or (x=-1, y=-2)", new[] { "1", "2", "-1", "-2" })]
+        [Arguments("x=-1 or x=-1", new[] { "-1" })]
+        [Arguments("x=3, x=3+⦗⦗2π𝒩₁ⅈ⦘/⦗ln(2)⦘⦘, 𝒩₁∈ℤ", new[] { "3" })]
         public async Task ReadsLinearResults(string text, string[] expected)
         {
             var values = MathEngineText.ReadLinear(text);
@@ -83,6 +89,10 @@ namespace SharpEquations.MathTools.Tests
                 .IsEqualTo("<mi>ⅈ</mi><mo>\u2062</mo><mo>&amp;</mo>");
             const string result = "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi>x</mi><mo>=</mo><mn>2</mn><mo>&CenterDot;</mo><mi>&ImaginaryI;</mi></math>";
             await Assert.That(MathEngineText.Values(result).Count).IsEqualTo(1);
+            const string family = "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi>x</mi><mo>=</mo><mn>3</mn><mo>,</mo>"
+                + "<mi>x</mi><mo>=</mo><mn>3</mn><mo>,</mo><mi>x</mi><mo>=</mo><msub><mi>&Nscr;</mi><mn>1</mn></msub><mo>,</mo>"
+                + "<mi>a</mi><mo>&NotEqual;</mo><mn>0</mn></math>";
+            await Assert.That(MathEngineText.Values(family).Count).IsEqualTo(1);
         }
 
         [Test]
