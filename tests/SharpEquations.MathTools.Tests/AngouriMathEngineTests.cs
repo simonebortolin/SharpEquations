@@ -94,6 +94,24 @@ namespace SharpEquations.MathTools.Tests
             await Assert.That(result.Text).Contains("b").And.Contains("a");
         }
 
+        /// <summary>Solutions with radicals get their decimal values too, complex ones as a+bi; whole numbers need none.</summary>
+        [Test]
+        public async Task ApproximatesTheSolutions()
+        {
+            var engine = new AngouriMathEngine();
+            var result = engine.Run(CasAction.Solve, Equation.Parse("x^2-x^4=2", EquationFormat.UnicodeMath), "x");
+            await Assert.That(result.ApproximateText).IsNotNull();
+            await Assert.That(result.ApproximateText!).StartsWith("x ≈ {").And.Contains("i");
+            await Assert.That(result.ApproximateText!.Split(',').Length).IsEqualTo(4);
+            await Assert.That(result.Approximate).IsNotNull();
+
+            var roots = engine.Run(CasAction.Solve, Equation.Parse("x^2=2", EquationFormat.UnicodeMath), "x");
+            await Assert.That(roots.ApproximateText!).Contains("1.41421").And.Contains("-1.41421");
+
+            var whole = engine.Run(CasAction.Solve, Equation.Parse("x^2-5x+6=0", EquationFormat.UnicodeMath), "x");
+            await Assert.That(whole.ApproximateText).IsNull();
+        }
+
         [Test]
         [Arguments("x+")]
         [Arguments("∫ x")]
