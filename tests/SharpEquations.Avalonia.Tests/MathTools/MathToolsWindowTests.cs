@@ -264,6 +264,57 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(sent.Count).IsEqualTo(4);
             await Assert.That(tab).IsEqualTo(4);
         }
-    }
+            [Test]
+        public async Task WorksheetComputesAndIsKept()
+        {
+            var (count, labels, failed, graphed, tab, kept, defined) = await Headless.RunAsync(async () =>
+            {
+                var settings = new MemorySettingsStore();
+                var window = new MainWindow(settings);
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                view.Tabs.SelectedIndex = 5;
+                var page = view.Worksheet;
+                var display = new EquationOptions { Display = true };
+                page.Editor.Equation = Equation.Parse("b≔3", EquationFormat.UnicodeMath, display);
+                page.SelectedAction = CasAction.Define;
+                await page.EnterAsync();
+                page.Editor.Equation = Equation.Parse("x^2-5x+6=0", EquationFormat.UnicodeMath, display);
+                page.SelectedAction = CasAction.Solve;
+                await page.EnterAsync();
+                page.Editor.Equation = Equation.Parse("sin(b t)", EquationFormat.UnicodeMath, display);
+                page.SelectedAction = CasAction.Differentiate;
+                page.Letter.SelectedItem = "t";
+                await page.EnterAsync();
+                page.Editor.Equation = Equation.Parse("(x+1)^3", EquationFormat.UnicodeMath, display);
+                page.SelectedAction = CasAction.Expand;
+                await page.EnterAsync();
+                page.Editor.Equation = null;
+                var none = await page.EnterAsync();
+                page.Editor.Equation = Equation.Parse("y=2x+1", EquationFormat.UnicodeMath, display);
+                window.Height = 1400;
+                Save(window, "math-tools-worksheet");
+                var labels = page.Sheet.Entries.Select(e => e.Label).ToList();
+                var curves = view.Graphs.Graph.Curves.Count;
+                var graph = window.GetVisualDescendants().OfType<Button>().Last(b => Equals(b.Content, "Graph") && b.FindAncestorOfType<WorksheetPage>() != null);
+                graph.RaiseEvent(new global::Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                var result = (page.Sheet.Entries.Count, labels, none == null && page.Message.Length > 0, view.Graphs.Graph.Curves.Count - curves, view.Tabs.SelectedIndex, settings.Get("worksheet"), 0);
+                window.Close();
+
+                // a new window over the same settings has the worksheet back, and the letter defined
+                var again = new MainWindow(settings);
+                var back = again.GetVisualDescendants().OfType<MathToolsView>().SingleOrDefault() ?? (MathToolsView)again.Content!;
+                result.Item7 = back.Worksheet.Sheet.Entries.Count + (back.Engine.Definitions.ContainsKey("b") ? 100 : 0);
+                return result;
+            });
+            await Assert.That(count).IsEqualTo(4);
+            await Assert.That(labels).IsEquivalentTo(new[] { "Define", "Solve for x", "Derivative by t", "Expand" });
+            await Assert.That(failed).IsTrue();
+            await Assert.That(graphed).IsEqualTo(1);
+            await Assert.That(tab).IsEqualTo(4);
+            await Assert.That(kept).IsNotNull();
+            await Assert.That(defined).IsEqualTo(104);
+        }
+}
 }
 #endif

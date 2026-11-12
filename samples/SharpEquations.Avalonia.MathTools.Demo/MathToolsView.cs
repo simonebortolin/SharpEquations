@@ -12,13 +12,15 @@ namespace SharpEquations.Avalonia.MathTools
 
     /// <summary>
     /// The math tools, a page each: the scientific keypad around the equation editor, the library of formulas, the
-    /// unit converter, the solver of triangles and the graphs. The desktop window and the WebAssembly page show the same view, each
+    /// unit converter, the solver of triangles, the graphs and the worksheet. The desktop window and the WebAssembly page show the same view, each
     /// with the services of its platform: where the settings are kept (the page shown, the equation of the calculator,
     /// the unit of angles, the theme), and the computer algebra system.
     /// </summary>
     public sealed class MathToolsView : UserControl
     {
         private const string RepositoryUrl = "https://github.com/simonebortolin/SharpEquations";
+
+        private const int GraphsTab = 4;
 
         private const string TabKey = "tab";
         private const string EquationKey = "equation";
@@ -36,6 +38,7 @@ namespace SharpEquations.Avalonia.MathTools
             Converter = new UnitsPage();
             TriangleSolver = new TrianglePage();
             Graphs = new GraphsPage(Engine);
+            Worksheet = new WorksheetPage(Engine, this.settings);
             Tabs = new TabControl { Margin = new Thickness(20, 12, 20, 0) };
             FormulaLibrary = new FormulasPage(equation =>
             {
@@ -50,12 +53,10 @@ namespace SharpEquations.Avalonia.MathTools
                 Tab("Units", Converter),
                 Tab("Triangles", TriangleSolver),
                 Tab("Graphs", Graphs),
+                Tab("Worksheet", Worksheet),
             };
-            Calculator.Solver.GraphRequested += (_, equation) =>
-            {
-                Graphs.AddEquation(equation, Engine.Angles, Engine.Definitions);
-                Tabs.SelectedIndex = 4;
-            };
+            Calculator.Solver.GraphRequested += (_, equation) => ShowGraph(equation);
+            Worksheet.GraphRequested += (_, equation) => ShowGraph(equation);
 
             Restore();
             Tabs.SelectionChanged += (_, _) => this.settings.Set(TabKey, Tabs.SelectedIndex.ToString(CultureInfo.InvariantCulture));
@@ -66,6 +67,9 @@ namespace SharpEquations.Avalonia.MathTools
             root.Bind(Panel.BackgroundProperty, root.GetResourceObservable("PageBrush"));
             Content = root;
         }
+
+        /// <summary>The worksheet, the history of what was computed.</summary>
+        public WorksheetPage Worksheet { get; }
 
         /// <summary>The computer algebra system of the calculator.</summary>
         public ICasEngine Engine { get; }
@@ -101,6 +105,12 @@ namespace SharpEquations.Avalonia.MathTools
                 app.RequestedThemeVariant = theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light;
         }
 
+        private void ShowGraph(Equation equation)
+        {
+            Graphs.AddEquation(equation, Engine.Angles, Engine.Definitions);
+            Tabs.SelectedIndex = GraphsTab;
+        }
+
         private static TabItem Tab(string header, Control page) => new TabItem
         {
             Header = new TextBlock { Text = header, FontSize = 15, FontWeight = FontWeight.SemiBold },
@@ -122,7 +132,7 @@ namespace SharpEquations.Avalonia.MathTools
                     new TextBlock { Text = "SharpEquations Math Tools", FontSize = 26, FontWeight = FontWeight.Bold, Foreground = Brushes.White },
                     new TextBlock
                     {
-                        Text = "A scientific keypad, formulas, units, triangles and graphs around a real-time equation editor in .NET.",
+                        Text = "A scientific keypad, formulas, units, triangles, graphs and a worksheet around a real-time equation editor in .NET.",
                         FontSize = 14,
                         Foreground = new SolidColorBrush(Colors.White, 0.85),
                         TextWrapping = TextWrapping.Wrap,
