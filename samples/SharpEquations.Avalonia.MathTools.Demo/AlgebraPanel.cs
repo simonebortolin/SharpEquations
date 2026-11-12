@@ -6,6 +6,7 @@ namespace SharpEquations.Avalonia.MathTools
     using System.Threading.Tasks;
     using global::Avalonia;
     using global::Avalonia.Controls;
+    using global::Avalonia.Input;
     using global::Avalonia.Layout;
     using global::Avalonia.Threading;
     using SharpEquations;
@@ -97,6 +98,16 @@ namespace SharpEquations.Avalonia.MathTools
                 Child = new StackPanel { Spacing = 4, Children = { answer, answerNote } },
             };
             answerFrame.Bind(Border.BackgroundProperty, answerFrame.GetResourceObservable("CodeBrush"));
+            answerFrame.ContextMenu = new ContextMenu();
+            answerFrame.ContextMenu.Opening += (_, e) =>
+            {
+                if (Answer == null)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+                answerFrame.ContextMenu.ItemsSource = MenuItems(Answer);
+            };
 
             Content = new StackPanel { Spacing = 14, Children = { answerFrame, Ui.Row(buttons.ToArray()), definitionsRow, results } };
             ShowDefinitions();
@@ -253,21 +264,83 @@ namespace SharpEquations.Avalonia.MathTools
             Control math = result.Math != null
                 ? new MathView { FontSize = 22, Equation = result.Math, HorizontalAlignment = HorizontalAlignment.Left }
                 : new SelectableTextBlock { Text = result.Text, FontSize = 14, TextWrapping = global::Avalonia.Media.TextWrapping.Wrap };
-            var use = new Button { Content = "To the editor", CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 3), IsEnabled = result.Math != null };
-            use.Click += (_, _) =>
+            var body = new StackPanel { Spacing = 6, Children = { math } };
+            if (result.ApproximateText != null)
             {
-                editor.Equation = result.Math;
-                editor.Focus();
-            };
-            var top = new DockPanel { Children = { Ui.Docked(use, Dock.Right), Ui.Small(label) } };
+                body.Children.Add(result.Approximate != null
+                    ? new MathView { FontSize = 18, Equation = result.Approximate, HorizontalAlignment = HorizontalAlignment.Left }
+                    : new SelectableTextBlock { Text = result.ApproximateText, FontSize = 14, TextWrapping = global::Avalonia.Media.TextWrapping.Wrap });
+            }
+
+            var copy = new Button { Content = "Copy", CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 3) };
+            ToolTip.SetTip(copy, "Copy the result, as text and as MathML (right-click for more)");
+            copy.Click += async (_, _) => await CopyAsync(result.Math, result.Text, null).ConfigureAwait(true);
+            var use = new Button { Content = "To the editor", CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 3), IsEnabled = result.Math != null };
+            use.Click += (_, _) => ToEditor(result.Math);
+            var top = new DockPanel { Children = { Ui.Docked(use, Dock.Right), Ui.Docked(copy, Dock.Right), Ui.Small(label) } };
+            copy.Margin = new Thickness(0, 0, 6, 0);
             var card = new Border
             {
                 CornerRadius = new CornerRadius(12),
                 Padding = new Thickness(16, 10),
-                Child = new StackPanel { Spacing = 8, Children = { top, math } },
+                Child = new StackPanel { Spacing = 8, Children = { top, body } },
+                ContextMenu = new ContextMenu { ItemsSource = MenuItems(result) },
             };
             card.Bind(Border.BackgroundProperty, card.GetResourceObservable("CodeBrush"));
             return card;
+        }
+
+        // the right-click menu of a result: copy it as text, LaTeX or MathML, its decimal values, or put it in the editor
+        private List<MenuItem> MenuItems(CasResult result)
+        {
+            var items = new List<MenuItem>
+            {
+                Item("Copy", () => CopyAsync(result.Math, result.Text, null)),
+                Item("Copy as LaTeX", () => CopyAsync(result.Math, result.Text, EquationFormat.LaTeX), result.Math != null),
+                Item("Copy as MathML", () => CopyAsync(result.Math, result.Text, EquationFormat.MathML), result.Math != null),
+            };
+            if (result.ApproximateText != null)
+                items.Add(Item("Copy decimal values", () => CopyAsync(result.Approximate, result.ApproximateText, null)));
+            items.Add(Item("To the editor", () => { ToEditor(result.Math); return Task.CompletedTask; }, result.Math != null));
+            if (result.Approximate != null)
+                items.Add(Item("Decimal values to the editor", () => { ToEditor(result.Approximate); return Task.CompletedTask; }));
+            items.Add(Item("Paste into the editor", PasteAsync));
+            return items;
+        }
+
+        private static MenuItem Item(string header, Func<Task> action, bool enabled = true)
+        {
+            var item = new MenuItem { Header = header, IsEnabled = enabled };
+            item.Click += async (_, _) => await action().ConfigureAwait(true);
+            return item;
+        }
+
+        private void ToEditor(Equation? math)
+        {
+            if (math == null)
+                return;
+            editor.Equation = math;
+            editor.Focus();
+        }
+
+        private async Task PasteAsync()
+        {
+            editor.Focus();
+            await editor.PasteAsync().ConfigureAwait(true);
+        }
+
+        // the result on the clipboard: as text (UnicodeMath, or the format asked) and as MathML for Word and the editor
+        private async Task CopyAsync(Equation? math, string text, EquationFormat? format)
+        {
+            if (TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
+                return;
+            var item = new DataTransferItem();
+            item.SetText(math == null ? text : math.ToString(format ?? EquationFormat.UnicodeMath));
+            if (math != null)
+                item.Set(MathEditBox.MathMLClipboardFormat, MathClipboard.Encode(math.ToString(EquationFormat.MathML)));
+            var data = new DataTransfer();
+            data.Add(item);
+            await clipboard.SetDataAsync(data).ConfigureAwait(true);
         }
 
         private static string Label(CasAction action, string letter) => action switch
