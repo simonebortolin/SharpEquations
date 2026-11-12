@@ -19,54 +19,88 @@ namespace SharpEquations.Internal.Xslt
     /// </summary>
     internal sealed class XsltOutput
     {
-        private static readonly XName Container = XName.Get("fragment");
+        public static readonly XName Container = XName.Get("fragment");
 
-        private readonly Stack<XContainer> open = new Stack<XContainer>();
-        private readonly Stack<XElement> roots = new Stack<XElement>();
         private readonly XElement result = new XElement(Container);
 
-        // the text written since the last node, as it is and as markup (escaped, with the unescaped text as it is)
-        private readonly StringBuilder text = new StringBuilder();
-        private readonly StringBuilder markup = new StringBuilder();
+        // the element being written, the root of what is written (the result, or the fragment being captured), and
+        // those of the captures around it
+        private XContainer top;
+        private XElement root;
+        private Stack<XContainer>? outer;
+
+        // the text written since the last node: as it is (one piece, or more in the builder) and, once some is written
+        // with disable-output-escaping, as markup (escaped, with the unescaped text as it is)
+        private string? piece;
+        private StringBuilder? text;
+        private StringBuilder? markup;
         private bool hasText;
         private bool hasMarkup;
 
+        // the text captured as strings, one capture after the other, and where the one in progress starts (-1: none)
+        private StringBuilder? captured;
+        private Stack<int>? captures;
+        private int capture = -1;
+
         public XsltOutput()
         {
-            open.Push(result);
-            roots.Push(result);
+            top = result;
+            root = result;
         }
-
-        private XContainer Top => open.Peek();
 
         public void StartElement(XName name)
         {
             Flush();
             var element = new XElement(name);
-            Top.Add(element);
-            open.Push(element);
+            top.Add(element);
+            top = element;
         }
 
         public void EndElement()
         {
             Flush();
-            open.Pop();
+            top = top.Parent!;
         }
 
         public void Attribute(XName name, string value)
         {
             Flush();
-            if (!(Top is XElement element) || ReferenceEquals(element, roots.Peek()))
+            if (!(top is XElement element) || ReferenceEquals(element, root))
                 throw new InvalidOperationException("An attribute can be added only to an element.");
-            if (element.Nodes().Any(n => !(n is XText t) || t.Value.Length > 0))
-                throw new InvalidOperationException("An attribute cannot be added to an element after its children.");
+            for (var node = element.FirstNode; node != null; node = node.NextNode)
+            {
+                if (!(node is XText t) || t.Value.Length > 0)
+                    throw new InvalidOperationException("An attribute cannot be added to an element after its children.");
+            }
             element.SetAttributeValue(name, value);
         }
 
         public void Text(string value)
         {
-            hasText = true;
-            text.Append(value);
+            if (capture >= 0)
+            {
+                captured!.Append(value);
+                return;
+            }
+            if (hasMarkup)
+                Escape(markup!, value);
+            if (!hasText)
+            {
+                hasText = true;
+                piece = value;
+                return;
+            }
+            if (piece != null)
+            {
+                text ??= new StringBuilder();
+                text.Append(piece);
+                piece = null;
+            }
+            text!.Append(value);
+        }
+
+        private static void Escape(StringBuilder markup, string value)
+        {
             foreach (var c in value)
             {
                 switch (c)
@@ -87,46 +121,168 @@ namespace SharpEquations.Internal.Xslt
             }
         }
 
+        private string Pending => piece ?? text!.ToString();
+
         /// <summary>Text written with disable-output-escaping.</summary>
         public void RawText(string value)
         {
-            hasText = true;
-            hasMarkup = true;
-            text.Append(value);
-            markup.Append(value);
+            if (capture >= 0)
+                throw new InvalidOperationException("Text cannot be written as markup here.");
+            if (!hasMarkup)
+            {
+                markup ??= new StringBuilder();
+                markup.Clear();
+                if (hasText)
+                    Escape(markup, Pending);
+                hasMarkup = true;
+            }
+            markup!.Append(value);
+            if (!hasText)
+            {
+                hasText = true;
+                piece = value;
+                return;
+            }
+            if (piece != null)
+            {
+                text ??= new StringBuilder();
+                text.Append(piece);
+                piece = null;
+            }
+            text!.Append(value);
         }
 
         private void Flush()
         {
             if (!hasText)
                 return;
-            var top = Top;
-            if (hasMarkup)
+            if (hasMarkup && Decode(markup!) is string decoded)
+            {
+                if (decoded.Length > 0)
+                    top.Add(new XText(decoded));
+                markup!.Clear();
+            }
+            else if (hasMarkup)
             {
                 var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
                 using (var reader = XmlReader.Create(new StringReader("<r>" + markup + "</r>"), settings))
                     top.Add(XElement.Load(reader, LoadOptions.PreserveWhitespace).Nodes().ToList());
+                markup!.Clear();
             }
-            else if (text.Length > 0 || (top is XElement element && element.IsEmpty && !ReferenceEquals(element, roots.Peek())))
+            else
             {
-                top.Add(text.ToString());
+                var pending = Pending;
+                if (pending.Length > 0 || (top is XElement element && element.IsEmpty && !ReferenceEquals(element, root)))
+                    top.Add(pending);
             }
-            text.Clear();
-            markup.Clear();
+            piece = null;
+            text?.Clear();
             hasText = false;
             hasMarkup = false;
+        }
+
+        /// <summary>
+        /// The text of markup that is only text and references to characters, as most is (a character reference
+        /// written as text): what a parser reads it as. Null for any other markup, which a parser reads.
+        /// </summary>
+        private static string? Decode(StringBuilder markup)
+        {
+            var result = new StringBuilder(markup.Length);
+            for (var i = 0; i < markup.Length; i++)
+            {
+                var c = markup[i];
+                switch (c)
+                {
+                    case '&':
+                    {
+                        var end = i + 1;
+                        while (end < markup.Length && end - i <= 10 && markup[end] != ';')
+                            end++;
+                        if (end >= markup.Length || markup[end] != ';')
+                            return null;
+                        var reference = Reference(markup.ToString(i + 1, end - i - 1));
+                        if (reference == null)
+                            return null;
+                        result.Append(reference);
+                        i = end;
+                        break;
+                    }
+                    // markup, the end of a CDATA section, the ends of lines a parser normalizes, the characters XML
+                    // does not allow and the surrogates, whose pairs a parser checks
+                    case '<':
+                    case '>':
+                    case '\r':
+                    case var _ when c < 0x20 && c != '\t' && c != '\n':
+                    case var _ when c >= 0xD800 && c <= 0xDFFF:
+                    case var _ when c >= 0xFFFE:
+                        return null;
+                    default:
+                        result.Append(c);
+                        break;
+                }
+            }
+            return result.ToString();
+        }
+
+        // the character of a reference to a character or to one of the entities of XML, or null if it is not one
+        private static string? Reference(string name)
+        {
+            switch (name)
+            {
+                case "amp":
+                    return "&";
+                case "lt":
+                    return "<";
+                case "gt":
+                    return ">";
+                case "quot":
+                    return "\"";
+                case "apos":
+                    return "'";
+            }
+            if (name.Length < 2 || name[0] != '#')
+                return null;
+            var hexadecimal = name[1] == 'x';
+            var value = 0;
+            for (var i = hexadecimal ? 2 : 1; i < name.Length; i++)
+            {
+                var c = name[i];
+                int digit;
+                switch (c)
+                {
+                    case >= '0' and <= '9':
+                        digit = c - '0';
+                        break;
+                    case >= 'a' and <= 'f' when hexadecimal:
+                        digit = c - 'a' + 10;
+                        break;
+                    case >= 'A' and <= 'F' when hexadecimal:
+                        digit = c - 'A' + 10;
+                        break;
+                    default:
+                        return null;
+                }
+                value = value * (hexadecimal ? 16 : 10) + digit;
+                if (value > 0x10FFFF)
+                    return null;
+            }
+            if (name.Length == (hexadecimal ? 2 : 1))
+                return null;
+            // the characters of XML but the ends of lines
+            var allowed = value == 0x9 || (value >= 0x20 && value <= 0xD7FF) || (value >= 0xE000 && value <= 0xFFFD) || value >= 0x10000;
+            return allowed ? char.ConvertFromUtf32(value) : null;
         }
 
         public void Comment(string value)
         {
             Flush();
-            Top.Add(new XComment(value));
+            top.Add(new XComment(value));
         }
 
         public void ProcessingInstruction(string target, string data)
         {
             Flush();
-            Top.Add(new XProcessingInstruction(target, data));
+            top.Add(new XProcessingInstruction(target, data));
         }
 
         public void CopyOf(List<XObject> nodes)
@@ -137,11 +293,23 @@ namespace SharpEquations.Internal.Xslt
 
         public void CopyOf(ResultFragment fragment)
         {
+            if (fragment.Text != null)
+            {
+                CopyOfText(fragment.Text);
+                return;
+            }
             foreach (var node in fragment.Root.Nodes())
                 Copy(node);
         }
 
         public void CopyOf(string value) => Text(value);
+
+        /// <summary>The copy of a result tree fragment that is only text: its text node, if it has one.</summary>
+        public void CopyOfText(string value)
+        {
+            if (value.Length > 0)
+                Text(value);
+        }
 
         public void CopyOf(object value)
         {
@@ -159,7 +327,7 @@ namespace SharpEquations.Internal.Xslt
             }
         }
 
-        private void Copy(XObject node)
+        public void Copy(XObject node)
         {
             switch (node)
             {
@@ -169,7 +337,7 @@ namespace SharpEquations.Internal.Xslt
                     break;
                 case XElement element:
                     Flush();
-                    Top.Add(new XElement(element));
+                    top.Add(new XElement(element));
                     break;
                 case XAttribute attribute:
                     Attribute(attribute.Name, attribute.Value);
@@ -202,28 +370,53 @@ namespace SharpEquations.Internal.Xslt
             }
         }
 
+        /// <summary>Starts keeping the text written as a string: only text is written until <see cref="EndText"/>.</summary>
+        public void BeginText()
+        {
+            captured ??= new StringBuilder();
+            captures ??= new Stack<int>();
+            captures.Push(capture);
+            capture = captured.Length;
+        }
+
+        public string EndText()
+        {
+            var value = captured!.ToString(capture, captured.Length - capture);
+            captured.Length = capture;
+            capture = captures!.Pop();
+            return value;
+        }
+
         public void BeginCapture()
         {
             Flush();
-            var root = new XElement(Container);
-            open.Push(root);
-            roots.Push(root);
+            captures ??= new Stack<int>();
+            captures.Push(capture);
+            capture = -1;
+            outer ??= new Stack<XContainer>();
+            outer.Push(top);
+            outer.Push(root);
+            root = new XElement(Container);
+            top = root;
         }
 
-        public ResultFragment EndFragment()
+        private XElement EndCapture()
         {
             Flush();
-            open.Pop();
-            return new ResultFragment(roots.Pop());
+            var fragment = root;
+            root = (XElement)outer!.Pop();
+            top = outer.Pop();
+            capture = captures!.Pop();
+            return fragment;
         }
+
+        public ResultFragment EndFragment() => new ResultFragment(EndCapture());
 
         /// <summary>The text captured, for an attribute or a comment, where disable-output-escaping does not apply.</summary>
         public string EndString()
         {
             hasMarkup = false;
-            Flush();
-            open.Pop();
-            return roots.Pop().Value;
+            return EndCapture().Value;
         }
 
         /// <summary>The document element of the result, or null if the result is only white space.</summary>

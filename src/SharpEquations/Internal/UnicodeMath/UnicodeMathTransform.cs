@@ -634,6 +634,13 @@ namespace SharpEquations.Internal.UnicodeMath
                 foreach (var space in spaceString)
                     spaces += "&#x" + ((int)space).ToString("x", CultureInfo.InvariantCulture) + ";";
             }
+            // a space of a width in eighteenths of an em (the ½ em of ",  "), as the character of that width; none for
+            // the width 0 of an empty cell
+            else if (value is JsObject width && Get(width, "space") is { } eighteenths && System.Convert.ToInt32(eighteenths, CultureInfo.InvariantCulture) > 0)
+            {
+                foreach (var space in UnicodeMathSerializer.UniSpaces[System.Convert.ToInt32(eighteenths, CultureInfo.InvariantCulture)])
+                    spaces += "&#x" + ((int)space).ToString("x", CultureInfo.InvariantCulture) + ";";
+            }
             return O("mo", NoAttr(spaces));
         }
 

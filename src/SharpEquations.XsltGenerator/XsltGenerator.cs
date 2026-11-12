@@ -51,7 +51,16 @@ namespace SharpEquations.XsltGenerator
                 using (var reader = XmlReader.Create(new StringReader(text), settings))
                     document = XDocument.Load(reader, LoadOptions.SetLineInfo | LoadOptions.PreserveWhitespace);
                 var className = ClassName(path);
-                var source = new StylesheetCompiler(document.Root!, className, fileName).Compile();
+                // compiled again with what each compilation learns of the templates, until nothing is new
+                var facts = new Facts();
+                string source;
+                while (true)
+                {
+                    var compiler = new StylesheetCompiler(document.Root!, className, fileName, facts);
+                    source = compiler.Compile();
+                    if (!facts.Add(compiler.Learnt))
+                        break;
+                }
                 output.AddSource(className + ".g.cs", SourceText.From(source, Encoding.UTF8));
             }
             catch (XsltException e)

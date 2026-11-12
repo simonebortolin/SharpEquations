@@ -1,5 +1,16 @@
 #nullable enable
 
+namespace SharpEquations.Internal.Xslt
+{
+    using System.Xml.Linq;
+
+    /// <summary>Xslt/conformance.xsl, compiled by SharpEquations.XsltGenerator.</summary>
+    internal sealed partial class ConformanceStylesheet
+    {
+        public static partial XElement? Transform(XElement input);
+    }
+}
+
 namespace SharpEquations.Tests.Xslt
 {
     using System;
@@ -32,7 +43,9 @@ namespace SharpEquations.Tests.Xslt
         {
             var stylesheet = Stylesheets.GetOrAdd(name, n =>
             {
-                using var stream = File.OpenRead(Path.Combine(TestData.Path(), "..", "..", "src", "SharpEquations", "Resources", n));
+                using var stream = File.OpenRead(n == "conformance.xsl"
+                    ? Path.Combine(TestData.Path(), "..", "SharpEquations.Tests", "Xslt", n)
+                    : Path.Combine(TestData.Path(), "..", "..", "src", "SharpEquations", "Resources", n));
                 using var reader = XmlReader.Create(stream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
                 var transform = new XslCompiledTransform();
                 transform.Load(reader, XsltSettings.Default, null);
@@ -114,7 +127,7 @@ namespace SharpEquations.Tests.Xslt
 
         private static async Task AssertNoDifferences((List<string> Differences, int Astral) result, int inputs)
         {
-            await Assert.That(inputs).IsGreaterThan(100);
+            await Assert.That(inputs).IsGreaterThan(30);
             Console.WriteLine(result.Astral + " of " + inputs + " differ, with characters outside the basic plane");
             await Assert.That(result.Differences.Count).IsEqualTo(0).Because(string.Join("\n", result.Differences.Take(10)));
         }
@@ -131,6 +144,44 @@ namespace SharpEquations.Tests.Xslt
         {
             var inputs = Equations().Select(e => (e.Label, e.Equation.ToMathML())).ToList();
             await AssertNoDifferences(Differences("mml2omml.xsl", Mml2ommlStylesheet.Transform, inputs), inputs.Count);
+        }
+
+        private const string ConformanceInput = "<root xmlns:p=\"urn:p\" a=\"1\" b=\"two\"><?pi data?><!--c-->"
+            + "<item id=\"1\" k=\"x\"><name>alpha</name><v>3</v><sub><v>10</v></sub></item>"
+            + "<item id=\"2\" k=\"y\"><name>beta</name><v>4</v><v>5</v></item>text"
+            + "<p:item id=\"3\"><name>gamma</name><v>-1.5</v></p:item>"
+            + "<item id=\"4\"><name>delta</name><sub><sub><v>7</v></sub><v>8</v></sub></item>"
+            + "<ch><code>c01</code><mode>m</mode></ch><ch><code>c01</code><mode>t</mode></ch><ch><code>c01</code></ch>"
+            + "<ch><code>c02</code><mode>t</mode></ch><ch><code>c02</code></ch><ch><code>c03</code><mode>m</mode></ch><ch><code>c03</code></ch>"
+            + "<ch><code>c04</code><code>c05</code></ch><ch><code>c05</code><code>c01</code><mode>t</mode></ch><ch plain=\"1\"><code>c06</code></ch>"
+            + "<ch plain=\"1\"><code>c05</code></ch><ch><code>c09</code></ch><ch><mode>m</mode></ch><ch/><ch><code>c10</code></ch><ch><code> c07</code></ch>"
+            + "</root>";
+
+        /// <summary>
+        /// What the generator compiles, beyond what the stylesheets of the library use of it on the corpora: the axes,
+        /// the predicates that count, the node-sets as variables and parameters, the comparisons, the rules found by the
+        /// text of a child (Xslt/conformance.xsl).
+        /// </summary>
+        [Test]
+        public async Task GeneratorConformance()
+        {
+            var input = XElement.Parse(ConformanceInput);
+            var expected = Canonical(Reference("conformance.xsl", new XElement(input)));
+            var actual = Canonical(ConformanceStylesheet.Transform(new XElement(input)));
+            await Assert.That(XElement.Parse(expected).Elements().Count()).IsGreaterThan(30);
+            foreach (var (e, a) in XElement.Parse(expected).Elements().Zip(XElement.Parse(actual).Elements(), (e, a) => (e, a)))
+                await Assert.That(a.ToString(SaveOptions.DisableFormatting)).IsEqualTo(e.ToString(SaveOptions.DisableFormatting));
+            await Assert.That(actual).IsEqualTo(expected);
+        }
+
+        [Test]
+        public async Task ContentMathML2MathML()
+        {
+            var inputs = Directory.GetFiles(TestData.Path("contentmathml"), "*.mml")
+                .OrderBy(f => f, StringComparer.Ordinal)
+                .SelectMany(f => XElement.Load(f, LoadOptions.PreserveWhitespace).DescendantsAndSelf().Where(e => e.Name.LocalName == "math").Select((e, i) => (Path.GetFileName(f) + "#" + i, e)))
+                .ToList();
+            await AssertNoDifferences(Differences("ctop.xsl", CtopStylesheet.Transform, inputs), inputs.Count);
         }
 
         [Test]

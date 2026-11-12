@@ -10,20 +10,6 @@ namespace SharpEquations.Internal.Xslt
     using System.Xml.Linq;
     using SharpEquations.Internal.Text;
 
-    internal enum Axis
-    {
-        Child,
-        Descendant,
-        DescendantOrSelf,
-        Parent,
-        Ancestor,
-        AncestorOrSelf,
-        FollowingSibling,
-        PrecedingSibling,
-        Self,
-        Attribute,
-    }
-
     internal enum Comparison
     {
         Equal,
@@ -110,29 +96,41 @@ namespace SharpEquations.Internal.Xslt
 
         public static double Num(string value)
         {
-            var s = value.Trim(' ', '\t', '\r', '\n');
-            var i = 0;
-            if (i < s.Length && s[i] == '-')
+            var start = 0;
+            var end = value.Length;
+            while (start < end && IsSpace(value[start]))
+                start++;
+            while (end > start && IsSpace(value[end - 1]))
+                end--;
+            var i = start;
+            if (i < end && value[i] == '-')
                 i++;
             var digits = 0;
-            while (i < s.Length && s[i] >= '0' && s[i] <= '9')
+            var whole = 0L;
+            while (i < end && value[i] >= '0' && value[i] <= '9')
             {
+                whole = whole * 10 + (value[i] - '0');
                 i++;
                 digits++;
             }
-            if (i < s.Length && s[i] == '.')
+            // a short whole number, as most are, is exact as it is
+            if (i == end && digits > 0 && digits <= 15)
+                return value[start] == '-' ? -(double)whole : whole;
+            if (i < end && value[i] == '.')
             {
                 i++;
-                while (i < s.Length && s[i] >= '0' && s[i] <= '9')
+                while (i < end && value[i] >= '0' && value[i] <= '9')
                 {
                     i++;
                     digits++;
                 }
             }
-            if (digits == 0 || i != s.Length)
+            if (digits == 0 || i != end)
                 return double.NaN;
-            return double.Parse(s, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
+            return double.Parse(value.Substring(start, end - start), NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
         }
+
+        private static bool IsSpace(char c) => c == ' ' || c == '\t' || c == '\r' || c == '\n';
 
         public static double Num(double value) => value;
 
@@ -218,9 +216,22 @@ namespace SharpEquations.Internal.Xslt
         public static bool Compare(object left, object right, Comparison comparison)
         {
             if (IsNodes(left))
-                return IsNodes(right) ? CompareNodes(left, right, comparison) : CompareNodes(left, right, comparison, false);
+            {
+                if (!IsNodes(right))
+                    return CompareNodes(left, right, comparison);
+                for (int i = 0, leftCount = ValueCount(left); i < leftCount; i++)
+                {
+                    var value = ValueAt(left, i);
+                    for (int j = 0, rightCount = ValueCount(right); j < rightCount; j++)
+                    {
+                        if (CompareStrings(value, ValueAt(right, j), comparison))
+                            return true;
+                    }
+                }
+                return false;
+            }
             if (IsNodes(right))
-                return CompareNodes(right, left, comparison, true);
+                return CompareNodes(right, left, Swap(comparison));
             if (comparison == Comparison.Equal || comparison == Comparison.NotEqual)
             {
                 bool equal;
@@ -234,6 +245,43 @@ namespace SharpEquations.Internal.Xslt
             }
             return Compare(Num(left), Num(right), comparison);
         }
+
+        public static bool Compare(object left, string right, Comparison comparison)
+        {
+            if (!IsNodes(left))
+                return Compare(left, (object)right, comparison);
+            for (int i = 0, count = ValueCount(left); i < count; i++)
+            {
+                if (CompareStrings(ValueAt(left, i), right, comparison))
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool Compare(string left, object right, Comparison comparison) => Compare(right, left, Swap(comparison));
+
+        public static bool Compare(object left, double right, Comparison comparison)
+        {
+            switch (left)
+            {
+                case double number:
+                    return Compare(number, right, comparison);
+                case string text when comparison != Comparison.Equal && comparison != Comparison.NotEqual:
+                    return Compare(Num(text), right, comparison);
+                case string text:
+                    return (Num(text) == right) == (comparison == Comparison.Equal);
+                case bool _:
+                    return Compare(left, (object)right, comparison);
+            }
+            for (int i = 0, count = ValueCount(left); i < count; i++)
+            {
+                if (Compare(Num(ValueAt(left, i)), right, comparison))
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool Compare(double left, object right, Comparison comparison) => Compare(right, left, Swap(comparison));
 
         public static bool Compare(double left, double right, Comparison comparison)
         {
@@ -256,27 +304,14 @@ namespace SharpEquations.Internal.Xslt
 
         private static bool IsNodes(object value) => value is List<XObject> || value is ResultFragment;
 
-        private static IEnumerable<string> StringValues(object value) =>
-            value is ResultFragment fragment ? new[] { fragment.Value } : ((List<XObject>)value).Select(StringValue);
+        // the string values of a node-set: those of its nodes, or that of a result tree fragment
+        private static int ValueCount(object nodes) => nodes is List<XObject> list ? list.Count : 1;
 
-        private static bool CompareNodes(object left, object right, Comparison comparison)
-        {
-            var rightValues = StringValues(right).ToList();
-            foreach (var l in StringValues(left))
-            {
-                foreach (var r in rightValues)
-                {
-                    if (CompareStrings(l, r, comparison))
-                        return true;
-                }
-            }
-            return false;
-        }
+        private static string ValueAt(object nodes, int index) => nodes is List<XObject> list ? StringValue(list[index]) : ((ResultFragment)nodes).Value;
 
-        private static bool CompareNodes(object nodes, object other, Comparison comparison, bool swapped)
+        // a node-set compared with a value that is not one
+        private static bool CompareNodes(object nodes, object other, Comparison comparison)
         {
-            if (swapped)
-                comparison = Swap(comparison);
             if (other is bool b)
             {
                 var value = Bool(nodes);
@@ -284,10 +319,23 @@ namespace SharpEquations.Internal.Xslt
                     ? (value == b) == (comparison == Comparison.Equal)
                     : Compare(value ? 1 : 0, b ? 1 : 0, comparison);
             }
+            var count = ValueCount(nodes);
             if (other is double d)
-                return StringValues(nodes).Any(s => Compare(Num(s), d, comparison));
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    if (Compare(Num(ValueAt(nodes, i)), d, comparison))
+                        return true;
+                }
+                return false;
+            }
             var text = Str(other);
-            return StringValues(nodes).Any(s => CompareStrings(s, text, comparison));
+            for (var i = 0; i < count; i++)
+            {
+                if (CompareStrings(ValueAt(nodes, i), text, comparison))
+                    return true;
+            }
+            return false;
         }
 
         private static bool CompareStrings(string left, string right, Comparison comparison)
@@ -324,14 +372,6 @@ namespace SharpEquations.Internal.Xslt
 
         public static List<XObject> Single(XObject node) => new List<XObject>(1) { node };
 
-        public static List<XObject> Root(XObject node)
-        {
-            var root = node;
-            for (var parent = Parent(root); parent != null; parent = Parent(parent))
-                root = parent;
-            return Single(root);
-        }
-
         public static XObject? Parent(XObject node)
         {
             switch (node)
@@ -360,129 +400,79 @@ namespace SharpEquations.Internal.Xslt
             return result;
         }
 
-        public static List<XObject> Step(List<XObject> input, Axis axis, NodeTest test)
+        /// <summary>What a template is given for a parameter that is a node, when the call leaves it to its default.</summary>
+        public static readonly XObject Omitted = new XComment("");
+
+        public static List<XObject> ListOf(XObject? node) => node == null ? Empty : Single(node);
+
+        /// <summary>The string value of the first child of the element with the name, and whether it has none, one or more.</summary>
+        public static string? KeyValue(XElement element, XName name, out int count)
         {
-            var result = new List<XObject>();
-            var attributeAxis = axis == Axis.Attribute;
-            foreach (var context in input)
+            string? value = null;
+            count = 0;
+            for (var node = element.FirstNode; node != null; node = node.NextNode)
             {
-                foreach (var node in Along(context, axis))
-                {
-                    if (test.Matches(node, attributeAxis))
-                        result.Add(node);
-                }
+                if (!(node is XElement child) || child.Name != name)
+                    continue;
+                if (++count > 1)
+                    break;
+                value = child.Value;
             }
-            Order(result, input.Count, axis);
-            return result;
+            return value;
         }
 
-        public static List<XObject> Step(List<XObject> input, Axis axis, NodeTest test, params XPathPredicate[] predicates)
+        public static XObject? First(List<XObject> nodes) => nodes.Count == 0 ? null : nodes[0];
+
+        public static XObject RootNode(XObject node)
         {
-            var result = new List<XObject>();
-            var attributeAxis = axis == Axis.Attribute;
-            var candidates = new List<XObject>();
-            foreach (var context in input)
+            var root = node;
+            for (var parent = Parent(root); parent != null; parent = Parent(parent))
+                root = parent;
+            return root;
+        }
+
+        public static XNode? FirstChild(XObject node) => node is XContainer container ? container.FirstNode : null;
+
+        public static XNode? NextSibling(XObject node) => node is XNode sibling ? sibling.NextNode : null;
+
+        public static XNode? PreviousSibling(XObject node) => node is XNode sibling ? sibling.PreviousNode : null;
+
+        /// <summary>The first of the nodes that have the parent of the node, if it is one of them (an attribute is not).</summary>
+        public static XNode? FirstSibling(XObject node) =>
+            node is XNode && !(node is XDocument) && Parent(node) is XContainer parent ? parent.FirstNode : null;
+
+        /// <summary>The node after a node of a tree in document order, within the tree.</summary>
+        public static XObject? NextInTree(XObject node, XObject root)
+        {
+            if (node is XContainer container && container.FirstNode is XNode first)
+                return first;
+            for (var current = node; !ReferenceEquals(current, root); )
             {
-                candidates.Clear();
-                foreach (var node in Along(context, axis))
-                {
-                    if (test.Matches(node, attributeAxis))
-                        candidates.Add(node);
-                }
-                result.AddRange(Apply(candidates, predicates));
+                if (current is XNode sibling && sibling.NextNode is XNode next)
+                    return next;
+                var parent = Parent(current);
+                if (parent == null)
+                    return null;
+                current = parent;
             }
-            Order(result, input.Count, axis);
-            return result;
-        }
-
-        public static List<XObject> Filter(List<XObject> nodes, XPathPredicate predicate)
-        {
-            var result = new List<XObject>();
-            for (var i = 0; i < nodes.Count; i++)
-            {
-                if (predicate(nodes[i], i + 1, nodes.Count))
-                    result.Add(nodes[i]);
-            }
-            return result;
-        }
-
-        private static List<XObject> Apply(List<XObject> candidates, XPathPredicate[] predicates)
-        {
-            var nodes = candidates;
-            foreach (var predicate in predicates)
-                nodes = Filter(nodes, predicate);
-            return ReferenceEquals(nodes, candidates) ? new List<XObject>(candidates) : nodes;
-        }
-
-        private static bool IsReverse(Axis axis) =>
-            axis == Axis.Ancestor || axis == Axis.AncestorOrSelf || axis == Axis.PrecedingSibling;
-
-        private static void Order(List<XObject> nodes, int contexts, Axis axis)
-        {
-            if (contexts > 1)
-                SortUnique(nodes);
-            else if (IsReverse(axis))
-                nodes.Reverse();
-        }
-
-        private static IEnumerable<XObject> Along(XObject node, Axis axis)
-        {
-            switch (axis)
-            {
-                case Axis.Child:
-                    return Children(node);
-                case Axis.Descendant:
-                    return Descendants(node);
-                case Axis.DescendantOrSelf:
-                    return new[] { node }.Concat(Descendants(node));
-                case Axis.Parent:
-                    var parent = Parent(node);
-                    return parent == null ? Enumerable.Empty<XObject>() : new[] { parent };
-                case Axis.Ancestor:
-                    return Ancestors(node);
-                case Axis.AncestorOrSelf:
-                    return new[] { node }.Concat(Ancestors(node));
-                case Axis.FollowingSibling:
-                    return node is XNode following && !(node is XDocument) ? following.NodesAfterSelf().Where(IsInModel) : Enumerable.Empty<XObject>();
-                case Axis.PrecedingSibling:
-                    return node is XNode preceding && !(node is XDocument) ? preceding.NodesBeforeSelf().Reverse().Where(IsInModel) : Enumerable.Empty<XObject>();
-                case Axis.Self:
-                    return new[] { node };
-                default:
-                    return node is XElement element ? element.Attributes().Where(a => !a.IsNamespaceDeclaration) : Enumerable.Empty<XObject>();
-            }
+            return null;
         }
 
         public static List<XObject> ChildNodes(XObject node) => new List<XObject>(Children(node));
 
-        /// <summary>
-        /// Whether a node matches a step of a pattern whose predicates count positions: whether the step, from the
-        /// parent of the node, selects it.
-        /// </summary>
-        public static bool MatchesStep(XObject node, Axis axis, NodeTest test, params XPathPredicate[] predicates)
-        {
-            var parent = Parent(node);
-            return parent != null && test.Matches(node, axis == Axis.Attribute) && Step(Single(parent), axis, test, predicates).Contains(node);
-        }
-
         public static IEnumerable<XObject> Children(XObject node) =>
             node is XContainer container ? container.Nodes().Where(IsInModel) : Enumerable.Empty<XObject>();
-
-        private static IEnumerable<XObject> Descendants(XObject node) =>
-            node is XContainer container ? container.DescendantNodes().Where(IsInModel) : Enumerable.Empty<XObject>();
-
-        private static IEnumerable<XObject> Ancestors(XObject node)
-        {
-            for (var parent = Parent(node); parent != null; parent = Parent(parent))
-                yield return parent;
-        }
 
         // the document type and the white space around the document element are not nodes of XPath
         private static bool IsInModel(XNode node) =>
             !(node is XDocumentType) && !(node is XText && node.Parent == null);
 
-        private static void SortUnique(List<XObject> nodes)
+        public static bool IsNode(XObject node) => !(node is XNode other) || IsInModel(other);
+
+        public static void SortUnique(List<XObject> nodes)
         {
+            if (nodes.Count < 2)
+                return;
             nodes.Sort(DocumentOrder);
             var write = 0;
             for (var read = 0; read < nodes.Count; read++)
@@ -605,9 +595,39 @@ namespace SharpEquations.Internal.Xslt
         {
             var first = Round(start);
             var end = first + Round(length);
+            var position = 0;
+            var index = 0;
+            var from = -1;
+            var to = 0;
+            foreach (var rune in s.EnumerateRunes())
+            {
+                position++;
+                var next = index + (rune.IsBmp ? 1 : 2);
+                if (position >= first && position < end)
+                {
+                    // a lone surrogate, which reads as U+FFFD, is written as U+FFFD
+                    if (rune.Value == 0xFFFD && s[index] != '\uFFFD')
+                        return SubstringOfRunes(s, first, end);
+                    if (from < 0)
+                        from = index;
+                    to = next;
+                }
+                else if (from >= 0)
+                {
+                    break;
+                }
+                index = next;
+            }
+            if (from < 0)
+                return "";
+            return from == 0 && to == s.Length ? s : s.Substring(from, to - from);
+        }
+
+        private static string SubstringOfRunes(string s, double first, double end)
+        {
             var result = new StringBuilder();
             var position = 0;
-            foreach (var rune in CodePoints.Of(s))
+            foreach (var rune in s.EnumerateRunes())
             {
                 position++;
                 if (position >= first && position < end)
@@ -616,7 +636,13 @@ namespace SharpEquations.Internal.Xslt
             return result.ToString();
         }
 
-        public static double StringLength(string s) => CodePoints.Of(s).Count();
+        public static double StringLength(string s)
+        {
+            var length = 0;
+            foreach (var rune in s.EnumerateRunes())
+                length++;
+            return length;
+        }
 
         public static string NormalizeSpace(string s)
         {
@@ -637,20 +663,14 @@ namespace SharpEquations.Internal.Xslt
             return result.ToString();
         }
 
-        public static string Translate(string s, string from, string to)
+        public static string Translate(string s, string from, string to) => new TranslateMap(from, to).Apply(s);
+
+        /// <summary>translate() with the map of the last call from the same place, which mostly has the same arguments.</summary>
+        public static string Translate(string s, string from, string to, ref TranslateMap? map)
         {
-            var source = CodePoints.Of(from).ToList();
-            var target = CodePoints.Of(to).ToList();
-            var result = new StringBuilder(s.Length);
-            foreach (var rune in CodePoints.Of(s))
-            {
-                var index = source.IndexOf(rune);
-                if (index < 0)
-                    result.Append(rune.ToString());
-                else if (index < target.Count)
-                    result.Append(target[index].ToString());
-            }
-            return result.ToString();
+            if (map == null || !map.Maps(from, to))
+                map = new TranslateMap(from, to);
+            return map.Apply(s);
         }
 
         public static double Round(double value)

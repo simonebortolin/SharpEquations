@@ -7,12 +7,21 @@ namespace SharpEquations.Internal.Xslt
     /// <summary>A result tree fragment: the value of a variable or parameter given by its content.</summary>
     internal sealed class ResultFragment
     {
-        public ResultFragment(XElement root) => Root = root;
+        private readonly string? text;
+        private XElement? root;
+
+        public ResultFragment(XElement root) => this.root = root;
+
+        /// <summary>A fragment that is only text.</summary>
+        public ResultFragment(string text) => this.text = text;
+
+        /// <summary>The text of a fragment that is only text, or null.</summary>
+        public string? Text => text;
 
         /// <summary>The nodes of the fragment, as the children of an element that is not part of it.</summary>
-        public XElement Root { get; }
+        public XElement Root => root ??= new XElement(XsltOutput.Container, text!.Length > 0 ? new XText(text) : null);
 
-        public string Value => Root.Value;
+        public string Value => text ?? root!.Value;
     }
 
     /// <summary>The parameters passed by <c>xsl:apply-templates</c>.</summary>
@@ -37,7 +46,4 @@ namespace SharpEquations.Internal.Xslt
             return null;
         }
     }
-
-    /// <summary>An XPath predicate, or any expression evaluated with a context node, position and size.</summary>
-    internal delegate bool XPathPredicate(XObject node, int position, int size);
 }

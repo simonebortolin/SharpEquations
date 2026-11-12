@@ -7,10 +7,78 @@ namespace SharpEquations.XsltGenerator
     using System.Xml.Linq;
 
     /// <summary>
-    /// An XSLT 1.0 stylesheet compiled to a C# class: a method for each template, the dispatch of
-    /// <c>xsl:apply-templates</c> for each mode (by the name of the element first), a lazy property for each
-    /// global variable. What the stylesheets of SharpEquations do not use (keys, sorting, numbering, imports,
-    /// extension functions) is reported as an error.
+    /// What a compilation of the stylesheet takes as known of its templates, parameters and global variables, and
+    /// learns of them: the stylesheet is compiled again, with what the compilation before learnt, until nothing new
+    /// is learnt. Every fact starts as the one that gives the best code and only moves to the one that is always
+    /// right, so the last compilation holds.
+    /// </summary>
+    internal sealed class Facts
+    {
+        /// <summary>The types of the values given to the parameters of the named templates.</summary>
+        public Dictionary<string, XType> ParameterTypes { get; } = new Dictionary<string, XType>();
+
+        /// <summary>The parameters of the named templates that a call leaves to their default.</summary>
+        public HashSet<string> Omitted { get; } = new HashSet<string>();
+
+        /// <summary>The named templates that read the context node, its position, its size.</summary>
+        public HashSet<string> NodeUsed { get; } = new HashSet<string>();
+
+        public HashSet<string> PositionUsed { get; } = new HashSet<string>();
+
+        public HashSet<string> SizeUsed { get; } = new HashSet<string>();
+
+        /// <summary>The modes with a template that reads the position of the node, the size.</summary>
+        public HashSet<string> ModePosition { get; } = new HashSet<string>();
+
+        public HashSet<string> ModeSize { get; } = new HashSet<string>();
+
+        /// <summary>The named templates that write more than text.</summary>
+        public HashSet<string> NotText { get; } = new HashSet<string>();
+
+        /// <summary>The named templates that read the input, or a global variable that depends on it.</summary>
+        public HashSet<string> Impure { get; } = new HashSet<string>();
+
+        /// <summary>The global variables that depend on the input, or are not strings.</summary>
+        public HashSet<string> Dynamic { get; } = new HashSet<string>();
+
+        private IEnumerable<HashSet<string>> Sets => new[] { Omitted, NodeUsed, PositionUsed, SizeUsed, ModePosition, ModeSize, NotText, Impure, Dynamic };
+
+        public static string Parameter(string template, string parameter) => template + "\n" + parameter;
+
+        public static XType Join(XType left, XType right)
+        {
+            if (left == XType.None)
+                return right;
+            if (right == XType.None || left == right)
+                return left;
+            // a node is a node-set too
+            return (left == XType.Node && right == XType.NodeSet) || (left == XType.NodeSet && right == XType.Node) ? XType.NodeSet : XType.Any;
+        }
+
+        public void Give(string parameter, XType type) =>
+            ParameterTypes[parameter] = Join(ParameterTypes.TryGetValue(parameter, out var known) ? known : XType.None, type);
+
+        /// <summary>Adds what another compilation learnt; whether it was anything new.</summary>
+        public bool Add(Facts other)
+        {
+            var before = Count;
+            foreach (var parameter in other.ParameterTypes)
+                Give(parameter.Key, parameter.Value);
+            foreach (var pair in Sets.Zip(other.Sets, (mine, theirs) => (mine, theirs)))
+                pair.mine.UnionWith(pair.theirs);
+            return Count != before;
+        }
+
+        // every fact moves one way, so the count tells whether one moved
+        private int Count => Sets.Sum(s => s.Count) + ParameterTypes.Values.Sum(t => t == XType.None ? 0 : t == XType.Any ? 3 : t == XType.NodeSet ? 2 : 1);
+    }
+
+    /// <summary>
+    /// An XSLT 1.0 stylesheet compiled to a C# class: a method for each template, with typed parameters for the named
+    /// ones; the dispatch of <c>xsl:apply-templates</c> for each mode (by the name of the element first); a lazy
+    /// property for each global variable, computed once for all when it is a string that does not depend on the
+    /// input; a method for each expression that walks the tree. What the stylesheets of SharpEquations do not use
+    /// (keys, sorting, numbering, imports, extension functions) is reported as an error.
     /// </summary>
     internal sealed class StylesheetCompiler
     {
@@ -19,33 +87,41 @@ namespace SharpEquations.XsltGenerator
         private readonly XElement stylesheet;
         private readonly string className;
         private readonly string fileName;
+        private readonly Facts facts;
         private readonly XPathCompiler xpath;
+        private readonly Names locals = new Names();
 
         private readonly CodeWriter nameFields = new CodeWriter(2);
-        private readonly CodeWriter testFields = new CodeWriter(2);
         private readonly CodeWriter staticFields = new CodeWriter(2);
         private readonly CodeWriter instanceFields = new CodeWriter(2);
         private readonly CodeWriter members = new CodeWriter(2);
 
         private readonly Dictionary<string, string> names = new Dictionary<string, string>();
-        private readonly Dictionary<string, string> tests = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> helpers = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> statics = new Dictionary<string, string>();
         private readonly Dictionary<string, NamedTemplate> namedTemplates = new Dictionary<string, NamedTemplate>();
         private readonly Dictionary<string, GlobalVariable> globals = new Dictionary<string, GlobalVariable>();
         private readonly Dictionary<string, int> modes = new Dictionary<string, int> { [""] = 0 };
         private readonly List<Rule> rules = new List<Rule>();
-        private int counter;
 
         private sealed class NamedTemplate
         {
-            public NamedTemplate(string method, List<string> parameters)
+            public NamedTemplate(string name, string method, List<string> parameters, bool matches)
             {
+                Name = name;
                 Method = method;
                 Parameters = parameters;
+                Matches = matches;
             }
+
+            public string Name { get; }
 
             public string Method { get; }
 
             public List<string> Parameters { get; }
+
+            /// <summary>Whether the template has a pattern too, and takes its parameters from xsl:apply-templates.</summary>
+            public bool Matches { get; }
         }
 
         private sealed class GlobalVariable
@@ -115,17 +191,24 @@ namespace SharpEquations.XsltGenerator
             public List<PatternStep> Steps { get; }
 
             public Step? Last => Steps.Count == 0 ? null : Steps[Steps.Count - 1].Step;
+
+            /// <summary>Whether the rule matches every node it is tried on, those its last step tells by their kind or name.</summary>
+            public bool Always { get; set; }
         }
 
-        public StylesheetCompiler(XElement stylesheet, string className, string fileName)
+        public StylesheetCompiler(XElement stylesheet, string className, string fileName, Facts facts)
         {
             this.stylesheet = stylesheet;
             this.className = className;
             this.fileName = fileName;
+            this.facts = facts;
             xpath = new XPathCompiler(this);
         }
 
-        public string NewName(string prefix) => prefix + (++counter);
+        /// <summary>What this compilation learnt.</summary>
+        public Facts Learnt { get; } = new Facts();
+
+        public string NewName(string prefix) => locals.New(prefix);
 
         public static XsltException Error(XObject node, string message)
         {
@@ -147,49 +230,41 @@ namespace SharpEquations.XsltGenerator
             return field;
         }
 
-        public string NodeTest(NodeTestSyntax test, XElement scope)
+        /// <summary>A static field of the class with this value, the same for the same value.</summary>
+        public string StaticField(string type, string init)
         {
-            string key;
-            string init;
-            switch (test.Kind)
+            var key = type + " " + init;
+            if (!statics.TryGetValue(key, out var field))
             {
-                case TestKind.Name:
-                {
-                    var name = XName.Get(test.Local!, Namespace(test.Prefix, scope));
-                    key = "name " + name;
-                    init = "NodeTest.Named(" + Name(name) + ")";
-                    break;
-                }
-                case TestKind.Namespace:
-                {
-                    var ns = Namespace(test.Prefix, scope);
-                    key = "ns " + ns;
-                    init = "NodeTest.InNamespace(" + XPathCompiler.Literal(ns) + ")";
-                    break;
-                }
-                case TestKind.AnyName:
-                    return "NodeTest.AnyName";
-                case TestKind.Node:
-                    return "NodeTest.Node";
-                case TestKind.Text:
-                    return "NodeTest.Text";
-                case TestKind.Comment:
-                    return "NodeTest.Comment";
-                default:
-                    key = "pi " + test.Local;
-                    init = "NodeTest.ProcessingInstruction(" + (test.Local == null ? "null" : XPathCompiler.Literal(test.Local)) + ")";
-                    break;
-            }
-            if (!tests.TryGetValue(key, out var field))
-            {
-                field = "Test" + tests.Count;
-                tests.Add(key, field);
-                testFields.Line("private static readonly NodeTest " + field + " = " + init + ";");
+                field = "Static" + statics.Count;
+                statics.Add(key, field);
+                staticFields.Line("private static readonly " + type + " " + field + " = " + init + ";");
             }
             return field;
         }
 
-        private static string Namespace(string? prefix, XElement scope)
+        /// <summary>A static field for a value kept from one use to the next.</summary>
+        public string CacheField(string type)
+        {
+            var field = NewName("Cache");
+            staticFields.Line("private static " + type + " " + field + ";");
+            return field;
+        }
+
+        /// <summary>A method of the class with this body, the same for the same body; its name.</summary>
+        public string HelperMethod(string returnType, string parameters, string body)
+        {
+            var key = returnType + " (" + parameters + ")\n" + body;
+            if (!helpers.TryGetValue(key, out var method))
+            {
+                method = "Path" + helpers.Count;
+                helpers.Add(key, method);
+                members.Line().Open("private " + returnType + " " + method + "(" + parameters + ")").Raw(body).Close();
+            }
+            return method;
+        }
+
+        public static string Namespace(string? prefix, XElement scope)
         {
             if (prefix == null)
                 return "";
@@ -234,7 +309,7 @@ namespace SharpEquations.XsltGenerator
             {
                 var name = Attr(templates[i], "name", false);
                 if (name != null)
-                    namedTemplates[name] = new NamedTemplate("Named" + i, TemplateParameters(templates[i]).Select(p => Attr(p, "name", true)!).ToList());
+                    namedTemplates[name] = new NamedTemplate(name, "Named" + i, TemplateParameters(templates[i]).Select(p => Attr(p, "name", true)!).ToList(), Attr(templates[i], "match", false) != null);
             }
 
             for (var i = 0; i < templates.Count; i++)
@@ -283,7 +358,7 @@ namespace SharpEquations.XsltGenerator
                 .Line()
                 .Line("// the stylesheet " + fileName + ", compiled to C#")
                 .Open("internal sealed partial class " + className);
-            file.Append(nameFields).Append(testFields).Append(staticFields);
+            file.Append(nameFields).Append(staticFields);
             file.Line()
                 .Line("private readonly XsltOutput output = new XsltOutput();")
                 .Line("private readonly XObject root;")
@@ -295,7 +370,7 @@ namespace SharpEquations.XsltGenerator
                 .Open("public static partial XElement? Transform(XElement input)")
                 .Line("var document = new XDocument(input);")
                 .Line("var stylesheet = new " + className + "(document);")
-                .Line("stylesheet.Apply0(Single(document), null);")
+                .Line("stylesheet.Dispatch0(document, 1, 1, null);")
                 .Line("return stylesheet.output.Result();")
                 .Close();
             file.Append(members);
@@ -316,34 +391,58 @@ namespace SharpEquations.XsltGenerator
             if (name != null)
             {
                 var named = namedTemplates[name];
-                var signature = string.Concat(named.Parameters.Select((p, i) => ", object? a" + i));
+                var types = named.Parameters.Select(p => ParameterType(named, p)).ToList();
+                if (named.Matches)
+                {
+                    foreach (var parameter in named.Parameters)
+                        Learnt.Give(Facts.Parameter(name, parameter), XType.Any);
+                }
+                var signature = string.Concat(named.Parameters.Select((p, i) => ", " + XPathCompiler.TypeName(types[i]) + "? a" + i));
+                var focus = new Focus();
+                var purity = new Purity();
                 var w = new CodeWriter(2);
                 w.Line().Open("private void " + named.Method + "(XObject n0, int p0, int s0" + signature + ")");
-                CompileBody(template, parameters, i => "a" + i, w);
+                CompileBody(template, parameters, i => "a" + i, i => types[i], named, focus, purity, w);
                 w.Close();
                 members.Append(w);
+                if (focus.NodeUsed || focus.CurrentUsed)
+                    Learnt.NodeUsed.Add(name);
+                if (focus.PositionUsed)
+                    Learnt.PositionUsed.Add(name);
+                if (focus.SizeUsed)
+                    Learnt.SizeUsed.Add(name);
+                if (purity.Impure)
+                    Learnt.Impure.Add(name);
+                if (!IsTextOnly(template.Nodes()))
+                    Learnt.NotText.Add(name);
             }
 
             if (match == null)
                 return;
 
+            var mode = ModeIndex((string?)template.Attribute("mode"));
             var method = "Template" + index;
             var body = new CodeWriter(2);
             body.Line().Open("private void " + method + "(XObject n0, int p0, int s0, TemplateArguments? args)");
+            var templateFocus = new Focus();
             if (name != null)
             {
                 var named = namedTemplates[name];
-                body.Line(named.Method + "(n0, p0, s0" + string.Concat(named.Parameters.Select(p => ", args?.Get(" + XPathCompiler.Literal(p) + ")")) + ");");
+                var context = TemplateContext(template, templateFocus, new Purity(), new Scope(null));
+                body.Line(Call(named, context, named.Parameters.Select(p => "args?.Get(" + XPathCompiler.Literal(p) + ")")));
             }
             else
             {
                 var names = parameters.Select(p => Attr(p, "name", true)!).ToList();
-                CompileBody(template, parameters, i => "args?.Get(" + XPathCompiler.Literal(names[i]) + ")", body);
+                CompileBody(template, parameters, i => "args?.Get(" + XPathCompiler.Literal(names[i]) + ")", i => XType.Any, null, templateFocus, new Purity(), body);
             }
             body.Close();
             members.Append(body);
+            if (templateFocus.PositionUsed)
+                Learnt.ModePosition.Add(ModeKey(mode));
+            if (templateFocus.SizeUsed)
+                Learnt.ModeSize.Add(ModeKey(mode));
 
-            var mode = ModeIndex((string?)template.Attribute("mode"));
             var priority = (string?)template.Attribute("priority");
             foreach (var alternative in Alternatives(XPathParser.Parse(match), template))
             {
@@ -369,6 +468,60 @@ namespace SharpEquations.XsltGenerator
                     isRoot, absolute, steps);
                 rules.Add(rule);
                 CompileMatch(rule);
+            }
+        }
+
+        private static string ModeKey(int mode) => mode.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        private Context TemplateContext(XElement element, Focus focus, Purity purity, Scope scope) =>
+            new Context("n0", NodeKind.Object, "p0", "s0", focus, "n0", NodeKind.Object, focus, scope, element, locals, purity);
+
+        /// <summary>The type of a parameter of a named template: that of every value it is given, if they have the same.</summary>
+        private XType ParameterType(NamedTemplate template, string parameter)
+        {
+            if (template.Matches)
+                return XType.Any;
+            return facts.ParameterTypes.TryGetValue(Facts.Parameter(template.Name, parameter), out var type) ? type : XType.None;
+        }
+
+        /// <summary>
+        /// The call of a named template, which is given the context node, its position and its size only if it reads them.
+        /// </summary>
+        private string Call(NamedTemplate template, Context context, IEnumerable<string> arguments)
+        {
+            if (facts.Impure.Contains(template.Name))
+                context.Purity.Impure = true;
+            var node = facts.NodeUsed.Contains(template.Name) ? context.Node : "null";
+            var position = facts.PositionUsed.Contains(template.Name) ? context.Position : "0";
+            var size = facts.SizeUsed.Contains(template.Name) ? context.Size : "0";
+            return template.Method + "(" + node + ", " + position + ", " + size + string.Concat(arguments.Select(a => ", " + a)) + ");";
+        }
+
+        /// <summary>The value as a parameter of the type takes it.</summary>
+        private static string Convert(Compiled value, XType type)
+        {
+            switch (type)
+            {
+                case XType.Any:
+                case XType.None:
+                    return XPathCompiler.Box(value);
+                case var _ when type == value.Type:
+                    return value.Code;
+                case XType.NodeSet when value.Type == XType.Node:
+                    return "ListOf(" + value.Code + ")";
+                case XType.Node:
+                    return "null";
+                // no value of another type reaches a parameter whose type is known
+                case XType.Number:
+                    return "0D";
+                case XType.Boolean:
+                    return "false";
+                case XType.NodeSet:
+                    return "Empty";
+                case XType.Fragment:
+                    return "null!";
+                default:
+                    return "\"\"";
             }
         }
 
@@ -403,36 +556,190 @@ namespace SharpEquations.XsltGenerator
             }
         }
 
-        private void CompileBody(XElement template, List<XElement> parameters, System.Func<int, string> argument, CodeWriter w)
+        private void CompileBody(XElement template, List<XElement> parameters, System.Func<int, string> argument, System.Func<int, XType> type, NamedTemplate? named,
+            Focus focus, Purity purity, CodeWriter w)
         {
             var scope = new Scope(null);
-            var context = new Context("n0", "p0", "s0", "n0", scope, template);
+            var context = TemplateContext(template, focus, purity, scope);
             for (var i = 0; i < parameters.Count; i++)
             {
                 var parameter = parameters[i];
+                var name = Attr(parameter, "name", true)!;
                 var id = NewName("v");
                 var paramContext = context.WithElement(parameter);
                 var select = Attr(parameter, "select", false);
+                var content = select == null && HasContent(parameter);
+                var valueType = type(i) == XType.Number || type(i) == XType.Boolean;
+
+                // the default is one of the values of the parameter if a call leaves the parameter to it
+                void Default(XType defaultType)
+                {
+                    if (named != null && facts.Omitted.Contains(Facts.Parameter(named.Name, name)))
+                        Learnt.Give(Facts.Parameter(named.Name, name), defaultType);
+                }
+
                 if (select != null)
                 {
-                    w.Line("var " + id + " = " + argument(i) + " ?? " + XPathCompiler.Box(xpath.Compile(select, paramContext)) + ";");
+                    var value = xpath.Compile(select, paramContext).Bound();
+                    Default(value.Type);
+                    // a node that is null is an empty node-set, not a parameter left to its default
+                    w.Line(type(i) == XType.Node
+                        ? "var " + id + " = ReferenceEquals(" + argument(i) + ", Omitted) ? " + Convert(value, type(i)) + " : " + argument(i) + ";"
+                        : "var " + id + " = " + argument(i) + " ?? " + Convert(value, type(i)) + ";");
                 }
-                else if (HasContent(parameter))
+                else if (type(i) == XType.Node)
+                {
+                    Default(content ? XType.Fragment : XType.String);
+                    w.Line("var " + id + " = ReferenceEquals(" + argument(i) + ", Omitted) ? null : " + argument(i) + ";");
+                }
+                else if (content && !valueType)
                 {
                     w.Line("var " + id + " = " + argument(i) + ";");
                     w.Open("if (" + id + " == null)");
-                    w.Line("output.BeginCapture();");
-                    CompileSequence(parameter.Nodes(), paramContext, w);
-                    w.Line(id + " = output.EndFragment();");
+                    var value = Capture(parameter, paramContext, w);
+                    Default(value.Type);
+                    w.Line(id + " = " + Convert(value, type(i)) + ";");
                     w.Close();
                 }
                 else
                 {
-                    w.Line("var " + id + " = " + argument(i) + " ?? \"\";");
+                    Default(content ? XType.Fragment : XType.String);
+                    w.Line("var " + id + " = " + argument(i) + " ?? " + Convert(new Compiled("\"\"", XType.String), type(i)) + ";");
                 }
-                scope.Add(Attr(parameter, "name", true)!, new Variable(id, XType.Any));
+                scope.Add(name, new Variable(id, type(i), type(i) == XType.Node ? NodeOrder.Single : NodeOrder.Ordered));
             }
             CompileSequence(template.Nodes().Where(n => !(n is XElement e && parameters.Contains(e))), context, w);
+        }
+
+        /// <summary>
+        /// Whether the instructions write only text, so that what they write can be kept as a string: no element, no
+        /// text written as markup, no template applied, and only named templates that write text called.
+        /// </summary>
+        private bool IsTextOnly(IEnumerable<XNode> nodes)
+        {
+            foreach (var element in nodes.OfType<XElement>())
+            {
+                if (element.Name.Namespace != Xsl)
+                    return false;
+                switch (element.Name.LocalName)
+                {
+                    case "text":
+                    case "value-of":
+                        if (DisablesEscaping(element))
+                            return false;
+                        break;
+                    case "variable":
+                    case "param":
+                    case "message":
+                    case "fallback":
+                        break;
+                    case "if":
+                    case "choose":
+                    case "when":
+                    case "otherwise":
+                    case "for-each":
+                        if (!IsTextOnly(element.Nodes()))
+                            return false;
+                        break;
+                    case "call-template":
+                        if (facts.NotText.Contains((string?)element.Attribute("name") ?? ""))
+                            return false;
+                        break;
+                    default:
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// What the instructions write as a C# expression of a string, if they are only text, values and choices
+        /// between them: null if they need statements.
+        /// </summary>
+        private string? TextExpression(IEnumerable<XNode> nodes, Context context)
+        {
+            var parts = new List<string>();
+            foreach (var node in nodes)
+            {
+                switch (node)
+                {
+                    case XText text when text.Value.Trim().Length == 0:
+                        break;
+                    case XText text:
+                        parts.Add(XPathCompiler.Literal(text.Value));
+                        break;
+                    case XElement element when element.Name == Xsl + "text" && !DisablesEscaping(element):
+                        if (element.Value.Length > 0)
+                            parts.Add(XPathCompiler.Literal(element.Value));
+                        break;
+                    case XElement element when element.Name == Xsl + "value-of" && !DisablesEscaping(element) && element.Attribute("select") != null:
+                        parts.Add(XPathCompiler.Str(xpath.Compile(Attr(element, "select", true)!, context.WithElement(element))));
+                        break;
+                    case XElement element when element.Name == Xsl + "if" && element.Attribute("test") != null:
+                    {
+                        var then = TextExpression(element.Nodes(), context.WithElement(element));
+                        if (then == null)
+                            return null;
+                        parts.Add("(" + XPathCompiler.Bool(xpath.Compile(Attr(element, "test", true)!, context.WithElement(element))) + " ? " + then + " : \"\")");
+                        break;
+                    }
+                    case XElement element when element.Name == Xsl + "choose":
+                    {
+                        var choice = new StringBuilder();
+                        var otherwise = "\"\"";
+                        foreach (var branch in element.Elements())
+                        {
+                            var value = TextExpression(branch.Nodes(), context.WithElement(branch));
+                            if (value == null)
+                                return null;
+                            if (branch.Name == Xsl + "when" && branch.Attribute("test") != null)
+                                choice.Append(XPathCompiler.Bool(xpath.Compile(Attr(branch, "test", true)!, context.WithElement(branch)))).Append(" ? ").Append(value).Append(" : ");
+                            else if (branch.Name == Xsl + "otherwise" && branch == element.Elements().Last())
+                                otherwise = value;
+                            else
+                                return null;
+                        }
+                        parts.Add("(" + choice + otherwise + ")");
+                        break;
+                    }
+                    case XElement _:
+                        return null;
+                }
+            }
+            switch (parts.Count)
+            {
+                case 0:
+                    return "\"\"";
+                case 1:
+                    return parts[0];
+                default:
+                    return "string.Concat(" + string.Join(", ", parts) + ")";
+            }
+        }
+
+        /// <summary>
+        /// The content of a variable or parameter as its value: a string when it only writes text, a result tree
+        /// fragment otherwise.
+        /// </summary>
+        private Compiled Capture(XElement element, Context context, CodeWriter w)
+        {
+            if (!IsTextOnly(element.Nodes()))
+            {
+                var fragment = NewName("f");
+                w.Line("output.BeginCapture();");
+                CompileSequence(element.Nodes(), context, w);
+                w.Line("var " + fragment + " = output.EndFragment();");
+                return new Compiled(fragment, XType.Fragment);
+            }
+
+            var expression = TextExpression(element.Nodes(), context);
+            if (expression != null)
+                return new Compiled(expression, XType.Text);
+            var text = NewName("t");
+            w.Line("output.BeginText();");
+            CompileSequence(element.Nodes(), context, w);
+            w.Line("var " + text + " = output.EndText();");
+            return new Compiled(text, XType.Text);
         }
 
         private static bool HasContent(XElement element) =>
@@ -443,7 +750,6 @@ namespace SharpEquations.XsltGenerator
         private void CompileMatch(Rule rule)
         {
             var w = new CodeWriter(2);
-            var context = new Context("node", "1", "1", "node", new Scope(null), rule.Template);
             if (rule.IsRoot)
             {
                 w.Line().Line("private static bool Match" + rule.Index + "(XObject node) => node is XDocument;");
@@ -454,19 +760,13 @@ namespace SharpEquations.XsltGenerator
             for (var i = 0; i < rule.Steps.Count; i++)
             {
                 var step = rule.Steps[i].Step;
-                var attributeAxis = step.Axis == "attribute";
-                var test = NodeTest(step.Test, rule.Template) + ".Matches(node, " + (attributeAxis ? "true" : "false") + ")";
-                if (step.Predicates.Count > 0)
-                {
-                    if (step.Predicates.Any(p => xpath.IsPositional(p, context)))
-                        test = "MatchesStep(node, Axis." + (attributeAxis ? "Attribute" : "Child") + ", " + NodeTest(step.Test, rule.Template) + ", "
-                            + string.Join(", ", step.Predicates.Select(p => xpath.Predicate(p, context))) + ")";
-                    else
-                        test += string.Concat(step.Predicates.Select(p => " && " + XPathCompiler.Bool(xpath.Compile(p, context))));
-                }
+                var focus = new Focus();
+                var context = new Context("node", NodeKind.Object, null, null, focus, "node", NodeKind.Object, focus, new Scope(null), rule.Template, new Names(), new Purity());
+                var test = MatchStep(step, context);
 
                 w.Line().Open("private bool Match" + rule.Index + "_" + i + "(XObject node)");
-                w.Line("if (!(" + test + "))").Line("    return false;");
+                if (test != null)
+                    w.Line("if (!(" + test + "))").Line("    return false;");
                 if (i == 0)
                 {
                     w.Line(rule.Absolute ? "return Parent(node) is XDocument;" : "return true;");
@@ -486,6 +786,67 @@ namespace SharpEquations.XsltGenerator
             }
             w.Line().Line("private bool Match" + rule.Index + "(XObject node) => Match" + rule.Index + "_" + (rule.Steps.Count - 1) + "(node);");
             members.Append(w);
+
+            var last = rule.Last!;
+            if (rule.Steps.Count == 1 && !rule.Absolute && last.Predicates.Count == 0)
+            {
+                switch (last.Test.Kind)
+                {
+                    case TestKind.AnyName:
+                    case TestKind.Node:
+                        rule.Always = true;
+                        break;
+                    case TestKind.Namespace:
+                        break;
+                    case TestKind.ProcessingInstruction:
+                        rule.Always = last.Test.Local == null;
+                        break;
+                    default:
+                        rule.Always = last.Axis != "attribute";
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Whether the node, <c>node</c> in the generated code, is one the step of a pattern selects from its parent: the
+        /// C# condition, or null if every node is.
+        /// </summary>
+        private string? MatchStep(Step step, Context context)
+        {
+            var attributeAxis = step.Axis == "attribute";
+            if (step.Predicates.Any(p => xpath.IsPositional(p, context)))
+            {
+                // the predicates count the node among those the step selects from its parent
+                var body = new CodeWriter(3);
+                body.Line("var parent = Parent(node);").Line("if (parent == null)").Line("    return false;");
+                xpath.EmitStep(new Cursor("parent", NodeKind.Object), step, context, body,
+                    cursor => body.Line("if (ReferenceEquals(" + cursor.Var + ", node))").Line("    return true;"));
+                body.Line("return false;");
+                return HelperMethod("bool", "XObject node", body.ToString()) + "(node)";
+            }
+
+            XPathCompiler.Tested tested;
+            string? condition;
+            if (attributeAxis)
+            {
+                var attribute = context.Names.New("a_");
+                tested = xpath.Test(step.Test, true, new Cursor(attribute, NodeKind.Attribute), false, context);
+                condition = "node is XAttribute " + attribute + (tested.Condition == null ? "" : " && " + tested.Condition);
+            }
+            else
+            {
+                tested = xpath.Test(step.Test, false, new Cursor("node", NodeKind.Object), false, context);
+                condition = tested.Condition;
+            }
+            if (tested.Never)
+                return "false";
+            foreach (var predicate in step.Predicates)
+            {
+                var value = XPathCompiler.Bool(xpath.Compile(predicate, context.WithFocus(tested.Cursor.Var, tested.Cursor.Kind, null, null, new Focus())));
+                condition = condition == null ? value : condition + " && " + value;
+            }
+            return condition;
         }
 
         private static Bucket[] Buckets(Rule rule)
@@ -518,10 +879,28 @@ namespace SharpEquations.XsltGenerator
             // the rule that wins is the one of highest priority and, among those, the last in the stylesheet
             var ordered = rules.Where(r => r.Mode == mode).OrderByDescending(r => r.Priority).ThenByDescending(r => r.Index).ToList();
             List<Rule> In(Bucket bucket) => ordered.Where(r => Buckets(r).Contains(bucket)).ToList();
+            var position = facts.ModePosition.Contains(ModeKey(mode));
+            var size = facts.ModeSize.Contains(ModeKey(mode));
 
             var w = new CodeWriter(2);
             w.Line().Open("private void Apply" + mode + "(List<XObject> nodes, TemplateArguments? args)");
             w.Line("for (var i = 0; i < nodes.Count; i++)").Line("    Dispatch" + mode + "(nodes[i], i + 1, nodes.Count, args);");
+            w.Close();
+
+            // the children of a node, without a list of them unless a template reads how many they are
+            w.Line().Open("private void ApplyChildren" + mode + "(XObject node, TemplateArguments? args)");
+            if (size)
+            {
+                w.Line("Apply" + mode + "(ChildNodes(node), args);");
+            }
+            else
+            {
+                if (position)
+                    w.Line("var position = 0;");
+                w.Open("for (var child = FirstChild(node); child != null; child = child.NextNode)");
+                w.Line("if (IsNode(child))").Line("    Dispatch" + mode + "(child, " + (position ? "++position" : "0") + ", 0, args);");
+                w.Close();
+            }
             w.Close();
 
             w.Line().Open("private void Dispatch" + mode + "(XObject node, int position, int size, TemplateArguments? args)");
@@ -546,23 +925,23 @@ namespace SharpEquations.XsltGenerator
                     w.Line("case " + i + ":").Open();
                     var candidates = ordered.Where(r => generic.Contains(r)
                         || (named.Contains(r) && XName.Get(r.Last!.Test.Local!, Namespace(r.Last.Test.Prefix, r.Template)) == name));
-                    EmitCandidates(candidates, w);
+                    EmitCandidates(candidates, w, true);
                     w.Line("break;").Close();
                 }
                 w.Line("default:").Open();
-                EmitCandidates(generic, w);
+                EmitCandidates(generic, w, true);
                 w.Line("break;").Close();
                 w.Close();
             }
             else
             {
-                EmitCandidates(generic, w);
+                EmitCandidates(generic, w, true);
             }
-            w.Line("Apply" + mode + "(ChildNodes(node), null);").Line("return;").Close();
+            w.Line("ApplyChildren" + mode + "(node, null);").Line("return;").Close();
 
             w.Line("case XDocument _:").Open();
             EmitCandidates(In(Bucket.Root), w);
-            w.Line("Apply" + mode + "(ChildNodes(node), null);").Line("return;").Close();
+            w.Line("ApplyChildren" + mode + "(node, null);").Line("return;").Close();
 
             w.Line("case XAttribute _:").Open();
             EmitCandidates(In(Bucket.Attribute), w);
@@ -584,22 +963,97 @@ namespace SharpEquations.XsltGenerator
             members.Append(w);
         }
 
-        private static void EmitCandidates(IEnumerable<Rule> candidates, CodeWriter w)
+        /// <summary>
+        /// The child and the text a rule asks of an element, if its pattern starts its first predicate with
+        /// <c>child = 'text'</c>: the rule can only match an element that has such a child.
+        /// </summary>
+        private static (XName Child, string Text)? KeyOf(Rule rule)
         {
-            foreach (var rule in candidates)
+            var last = rule.Last;
+            if (last == null || last.Axis != "child" || last.Predicates.Count == 0)
+                return null;
+            var condition = last.Predicates[0];
+            while (condition is BinaryExpr and && and.Op == "and")
+                condition = and.Left;
+            if (!(condition is BinaryExpr equal) || equal.Op != "=")
+                return null;
+            var path = equal.Left as PathExpr ?? equal.Right as PathExpr;
+            var literal = equal.Left as LiteralExpr ?? equal.Right as LiteralExpr;
+            if (path == null || literal == null || path.Start != null || path.Absolute || path.Steps.Count != 1)
+                return null;
+            var step = path.Steps[0];
+            if (step.Axis != "child" || step.Test.Kind != TestKind.Name || step.Predicates.Count != 0)
+                return null;
+            return (XName.Get(step.Test.Local!, Namespace(step.Test.Prefix, rule.Template)), literal.Value);
+        }
+
+        /// <summary>
+        /// The rules tried in order. Among those of an element, the many that ask for a child with a text (the
+        /// characters of MTEF, each with its code) are found by the text of that child, when the element has one.
+        /// </summary>
+        private void EmitCandidates(IEnumerable<Rule> candidates, CodeWriter w, bool ofElement = false)
+        {
+            var rules = candidates.ToList();
+            var always = rules.FindIndex(r => r.Always);
+            if (always >= 0)
+                rules = rules.Take(always + 1).ToList();
+            var keyed = ofElement
+                ? rules.Where(r => KeyOf(r) != null).GroupBy(r => KeyOf(r)!.Value.Child).OrderByDescending(g => g.Count()).FirstOrDefault()
+                : null;
+            var child = keyed != null && keyed.Count() >= 8 ? keyed.Key : null;
+            bool Keyed(Rule rule) => child != null && KeyOf(rule)?.Child == child;
+
+            void Try(Rule rule)
             {
+                if (rule.Always)
+                {
+                    w.Line(rule.Method + "(node, position, size, args);").Line("return;");
+                    return;
+                }
                 w.Open("if (Match" + rule.Index + "(node))");
                 w.Line(rule.Method + "(node, position, size, args);").Line("return;");
+                w.Close();
+            }
+
+            var key = NewName("key");
+            var count = NewName("keys");
+            if (child != null)
+                w.Line("var " + key + " = KeyValue(element, " + Name(child) + ", out var " + count + ");");
+            for (var i = 0; i < rules.Count;)
+            {
+                if (!Keyed(rules[i]))
+                {
+                    Try(rules[i++]);
+                    continue;
+                }
+                var run = rules.Skip(i).TakeWhile(Keyed).ToList();
+                i += run.Count;
+                w.Open("if (" + count + " == 1)");
+                w.Open("switch (" + key + ")");
+                foreach (var group in run.GroupBy(r => KeyOf(r)!.Value.Text))
+                {
+                    w.Line("case " + XPathCompiler.Literal(group.Key) + ":").Open();
+                    foreach (var rule in group)
+                        Try(rule);
+                    w.Line("break;").Close();
+                }
+                w.Close().Close();
+                // with more than one such child, any of them may have the text
+                w.Open("else if (" + count + " > 1)");
+                foreach (var rule in run)
+                    Try(rule);
                 w.Close();
             }
         }
 
         // global variables and parameters
 
-        public Variable? Global(string name)
+        public Variable? Global(string name, Purity purity)
         {
             if (!globals.TryGetValue(name, out var global))
                 return null;
+            if (facts.Dynamic.Contains(name))
+                purity.Impure = true;
             if (global.Variable != null)
                 return global.Variable;
             if (global.Compiling)
@@ -608,49 +1062,62 @@ namespace SharpEquations.XsltGenerator
 
             var id = "G" + NewName("_");
             var element = global.Element;
-            var context = new Context("n0", "p0", "s0", "n0", new Scope(null), element);
-            var w = new CodeWriter(2);
+            var focus = new Focus();
+            var own = new Purity();
+            var context = TemplateContext(element, focus, own, new Scope(null));
+            var body = new CodeWriter(3);
             var select = Attr(element, "select", false);
-            XType type;
-            w.Line();
+            Compiled value;
+            var order = NodeOrder.Ordered;
             if (select != null)
             {
-                var value = xpath.Compile(select, context);
-                type = value.Type;
-                w.Open("private " + XPathCompiler.TypeName(type) + " Compute" + id + "()");
-                w.Line("XObject n0 = root;").Line("const int p0 = 1, s0 = 1;");
-                w.Line("return " + value.Code + ";");
+                var expr = XPathParser.Parse(select);
+                value = xpath.Compile(expr, context);
+                if (value.Type == XType.NodeSet)
+                    order = xpath.OrderOf(expr, context);
             }
             else if (HasContent(element))
             {
-                type = XType.Fragment;
-                w.Open("private ResultFragment Compute" + id + "()");
-                w.Line("XObject n0 = root;").Line("const int p0 = 1, s0 = 1;");
-                w.Line("output.BeginCapture();");
-                CompileSequence(element.Nodes(), context, w);
-                w.Line("return output.EndFragment();");
+                value = Capture(element, context, body);
             }
             else
             {
-                type = XType.String;
-                w.Open("private string Compute" + id + "()");
-                w.Line("return \"\";");
+                value = new Compiled("\"\"", XType.String);
             }
+            var type = value.Type;
+            var typeName = XPathCompiler.TypeName(type);
+            body.Line("return " + value.Code + ";");
+
+            var w = new CodeWriter(2);
+            w.Line().Open("private " + typeName + " Compute" + id + "()");
+            w.Line("XObject n0 = root;").Line("const int p0 = 1, s0 = 1;");
+            w.Raw(body.ToString());
             w.Close();
 
-            var typeName = XPathCompiler.TypeName(type);
-            instanceFields.Line("private bool " + id + "Done;").Line("private " + typeName + " " + id + "Value = default!;");
-            w.Line().Open("private " + typeName + " " + id)
-                .Open("get")
-                .Open("if (!" + id + "Done)")
-                .Line(id + "Value = Compute" + id + "();")
-                .Line(id + "Done = true;")
-                .Close()
-                .Line("return " + id + "Value;")
-                .Close()
-                .Close();
+            // a string that does not depend on the input is computed once for all
+            var text = type == XType.String || type == XType.Text;
+            if (own.Impure || focus.NodeUsed || focus.CurrentUsed || !text)
+                Learnt.Dynamic.Add(name);
+            if (text && !facts.Dynamic.Contains(name))
+            {
+                staticFields.Line("private static string? " + id + "Value;");
+                w.Line().Line("private string " + id + " => " + id + "Value ??= Compute" + id + "();");
+            }
+            else
+            {
+                instanceFields.Line("private bool " + id + "Done;").Line("private " + typeName + " " + id + "Value = default!;");
+                w.Line().Open("private " + typeName + " " + id)
+                    .Open("get")
+                    .Open("if (!" + id + "Done)")
+                    .Line(id + "Value = Compute" + id + "();")
+                    .Line(id + "Done = true;")
+                    .Close()
+                    .Line("return " + id + "Value;")
+                    .Close()
+                    .Close();
+            }
             members.Append(w);
-            global.Variable = new Variable(id, type);
+            global.Variable = new Variable(id, type, order);
             return global.Variable;
         }
 
@@ -714,16 +1181,38 @@ namespace SharpEquations.XsltGenerator
                 case "apply-templates":
                 {
                     var select = Attr(element, "select", false);
-                    var nodes = select == null ? "ChildNodes(" + context.Node + ")" : XPathCompiler.Nodes(xpath.Compile(select, context));
+                    var mode = ModeIndex((string?)element.Attribute("mode"));
+                    context.Purity.Impure = true;
                     var args = "null";
                     var parameters = WithParameters(element, context, w);
                     if (parameters.Count > 0)
                     {
                         args = NewName("args");
                         w.Line("var " + args + " = new TemplateArguments(new[] { " + string.Join(", ", parameters.Keys.Select(XPathCompiler.Literal))
-                            + " }, new object[] { " + string.Join(", ", parameters.Values) + " });");
+                            + " }, new object[] { " + string.Join(", ", parameters.Values.Select(XPathCompiler.Box)) + " });");
                     }
-                    w.Line("Apply" + ModeIndex((string?)element.Attribute("mode")) + "(" + nodes + ", " + args + ");");
+                    if (select == null)
+                    {
+                        w.Line("ApplyChildren" + mode + "(" + context.Node + ", " + args + ");");
+                        break;
+                    }
+
+                    // the templates are given the position of each node, and a list of the nodes for their number,
+                    // only if one of the mode reads them
+                    var expr = XPathParser.Parse(select);
+                    if (facts.ModeSize.Contains(ModeKey(mode)) || !XPathCompiler.IsStreamed(xpath.OrderOf(expr, context)))
+                    {
+                        w.Line("Apply" + mode + "(" + xpath.NodesCode(expr, context) + ", " + args + ");");
+                        break;
+                    }
+                    var position = "0";
+                    if (facts.ModePosition.Contains(ModeKey(mode)))
+                    {
+                        var p = NewName("p");
+                        w.Line("var " + p + " = 0;");
+                        position = "++" + p;
+                    }
+                    xpath.EmitNodes(expr, context, w, cursor => w.Line("Dispatch" + mode + "(" + cursor.Var + ", " + position + ", 0, " + args + ");"));
                     break;
                 }
                 case "call-template":
@@ -732,8 +1221,22 @@ namespace SharpEquations.XsltGenerator
                     if (!namedTemplates.TryGetValue(name, out var template))
                         throw Error(element, "There is no template named " + name + ".");
                     var parameters = WithParameters(element, context, w);
-                    var args = string.Concat(template.Parameters.Select(p => ", " + (parameters.TryGetValue(p, out var value) ? value : "null")));
-                    w.Line(template.Method + "(" + context.Node + ", " + context.Position + ", " + context.Size + args + ");");
+                    var args = new List<string>();
+                    foreach (var parameter in template.Parameters)
+                    {
+                        var key = Facts.Parameter(name, parameter);
+                        if (parameters.TryGetValue(parameter, out var value))
+                        {
+                            Learnt.Give(key, value.Type);
+                            args.Add(Convert(value, ParameterType(template, parameter)));
+                        }
+                        else
+                        {
+                            Learnt.Omitted.Add(key);
+                            args.Add(ParameterType(template, parameter) == XType.Node ? "Omitted" : "null");
+                        }
+                    }
+                    w.Line(Call(template, context, args));
                     break;
                 }
                 case "value-of":
@@ -781,15 +1284,39 @@ namespace SharpEquations.XsltGenerator
                 {
                     if (element.Elements(Xsl + "sort").Any())
                         throw Error(element, "xsl:sort is not supported.");
-                    var set = NewName("set");
-                    var i = NewName("i");
+                    var expr = XPathParser.Parse(Attr(element, "select", true)!);
+                    var kind = xpath.KindOf(expr, context);
                     var n = NewName("n");
                     var p = NewName("p");
                     var s = NewName("s");
-                    w.Line("var " + set + " = " + XPathCompiler.Nodes(xpath.Compile(Attr(element, "select", true)!, context)) + ";");
+
+                    // the content first: whether it reads the position and the number of the nodes tells the loop it needs
+                    var focus = new Focus();
+                    var body = new CodeWriter();
+                    CompileSequence(element.Nodes(), new Context(n, kind, p, s, focus, n, kind, focus, context.Scope, element, context.Names, context.Purity), body);
+                    if (!focus.SizeUsed && XPathCompiler.IsStreamed(xpath.OrderOf(expr, context)))
+                    {
+                        if (focus.PositionUsed)
+                            w.Line("var " + p + " = 0;");
+                        xpath.EmitNodes(expr, context, w, cursor =>
+                        {
+                            w.Line("var " + n + " = " + cursor.Var + ";");
+                            if (focus.PositionUsed)
+                                w.Line(p + "++;");
+                            w.Indented(body);
+                        });
+                        break;
+                    }
+                    var set = NewName("set");
+                    var i = NewName("i");
+                    w.Line("var " + set + " = " + xpath.NodesCode(expr, context) + ";");
                     w.Open("for (var " + i + " = 0; " + i + " < " + set + ".Count; " + i + "++)");
-                    w.Line("var " + n + " = " + set + "[" + i + "];").Line("var " + p + " = " + i + " + 1;").Line("var " + s + " = " + set + ".Count;");
-                    CompileSequence(element.Nodes(), new Context(n, p, s, n, context.Scope, element), w);
+                    w.Line("var " + n + " = " + (kind == NodeKind.Object ? "" : "(" + XPathCompiler.TypeName(kind) + ")") + set + "[" + i + "];");
+                    if (focus.PositionUsed)
+                        w.Line("var " + p + " = " + i + " + 1;");
+                    if (focus.SizeUsed)
+                        w.Line("var " + s + " = " + set + ".Count;");
+                    w.Indented(body);
                     w.Close();
                     break;
                 }
@@ -798,26 +1325,25 @@ namespace SharpEquations.XsltGenerator
                     var name = Attr(element, "name", true)!;
                     var id = NewName("v");
                     var select = Attr(element, "select", false);
-                    XType type;
+                    Compiled value;
+                    var order = NodeOrder.Ordered;
                     if (select != null)
                     {
-                        var value = xpath.Compile(select, context);
-                        type = value.Type;
-                        w.Line("var " + id + " = " + value.Code + ";");
+                        var expr = XPathParser.Parse(select);
+                        value = xpath.Compile(expr, context).Bound();
+                        if (value.Type == XType.NodeSet)
+                            order = xpath.OrderOf(expr, context);
                     }
                     else if (HasContent(element))
                     {
-                        type = XType.Fragment;
-                        w.Line("output.BeginCapture();");
-                        CompileSequence(element.Nodes(), context, w);
-                        w.Line("var " + id + " = output.EndFragment();");
+                        value = Capture(element, context, w);
                     }
                     else
                     {
-                        type = XType.String;
-                        w.Line("var " + id + " = \"\";");
+                        value = new Compiled("\"\"", XType.String);
                     }
-                    context.Scope.Add(name, new Variable(id, type));
+                    w.Line("var " + id + " = " + value.Code + ";");
+                    context.Scope.Add(name, new Variable(id, value.Type, order));
                     break;
                 }
                 case "attribute":
@@ -837,9 +1363,24 @@ namespace SharpEquations.XsltGenerator
                 }
                 case "copy-of":
                 {
-                    var value = xpath.Compile(Attr(element, "select", true)!, context);
-                    var code = value.Type == XType.Number || value.Type == XType.Boolean ? XPathCompiler.Str(value) : value.Code;
-                    w.Line("output.CopyOf(" + code + ");");
+                    var expr = XPathParser.Parse(Attr(element, "select", true)!);
+                    var value = xpath.Compile(expr, context);
+                    switch (value.Type)
+                    {
+                        case XType.NodeSet when XPathCompiler.IsStreamed(xpath.OrderOf(expr, context)):
+                            xpath.EmitNodes(expr, context, w, cursor => w.Line("output.Copy(" + cursor.Var + ");"));
+                            break;
+                        case XType.Text:
+                            w.Line("output.CopyOfText(" + value.Code + ");");
+                            break;
+                        case XType.Number:
+                        case XType.Boolean:
+                            w.Line("output.CopyOf(" + XPathCompiler.Str(value) + ");");
+                            break;
+                        default:
+                            w.Line("output.CopyOf(" + value.Code + ");");
+                            break;
+                    }
                     break;
                 }
                 case "copy":
@@ -876,10 +1417,10 @@ namespace SharpEquations.XsltGenerator
 
         private static bool DisablesEscaping(XElement element) => (string?)element.Attribute("disable-output-escaping") == "yes";
 
-        /// <summary>The parameters of xsl:apply-templates or xsl:call-template, by name, as C# expressions of type object.</summary>
-        private Dictionary<string, string> WithParameters(XElement element, Context context, CodeWriter w)
+        /// <summary>The parameters of xsl:apply-templates or xsl:call-template, by name.</summary>
+        private Dictionary<string, Compiled> WithParameters(XElement element, Context context, CodeWriter w)
         {
-            var parameters = new Dictionary<string, string>();
+            var parameters = new Dictionary<string, Compiled>();
             foreach (var child in element.Elements())
             {
                 if (child.Name == Xsl + "sort")
@@ -891,19 +1432,16 @@ namespace SharpEquations.XsltGenerator
                 var paramContext = context.WithElement(child);
                 if (select != null)
                 {
-                    parameters[name] = XPathCompiler.Box(xpath.Compile(select, paramContext));
+                    // compiled here, before the statements of the parameters after it
+                    parameters[name] = xpath.Compile(select, paramContext).Bound();
                 }
                 else if (HasContent(child))
                 {
-                    var id = NewName("w");
-                    w.Line("output.BeginCapture();");
-                    CompileSequence(child.Nodes(), paramContext, w);
-                    w.Line("var " + id + " = output.EndFragment();");
-                    parameters[name] = id;
+                    parameters[name] = Capture(child, paramContext, w);
                 }
                 else
                 {
-                    parameters[name] = "(object)\"\"";
+                    parameters[name] = new Compiled("\"\"", XType.String);
                 }
             }
             return parameters;
@@ -924,6 +1462,8 @@ namespace SharpEquations.XsltGenerator
                 case 1 when nodes[0] is XElement e && e.Name == Xsl + "value-of":
                     return XPathCompiler.Str(xpath.Compile(Attr(e, "select", true)!, context.WithElement(e)));
             }
+            if (IsTextOnly(element.Nodes()))
+                return Capture(element, context, w).Code;
             var id = NewName("text");
             w.Line("output.BeginCapture();");
             CompileSequence(element.Nodes(), context, w);

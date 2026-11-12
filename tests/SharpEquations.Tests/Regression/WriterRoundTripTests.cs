@@ -35,6 +35,36 @@ namespace SharpEquations.Tests.Regression
             await Assert.That(RoundTrip(back, EquationFormat.UnicodeMath)).IsEqualTo(back);
         }
 
+        /// <summary>
+        /// UnicodeMath that reads to an equation the writer wrote as text that read back otherwise: a script of a matrix
+        /// in brackets (⒨(…)²), a function in a denominator (𝑎/ sin⁡𝛼), a denominator that ends with a script before
+        /// what follows the fraction (1/4𝜋𝜀₀ 𝑞₁𝑞₂/𝑟²), and the space after a comma that two spaces type (𝑎,  𝑏).
+        /// </summary>
+        [Test]
+        [Arguments("(■(a&b@c&d))^2")]
+        [Arguments("(■(a&b@c&d))^(-1)=1/(ad-bc) (■(d&-b@-c&a))")]
+        [Arguments("[■(a&b@c&d)]_ij")]
+        [Arguments("|■(a&b@c&d)|^2")]
+        [Arguments("a/sin⁡α")]
+        [Arguments("a/sin⁡α=b/sin⁡β=c/sin⁡γ")]
+        [Arguments("(sin⁡α)/a")]
+        [Arguments("1/(4πε_0) (q_1 q_2)/r^2")]
+        [Arguments("1/(x_1) y")]
+        [Arguments("1/(ab^2) c/d")]
+        [Arguments("A=√s,  s=2")]
+        [Arguments("f(x,  y)")]
+        public async Task UnicodeMathReadsBackWhatItWrites(string unicodeMath)
+        {
+            var equation = Equation.Parse(unicodeMath, EquationFormat.UnicodeMath);
+            await Assert.That(RoundTrip(equation, EquationFormat.UnicodeMath)).IsEqualTo(equation).Because(equation.ToString(EquationFormat.UnicodeMath));
+        }
+
+        [Test]
+        public async Task UnicodeMathReadsTwoSpacesAfterACommaAsASpace()
+        {
+            await Assert.That(Equation.Parse("a,  b", EquationFormat.UnicodeMath)).IsEqualTo(Equation.Parse("a,\u2002b", EquationFormat.UnicodeMath));
+        }
+
         [Test]
         [Arguments("<mrow><mo>[</mo><mi>a</mi><mo>|</mo><mi>b</mi><mo>]</mo></mrow>")]
         [Arguments("<mrow><mo>[</mo><mi>a</mi><mo>‖</mo><mi>b</mi><mo>]</mo></mrow>")]
