@@ -155,39 +155,34 @@ namespace SharpEquations.Internal.UnicodeMath
         {
             if (s == null || i < 0)
                 return null;
-            foreach (var codePoint in CodePoints.Of(s))
-            {
-                if (i-- == 0)
-                    return codePoint.ToString();
-            }
-            return null;
+            int at = CodePoints.Offset(s, i);
+            return at >= 0 && at < s.Length ? CodePoints.TextAt(s, at) : null;
         }
 
         /// <summary>The number of code points of a string.</summary>
-        public static int Len(string s) => s == null ? 0 : CodePoints.Of(s).Count();
+        public static int Len(string s) => s == null ? 0 : CodePoints.Count(s);
 
         /// <summary>The code point value at index i (by code points) of a string; -1 out of range.</summary>
         public static int CodeAt(string s, int i)
         {
             if (s == null || i < 0)
                 return -1;
-            foreach (var codePoint in CodePoints.Of(s))
-            {
-                if (i-- == 0)
-                    return codePoint.Value;
-            }
-            return -1;
+            int at = CodePoints.Offset(s, i);
+            return at >= 0 && at < s.Length ? CodePoints.ValueAt(s, at) : -1;
         }
 
         /// <summary>str.substring(start, end) by code points: indexes clamped, and swapped when start is after end.</summary>
         public static string Sub(string s, int start, int? end = null)
         {
-            var codePoints = CodePoints.Of(s).ToList();
-            int from = Math.Max(0, Math.Min(start, codePoints.Count));
-            int to = Math.Max(0, Math.Min(end ?? codePoints.Count, codePoints.Count));
+            int count = CodePoints.Count(s);
+            int from = Math.Max(0, Math.Min(start, count));
+            int to = Math.Max(0, Math.Min(end ?? count, count));
             if (from > to)
                 (from, to) = (to, from);
-            return string.Concat(codePoints.Skip(from).Take(to - from).Select(c => c.ToString()));
+            if (CodePoints.HasLoneSurrogate(s))
+                return string.Concat(CodePoints.Of(s).Skip(from).Take(to - from).Select(c => c.ToString()));
+            int first = CodePoints.Offset(s, from);
+            return s.Substring(first, CodePoints.Offset(s, to) - first);
         }
 
         /// <summary>value.length of an array or a string; null (undefined) for other values.</summary>
