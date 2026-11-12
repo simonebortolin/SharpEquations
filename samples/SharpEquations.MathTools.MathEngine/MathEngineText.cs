@@ -240,8 +240,9 @@ namespace SharpEquations.MathTools.MathEngine
                 var kept = piece;
                 if (kept.IndexOf('≈') is >= 0 and var approximately)
                     kept = kept[..approximately];
+                var name = "";
                 if (kept.LastIndexOf('=') is >= 0 and var equals)
-                    kept = kept[(equals + 1)..];
+                    (name, kept) = (kept[..equals], kept[(equals + 1)..]);
                 if (kept.Length == 0)
                     continue;
                 foreach (var variant in Signs(kept))
@@ -258,7 +259,7 @@ namespace SharpEquations.MathTools.MathEngine
                     {
                         throw new FormatException("Not a value: “" + variant + "” (" + input + ").", e);
                     }
-                    if (seen.Add(value.ToString()))
+                    if (seen.Add(name + "=" + value.ToString()))
                         values.Add(value);
                 }
             }
@@ -281,7 +282,8 @@ namespace SharpEquations.MathTools.MathEngine
         private static string Plain(string text)
         {
             // ⦗⦗sin⦘^⦗-1⦘⦘(x) is arcsin(x), ⦗⦗sin⦘^⦗2⦘⦘(x) is (sin(x))^2
-            text = Regex.Replace(text, "⦗⦗([a-z]+)⦘\\^⦗-1⦘⦘", "arc$1");
+            text = Regex.Replace(text, "⦗⦗(sinh|cosh|tanh|coth|sin|cos|tan|cot|sec|csc)⦘\\^⦗-1⦘⦘(?=\\()", "arc$1");
+            text = Bars(text);
             for (var m = Regex.Match(text, "⦗⦗([a-z]+)⦘\\^⦗([^⦗⦘]+)⦘⦘\\("); m.Success; m = Regex.Match(text, "⦗⦗([a-z]+)⦘\\^⦗([^⦗⦘]+)⦘⦘\\("))
             {
                 var open = m.Index + m.Length - 1;
@@ -296,6 +298,27 @@ namespace SharpEquations.MathTools.MathEngine
                 .Replace("·", "*").Replace("×", "*").Replace("⋅", "*").Replace("\u2062", "*").Replace("\u2061", "")
                 .Replace("\u00A0", "").Replace(" ", "").Replace("\u2009", "");
             return plain.ToString();
+        }
+
+        // |x| is abs(x): a bar after a value or a closing bracket closes, any other opens
+        private static string Bars(string text)
+        {
+            var written = new StringBuilder();
+            var open = 0;
+            for (var i = 0; i < text.Length; i++)
+            {
+                if (text[i] != '|')
+                {
+                    written.Append(text[i]);
+                    continue;
+                }
+
+                var before = written.ToString().TrimEnd();
+                var closes = open > 0 && before.Length > 0 && (char.IsLetterOrDigit(before[^1]) || before[^1] is ')' or '⦘' or '!' or 'π' or 'ⅇ' or 'ⅈ' or '∞');
+                written.Append(closes ? ")" : "abs(");
+                open += closes ? -1 : 1;
+            }
+            return written.ToString();
         }
 
         private static int Closing(string text, int open)

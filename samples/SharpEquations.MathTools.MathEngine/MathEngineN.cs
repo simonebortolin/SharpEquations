@@ -146,7 +146,8 @@ namespace SharpEquations.MathTools.MathEngine
                 {
                     var equations = MathEngineText.Equations(system);
                     var unknowns = system.Count > 1 ? letters : x != null ? new[] { x } : letters;
-                    return OnEngineThread(() => Solve(equations, unknowns));
+                    var named = variable != null && system.Count == 1;
+                    return OnEngineThread(() => Solve(equations, unknowns, named));
                 }
                 var command = MathEngineText.Command(action, system, x);
                 var imaginary = system.Any(e => e.Nodes.Any(n => n is Entity.Number.Complex c && c.ImaginaryPart != 0));
@@ -156,7 +157,51 @@ namespace SharpEquations.MathTools.MathEngine
 
         // as Microsoft Mathematics does: each equation read in the linear format and written as a formula, all of them
         // in SymbolicSolve[List[…]], read as a formula and solved through a request, which takes the letters to solve for
-        private CasResult Solve(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns)
+        // among the complex numbers, else among the real ones when that fails (|x-1|=3) or gives a family of values
+        // with a parameter (eˣ=5); the letter asked for even when the request does not ask, else without it
+        private CasResult Solve(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns, bool named)
+        {
+            if (!Complex)
+                return Attempt(equations, unknowns, named, false);
+
+            CasResult complex;
+            try
+            {
+                complex = Attempt(equations, unknowns, named, true);
+            }
+            catch (InvalidOperationException)
+            {
+                return Attempt(equations, unknowns, named, false);
+            }
+
+            if (!complex.Text.Contains("𝒩", StringComparison.Ordinal) && complex.Values.Count > 0)
+                return complex;
+            try
+            {
+                var real = Attempt(equations, unknowns, named, false);
+                return real.Values.Count > 0 ? real : complex;
+            }
+            catch (InvalidOperationException)
+            {
+                return complex;
+            }
+        }
+
+        private CasResult Attempt(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns, bool named, bool complex)
+        {
+            if (!named)
+                return Request(equations, unknowns, false, complex);
+            try
+            {
+                return Request(equations, unknowns, true, complex);
+            }
+            catch (SEHException)
+            {
+                return Request(equations, unknowns, false, complex);
+            }
+        }
+
+        private CasResult Request(IReadOnlyList<string> equations, IReadOnlyList<string> unknowns, bool named, bool complex)
         {
             var created = new List<int>();
             try
@@ -164,20 +209,22 @@ namespace SharpEquations.MathTools.MathEngine
                 var formulas = new List<string>();
                 foreach (var equation in equations)
                 {
-                    var one = Parse(equation, Linear, SolveEquation, Complex);
+                    var one = Parse(equation, Linear, SolveEquation, complex);
                     created.Add(one);
                     formulas.Add(Serialize(one, Formula));
                 }
                 var command = MathEngineText.SolveCommand(formulas);
-                var parsed = Parse(command, Formula, SolveEquation, Complex);
+                var parsed = Parse(command, Formula, SolveEquation, complex);
                 created.Add(parsed);
                 Check(NativeMethods.CreateEquationRequest(context, parsed, out var request));
                 created.Add(request);
                 // as Microsoft Mathematics: the letters only when the request asks for them, else the engine fails
-                if (NativeMethods.EquationRequestRequireVariableList(context, request, out var required) == 0 && required && unknowns.Count > 0)
+                // (or when the letter is asked for, which can fail)
+                var required = NativeMethods.EquationRequestRequireVariableList(context, request, out var asks) == 0 && asks;
+                if ((required || named) && unknowns.Count > 0)
                     Check(NativeMethods.EquationRequestSetVarNames(context, request, string.Join(",", unknowns.Select(MathReader.Symbol))));
 
-                SetEvaluation(Complex);
+                SetEvaluation(complex);
                 var code = NativeMethods.ExecuteExpression(context, request, out var result);
                 if (code == NoSolution)
                     return new CasResult(CasAction.Solve, null, "") { Values = Array.Empty<Equation>() };
