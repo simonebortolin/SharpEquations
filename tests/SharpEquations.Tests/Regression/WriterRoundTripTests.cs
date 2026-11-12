@@ -53,6 +53,8 @@ namespace SharpEquations.Tests.Regression
         [Arguments("1/(ab^2) c/d")]
         [Arguments("A=√s,  s=2")]
         [Arguments("f(x,  y)")]
+        [Arguments("x^(2/3)")]
+        [Arguments("a_(x/2)+b^(1/n)")]
         public async Task UnicodeMathReadsBackWhatItWrites(string unicodeMath)
         {
             var equation = Equation.Parse(unicodeMath, EquationFormat.UnicodeMath);

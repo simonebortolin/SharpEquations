@@ -13,20 +13,24 @@ namespace SharpEquations.Avalonia.MathTools
 
     /// <summary>
     /// The library of formulas: each one drawn by a <see cref="MathView"/>, filtered by subject and by name, and opened in
-    /// the calculator with a click.
+    /// the calculator with a click; the ones with a graph drawn on the page of the graphs with their button.
     /// </summary>
     public sealed class FormulasPage : UserControl
     {
         private static readonly EquationOptions Display = new EquationOptions { Display = true };
 
         private readonly Action<Equation> open;
-        private readonly List<(Formula Formula, Button Card)> cards = new List<(Formula, Button)>();
+        private readonly Action<GraphPreset>? graph;
+        private readonly List<(Formula Formula, Control Card)> cards = new List<(Formula, Control)>();
         private readonly List<ToggleButton> subjects = new List<ToggleButton>();
         private string? subject;
 
-        public FormulasPage(Action<Equation> open)
+        /// <param name="open">Opens a formula in the calculator.</param>
+        /// <param name="graph">Draws the graph of a formula; without it, the formulas have no button for their graph.</param>
+        public FormulasPage(Action<Equation> open, Action<GraphPreset>? graph = null)
         {
             this.open = open;
+            this.graph = graph;
 
             Search = new TextBox { PlaceholderText = "Search a formula", Width = 260 };
             // the property, not TextChanged, which Avalonia raises later, on the dispatcher
@@ -59,7 +63,7 @@ namespace SharpEquations.Avalonia.MathTools
                 list.Children.Add(card);
             }
 
-            Content = Ui.Card("Formulas", "A library of formulas of algebra, geometry, trigonometry, calculus, statistics and physics: click one to open it in the calculator", new StackPanel
+            Content = Ui.Card("Formulas", "A library of formulas of algebra, geometry, trigonometry, calculus, statistics and physics: click one to open it in the calculator, or draw its graph", new StackPanel
             {
                 Spacing = 16,
                 Children = { chips, list },
@@ -84,6 +88,15 @@ namespace SharpEquations.Avalonia.MathTools
         /// <summary>Opens a formula in the calculator, as a click on it does.</summary>
         public void Open(Formula formula) => open(Equation.Parse(formula.UnicodeMath, EquationFormat.UnicodeMath, Display));
 
+        /// <summary>Draws the graph of a formula, as its button does; false if it has none or the page draws no graphs.</summary>
+        public bool Graph(Formula formula)
+        {
+            if (formula.Graph == null || graph == null)
+                return false;
+            graph(formula.Graph);
+            return true;
+        }
+
         private void Filter()
         {
             var shown = new HashSet<Formula>(Formulas.Find(subject, Search.Text));
@@ -91,7 +104,7 @@ namespace SharpEquations.Avalonia.MathTools
                 card.IsVisible = shown.Contains(formula);
         }
 
-        private Button Card(Formula formula)
+        private Control Card(Formula formula)
         {
             var caption = Ui.Muted(formula.Subject.ToUpperInvariant() + "  ·  " + formula.Name, 11.5);
             var view = Ui.Math(formula.UnicodeMath, 19, display: true);
@@ -112,7 +125,22 @@ namespace SharpEquations.Avalonia.MathTools
             button.Bind(Button.BorderBrushProperty, button.GetResourceObservable("CardBorderBrush"));
             ToolTip.SetTip(button, "Open in the calculator");
             button.Click += (_, _) => Open(formula);
-            return button;
+            if (formula.Graph == null || graph == null)
+                return button;
+
+            var draw = new Button
+            {
+                Content = "Graph",
+                FontSize = 12,
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(10, 2),
+                Margin = new Thickness(0, 8, 10, 0),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+            };
+            ToolTip.SetTip(draw, "Draw on the page of the graphs, with a slider for each parameter");
+            draw.Click += (_, _) => Graph(formula);
+            return new Panel { Children = { button, draw } };
         }
     }
 }

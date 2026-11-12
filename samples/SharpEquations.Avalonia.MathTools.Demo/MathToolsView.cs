@@ -45,6 +45,10 @@ namespace SharpEquations.Avalonia.MathTools
                 Calculator.Editor.Equation = equation;
                 Tabs.SelectedIndex = 0;
                 Calculator.Editor.Focus();
+            }, preset =>
+            {
+                Graphs.AddPreset(preset, Engine.Angles);
+                Tabs.SelectedIndex = GraphsTab;
             });
             Tabs.ItemsSource = new[]
             {

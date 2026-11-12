@@ -265,6 +265,39 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(tab).IsEqualTo(4);
         }
 
+        /// <summary>A formula of the library draws its graph, with its parameters (Greek letters too) at their starting values.</summary>
+        [Test]
+        public async Task FormulaDrawsItsGraph()
+        {
+            var (drawn, tab, sliders, values, none) = await Headless.Run(() =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                view.Graphs.Clear();
+                view.Tabs.SelectedIndex = 1;
+                view.FormulaLibrary.ShowSubject("Physics");
+                window.Height = 1300;
+                Save(window, "math-tools-formulas-physics");
+                var drawn = view.FormulaLibrary.Graph(Formulas.All.Single(f => f.Name == "Damped oscillation"));
+                Save(window, "math-tools-formula-graph");
+                var curve = view.Graphs.Graph.Curves.Single();
+                var sliders = view.Graphs.Sliders.Keys.Select(k => k.Parameter).OrderBy(p => p, StringComparer.Ordinal).ToList();
+                var values = (view.Graphs.Sliders[(curve, "γ")].Value, curve.Plot["γ"], curve.Plot["A"]);
+                var none = view.FormulaLibrary.Graph(Formulas.All.Single(f => f.Name == "Law of cosines"));
+                var result = (drawn, view.Tabs.SelectedIndex, sliders, values, none);
+                window.Close();
+                return result;
+            });
+            await Assert.That(drawn).IsTrue();
+            await Assert.That(tab).IsEqualTo(4);
+            await Assert.That(sliders).IsEquivalentTo(new[] { "A", "γ", "ω" });
+            await Assert.That(values.Item1).IsEqualTo(0.3);
+            await Assert.That(values.Item2).IsEqualTo(0.3);
+            await Assert.That(values.Item3).IsEqualTo(4);
+            await Assert.That(none).IsFalse();
+        }
+
         [Test]
         public async Task WorksheetComputesAndIsKept()
         {
