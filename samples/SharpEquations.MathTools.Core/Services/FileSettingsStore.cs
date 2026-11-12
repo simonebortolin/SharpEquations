@@ -32,7 +32,7 @@ namespace SharpEquations.MathTools
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.WriteAllText(path, JsonSerializer.Serialize(values));
+                File.WriteAllText(path, JsonSerializer.Serialize(values, MathToolsJson.Default.DictionaryStringString));
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
@@ -44,7 +44,7 @@ namespace SharpEquations.MathTools
         {
             try
             {
-                return File.Exists(path) ? JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path)) ?? new() : new();
+                return File.Exists(path) ? JsonSerializer.Deserialize(File.ReadAllText(path), MathToolsJson.Default.DictionaryStringString) ?? new() : new();
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
             {
