@@ -85,8 +85,8 @@ namespace SharpEquations.MathTools.MathEngine
 
         public AngleUnit Angles { get; set; }
 
-        /// <summary>Whether equations are solved among the complex numbers (true) or the real ones (false, the default).</summary>
-        public bool Complex { get; set; }
+        /// <summary>Whether equations are solved among the complex numbers (true, the default) or the real ones.</summary>
+        public bool Complex { get; set; } = true;
 
         public IReadOnlyDictionary<string, Equation> Definitions
         {
@@ -149,7 +149,8 @@ namespace SharpEquations.MathTools.MathEngine
                     return OnEngineThread(() => Solve(equations, unknowns));
                 }
                 var command = MathEngineText.Command(action, system, x);
-                return OnEngineThread(() => Execute(action, command));
+                var imaginary = system.Any(e => e.Nodes.Any(n => n is Entity.Number.Complex c && c.ImaginaryPart != 0));
+                return OnEngineThread(() => Execute(action, command, imaginary));
             }
         }
 
@@ -163,24 +164,20 @@ namespace SharpEquations.MathTools.MathEngine
                 var formulas = new List<string>();
                 foreach (var equation in equations)
                 {
-                    var one = Parse(equation, Linear, SolveEquation);
+                    var one = Parse(equation, Linear, SolveEquation, Complex);
                     created.Add(one);
                     formulas.Add(Serialize(one, Formula));
                 }
                 var command = MathEngineText.SolveCommand(formulas);
-                var parsed = Parse(command, Formula, SolveEquation);
+                var parsed = Parse(command, Formula, SolveEquation, Complex);
                 created.Add(parsed);
                 Check(NativeMethods.CreateEquationRequest(context, parsed, out var request));
                 created.Add(request);
-                // the letters are given even when the request does not ask for them, else it may solve for another one
-                if (unknowns.Count > 0)
-                {
-                    var named = NativeMethods.EquationRequestSetVarNames(context, request, string.Join(",", unknowns.Select(MathReader.Symbol)));
-                    if (NativeMethods.EquationRequestRequireVariableList(context, request, out var required) == 0 && required)
-                        Check(named);
-                }
+                // as Microsoft Mathematics: the letters only when the request asks for them, else the engine fails
+                if (NativeMethods.EquationRequestRequireVariableList(context, request, out var required) == 0 && required && unknowns.Count > 0)
+                    Check(NativeMethods.EquationRequestSetVarNames(context, request, string.Join(",", unknowns.Select(MathReader.Symbol))));
 
-                SetEvaluation();
+                SetEvaluation(Complex);
                 var code = NativeMethods.ExecuteExpression(context, request, out var result);
                 if (code == NoSolution)
                     return new CasResult(CasAction.Solve, null, "") { Values = Array.Empty<Equation>() };
@@ -195,14 +192,27 @@ namespace SharpEquations.MathTools.MathEngine
             }
         }
 
-        private CasResult Execute(CasAction action, string command)
+        // among the real numbers (∛(-8) is -2), else among the complex ones when the input has i or the real result
+        // is indeterminate (√(-4) is 2i)
+        private CasResult Execute(CasAction action, string command, bool imaginary)
+        {
+            if (!imaginary)
+            {
+                var real = Execute(action, command, false, out var indeterminate);
+                if (!indeterminate)
+                    return real;
+            }
+            return Execute(action, command, true, out _);
+        }
+
+        private CasResult Execute(CasAction action, string command, bool complex, out bool indeterminate)
         {
             var created = new List<int>();
             try
             {
-                var parsed = Parse(command, Linear, NonEquation);
+                var parsed = Parse(command, Linear, NonEquation, complex);
                 created.Add(parsed);
-                SetEvaluation();
+                SetEvaluation(complex);
                 Check(NativeMethods.ExecuteExpression(context, parsed, out var result));
                 created.Add(result);
                 if (action == CasAction.Simplify)
@@ -211,7 +221,9 @@ namespace SharpEquations.MathTools.MathEngine
                     Check(NativeMethods.FullSimplifyExpression(context, result, out result));
                     created.Add(result);
                 }
-                return Result(action, result);
+                var answer = Result(action, result);
+                indeterminate = answer.Text.Contains("Indeterminate", StringComparison.Ordinal);
+                return answer;
             }
             finally
             {
@@ -221,13 +233,13 @@ namespace SharpEquations.MathTools.MathEngine
         }
 
         // the input is in radians (see Run): so is the engine
-        private void SetEvaluation() =>
-            Check(NativeMethods.SetEvaluationProperties(context, Complex ? 1 : 0, 0, false, false, false, true));
+        private void SetEvaluation(bool complex) =>
+            Check(NativeMethods.SetEvaluationProperties(context, complex ? 1 : 0, 0, false, false, false, true));
 
-        private int Parse(string text, int format, int mode)
+        private int Parse(string text, int format, int mode, bool complex)
         {
             Check(NativeMethods.SetParsingOptions(context, format, true, true, true, mode));
-            SetEvaluation();
+            SetEvaluation(complex);
             var code = NativeMethods.Parse(context, text, out var parsed);
             if (code == 0)
                 return parsed;
