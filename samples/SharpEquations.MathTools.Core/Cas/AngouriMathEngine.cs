@@ -35,10 +35,10 @@ namespace SharpEquations.MathTools
                 case CasAction.Solve:
                     var equation = expression is Entity.Equalsf ? expression : expression.Equalizes(0);
                     var solutions = equation.Solve(x).Simplify();
-                    return Result(action, Latex(x) + @"\in " + Latex(solutions), x.ToString() + " ∈ " + solutions.ToString()) with
+                    return Approximations(Result(action, Latex(x) + @"\in " + Latex(solutions), x.ToString() + " ∈ " + solutions.ToString()) with
                     {
                         Values = solutions is Entity.Set.FiniteSet set ? Equations(set.Elements) : Array.Empty<Equation>(),
-                    };
+                    }, x, solutions);
                 case CasAction.Simplify:
                     return Result(action, expression.Simplify());
                 case CasAction.Expand:
@@ -70,27 +70,58 @@ namespace SharpEquations.MathTools
             return Result(CasAction.Evaluate, exactLatex + @"\approx " + approximate, exactText + " ≈ " + approximate) with { Values = values };
         }
 
-        /// <summary>A number of AngouriMath as the calculator shows it: ten significant digits, <c>a+bi</c> for a complex one; null for what is not a number.</summary>
-        public static string? Decimal(Entity value)
+        // x ∈ {…} with radicals gets a second line, x ≈ {1.2071, -0.5+0.866i}: the same solutions as decimal numbers
+        private static CasResult Approximations(CasResult result, Entity.Variable x, Entity solutions)
+        {
+            if (solutions is not Entity.Set.FiniteSet set || !set.Elements.Any())
+                return result;
+            var exact = set.Elements.ToList();
+            if (exact.All(e => e is Entity.Number))
+                return result;
+
+            var values = new List<string>();
+            foreach (var element in exact)
+            {
+                string? value;
+                try
+                {
+                    value = Decimal(element.EvalNumerical(), 6);
+                }
+                catch (AngouriMath.Core.Exceptions.AngouriMathBaseException)
+                {
+                    value = null;
+                }
+                if (value == null)
+                    return result;
+                values.Add(value);
+            }
+
+            var list = string.Join(", ", values);
+            var approximate = Result(CasAction.Solve, Latex(x) + @"\approx \left\{" + string.Join(@",\: ", values) + @"\right\}", x.ToString() + " ≈ {" + list + "}");
+            return result with { Approximate = approximate.Math, ApproximateText = approximate.Text };
+        }
+
+        /// <summary>A number of AngouriMath as the calculator shows it: <paramref name="digits"/> significant digits, <c>a+bi</c> for a complex one; null for what is not a number.</summary>
+        public static string? Decimal(Entity value, int digits = 10)
         {
             switch (value)
             {
                 case Entity.Number.Real real:
-                    return Format(real.EDecimal.ToDouble());
+                    return Format(real.EDecimal.ToDouble(), digits);
                 case Entity.Number.Complex complex:
                     var re = complex.RealPart.EDecimal.ToDouble();
                     var im = complex.ImaginaryPart.EDecimal.ToDouble();
                     if (Math.Abs(im) < 1e-12 * Math.Max(1, Math.Abs(re)))
-                        return Format(re);
-                    var imaginary = (Math.Abs(im) == 1 ? "" : Format(Math.Abs(im))) + "i";
-                    return Math.Abs(re) < 1e-12 * Math.Abs(im) ? (im < 0 ? "-" : "") + imaginary : Format(re) + (im < 0 ? "-" : "+") + imaginary;
+                        return Format(re, digits);
+                    var imaginary = (Math.Abs(im) == 1 ? "" : Format(Math.Abs(im), digits)) + "i";
+                    return Math.Abs(re) < 1e-12 * Math.Abs(im) ? (im < 0 ? "-" : "") + imaginary : Format(re, digits) + (im < 0 ? "-" : "+") + imaginary;
                 default:
                     return null;
             }
         }
 
-        private static string Format(double value) =>
-            double.IsInfinity(value) ? (value > 0 ? "∞" : "-∞") : value.ToString("G10", CultureInfo.InvariantCulture);
+        private static string Format(double value, int digits) =>
+            double.IsInfinity(value) ? (value > 0 ? "∞" : "-∞") : value.ToString("G" + digits.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
 
         private static CasResult Result(CasAction action, Entity value) =>
             Result(action, Latex(value), value.ToString()) with { Values = Equations(new[] { value }) };
