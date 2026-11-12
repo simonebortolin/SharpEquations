@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- An ICasEngine over the engine of Microsoft Mathematics (mathenginen.dll), to compare its results with those of
+       AngouriMath. Windows only, and only where Microsoft Mathematics is installed: the library is loaded from the
+       installation (or from MATHENGINEN_PATH) and is never part of this repository. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SharpEquations.MathTools.MathEngine</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpEquations.MathTools.Core\SharpEquations.MathTools.Core.csproj" />
+  </ItemGroup>
+
+</Project>

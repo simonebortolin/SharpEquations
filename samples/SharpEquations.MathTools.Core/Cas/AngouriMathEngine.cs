@@ -260,6 +260,9 @@ namespace SharpEquations.MathTools
             return equations;
         }
 
+        /// <summary>An expression of AngouriMath as an equation (through its LaTeX), or null when it cannot be written.</summary>
+        public static Equation? ToEquation(Entity value) => Parse(Latex(value));
+
         private static Equation? Parse(string latex) =>
             Equation.TryParse(latex, EquationFormat.LaTeX, new EquationOptions { Display = true }, out var parsed)
             && !parsed!.ToMathML().Descendants().Any(e => e.Name.LocalName == "merror")
