@@ -45,10 +45,12 @@ namespace SharpEquations.Avalonia.MathTools
             };
         }
 
-        public static Border Card(string title, string subtitle, Control content)
+        public static Border Card(string title, string subtitle, Control content) => Card(title, Muted(subtitle, 12.5), content);
+
+        /// <summary>A card whose caption is a control, such as <see cref="Caption"/>: text and formulas.</summary>
+        public static Border Card(string title, Control caption, Control content)
         {
             var heading = new TextBlock { Text = title, FontSize = 17, FontWeight = FontWeight.SemiBold };
-            var caption = Muted(subtitle, 12.5);
             var card = new Border
             {
                 CornerRadius = new CornerRadius(16),
@@ -81,6 +83,25 @@ namespace SharpEquations.Avalonia.MathTools
             IsHitTestVisible = false,
             Equation = Equation.Parse(unicodeMath, EquationFormat.UnicodeMath, new EquationOptions { Display = display }),
         };
+
+        /// <summary>
+        /// A caption of text and formulas in a row: the parts in <c>$…$</c> are UnicodeMath, drawn as formulas; the
+        /// rest is muted text.
+        /// </summary>
+        public static WrapPanel Caption(string text)
+        {
+            var row = new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 4, LineSpacing = 2 };
+            var parts = text.Split('$');
+            for (var i = 0; i < parts.Length; i++)
+            {
+                if (parts[i].Length == 0)
+                    continue;
+                Control part = i % 2 == 1 ? Math(parts[i], 14) : Muted(parts[i].Trim(), 12.5);
+                part.VerticalAlignment = VerticalAlignment.Center;
+                row.Children.Add(part);
+            }
+            return row;
+        }
 
         public static Control Docked(Control control, Dock dock)
         {
