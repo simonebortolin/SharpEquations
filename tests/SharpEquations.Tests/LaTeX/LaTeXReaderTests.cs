@@ -219,7 +219,7 @@ namespace SharpEquations.Tests.LaTeX
         [Arguments(@"|x|+|y|", @"|x|+|y|", @"|𝑥|+|𝑦|")]
         [Arguments(@"\left.\frac{d}{dx}\right|_{x=0}", @"{\left.\frac{d}{dx}\right|}_{x=0}", @"├𝑑/𝑑𝑥 ┤|_(𝑥=0)")]
         [Arguments(@"{a \over b}", @"\frac{a}{b}", @"𝑎/𝑏")]
-        [Arguments(@"x_\frac 1 2", @"x_{\frac{1}{2}}", @"𝑥_ 1/2 ")]
+        [Arguments(@"x_\frac 1 2", @"x_{\frac{1}{2}}", @"𝑥_(1/2)")]
         [Arguments(@"\frac 1 2+\binom n k+\frac{a} b", @"\frac{1}{2}+\binom{n}{k}+\frac{a}{b}", @"1/2+𝑛⒞𝑘+𝑎/𝑏")]
         public async Task ReadsSlashesAndBarsAsLaTeX(string latex, string expectedLaTeX, string expectedUnicodeMath)
         {

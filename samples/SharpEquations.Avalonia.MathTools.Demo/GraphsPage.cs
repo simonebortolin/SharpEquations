@@ -169,6 +169,31 @@ namespace SharpEquations.Avalonia.MathTools
             return true;
         }
 
+        /// <summary>
+        /// Draws the graph of a formula of the library, with its parameters (and their sliders) at their starting values;
+        /// false, with <see cref="Error"/>, when it has no graph.
+        /// </summary>
+        public bool AddPreset(GraphPreset preset, AngleUnit angles = AngleUnit.Radians)
+        {
+            ArgumentNullException.ThrowIfNull(preset);
+            if (!AddEquation(Equation.Parse(preset.UnicodeMath, EquationFormat.UnicodeMath, Display), angles))
+                return false;
+            var curve = Graph.Curves[^1];
+            foreach (var (parameter, value) in preset.Values)
+            {
+                var name = MathReader.Symbol(parameter);
+                if (Sliders.TryGetValue((curve, name), out var slider))
+                {
+                    slider.Minimum = Math.Min(slider.Minimum, value);
+                    slider.Maximum = Math.Max(slider.Maximum, value);
+                    slider.Value = value;
+                }
+                curve.Plot[name] = value;
+            }
+            Graph.Redraw();
+            return true;
+        }
+
         /// <summary>Removes every graph.</summary>
         public void Clear()
         {

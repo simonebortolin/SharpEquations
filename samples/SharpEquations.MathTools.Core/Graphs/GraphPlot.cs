@@ -45,7 +45,7 @@ namespace SharpEquations.MathTools
 
         public GraphKind Kind { get; }
 
-        /// <summary>The letters that are not variables of the graph, in the order of their values.</summary>
+        /// <summary>The letters that are not variables of the graph, in the order of their values, as written (μ, not mu).</summary>
         public IReadOnlyList<string> Parameters { get; }
 
         /// <summary>The range of the variable of a polar or parametric graph: 0 to 2π.</summary>
@@ -109,7 +109,8 @@ namespace SharpEquations.MathTools
             var parameters = f.Vars.Concat(g?.Vars ?? Enumerable.Empty<Entity.Variable>()).Select(l => l.Name)
                 .Where(n => n != u && n != v).Distinct().OrderBy(n => n, StringComparer.Ordinal).ToList();
             var letters = new[] { u, v }.Concat(parameters).ToList();
-            return new GraphPlot(kind, NumericCompiler.Compile(f, letters), g == null ? null : NumericCompiler.Compile(g, letters), parameters);
+            return new GraphPlot(kind, NumericCompiler.Compile(f, letters), g == null ? null : NumericCompiler.Compile(g, letters),
+                parameters.Select(MathReader.Symbol).ToList());
         }
 
         private static Entity Substitute(Entity e, Dictionary<string, Entity> defined)
@@ -125,7 +126,7 @@ namespace SharpEquations.MathTools
         {
             for (var i = 0; i < Parameters.Count; i++)
             {
-                if (Parameters[i] == parameter)
+                if (Parameters[i] == parameter || Parameters[i] == MathReader.Symbol(parameter))
                     return i;
             }
             throw new ArgumentException("“" + parameter + "” is not a parameter of the graph.", nameof(parameter));
