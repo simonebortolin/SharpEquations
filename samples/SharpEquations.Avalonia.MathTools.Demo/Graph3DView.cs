@@ -10,6 +10,7 @@ namespace SharpEquations.Avalonia.MathTools
     using global::Avalonia.Controls;
     using global::Avalonia.Input;
     using global::Avalonia.Media;
+    using global::Avalonia.Media.Imaging;
     using global::Avalonia.Media.Immutable;
     using global::Avalonia.OpenGL;
     using global::Avalonia.OpenGL.Controls;
@@ -38,6 +39,7 @@ namespace SharpEquations.Avalonia.MathTools
         private Viewport domain = Viewport.Default;
         private Point? dragged;
         private bool forceSoftware;
+        private DispatcherTimer? pending;
 
         public Graph3DView()
         {
@@ -109,9 +111,49 @@ namespace SharpEquations.Avalonia.MathTools
             Domain = Viewport.Default;
         }
 
+        /// <summary>
+        /// Samples the graphs again once <paramref name="delay"/> (200 ms by default) passed without another call: a
+        /// slider moving redraws when it stops, not at each of its steps.
+        /// </summary>
+        public void RedrawSoon(TimeSpan? delay = null)
+        {
+            if (pending is null)
+            {
+                pending = new DispatcherTimer();
+                pending.Tick += (_, _) => Redraw();
+            }
+            pending.Stop();
+            pending.Interval = delay ?? TimeSpan.FromMilliseconds(200);
+            pending.Start();
+        }
+
+        /// <summary>True while a <see cref="RedrawSoon"/> waits.</summary>
+        public bool IsRedrawPending => pending?.IsEnabled == true;
+
+        /// <summary>
+        /// The graphs and the axes as an image, at <paramref name="scale"/> pixels for a pixel of the control, drawn by
+        /// Skia whatever draws them on screen.
+        /// </summary>
+        public RenderTargetBitmap Snapshot(double scale = 2)
+        {
+            var size = Bounds.Size;
+            var bitmap = new RenderTargetBitmap(
+                new PixelSize(Math.Max(1, (int)Math.Ceiling(size.Width * scale)), Math.Max(1, (int)Math.Ceiling(size.Height * scale))),
+                new global::Avalonia.Vector(96 * scale, 96 * scale));
+            using (var context = bitmap.CreateDrawingContext())
+            {
+                if (Background is { } background)
+                    context.FillRectangle(background, new Rect(size));
+                SoftwareCanvas.Paint(this, context, size);
+                Overlay.Paint(this, context, size, renderer: false);
+            }
+            return bitmap;
+        }
+
         /// <summary>Samples the graphs again, after a parameter changed, and draws them.</summary>
         public void Redraw()
         {
+            pending?.Stop();
             var grid = IsOpenGl ? GlGrid : SoftwareGrid;
             var surfaces = new List<(Func<double, double, double>, Vector4)>();
             var curves = new List<(Func<double, (double, double, double)>, double, double, Vector4)>();
@@ -132,6 +174,8 @@ namespace SharpEquations.Avalonia.MathTools
         protected override void OnPointerPressed(PointerPressedEventArgs e)
         {
             base.OnPointerPressed(e);
+            if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+                return;
             if (e.ClickCount == 2)
             {
                 Reset();
@@ -221,9 +265,10 @@ namespace SharpEquations.Avalonia.MathTools
 
             public SoftwareCanvas(Graph3DView owner) => this.owner = owner;
 
-            public override void Render(DrawingContext context)
+            public override void Render(DrawingContext context) => Paint(owner, context, Bounds.Size);
+
+            public static void Paint(Graph3DView owner, DrawingContext context, Size size)
             {
-                var size = Bounds.Size;
                 var edges = owner.BrushColor("AxisBrush", Colors.Gray);
                 var shapes = Painter3D.Paint(owner.Scene, owner.camera, (float)size.Width, (float)size.Height, edges);
                 foreach (var shape in shapes)
@@ -257,9 +302,11 @@ namespace SharpEquations.Avalonia.MathTools
 
             public Overlay(Graph3DView owner) => this.owner = owner;
 
-            public override void Render(DrawingContext context)
+            public override void Render(DrawingContext context) => Paint(owner, context, Bounds.Size, renderer: true);
+
+            /// <param name="renderer">Whether to write what draws the graphs, in the corner.</param>
+            public static void Paint(Graph3DView owner, DrawingContext context, Size size, bool renderer)
             {
-                var size = Bounds.Size;
                 if (size.Width < 2 || size.Height < 2)
                     return;
                 var brush = owner.Brush("AxisBrush", Brushes.Gray);
@@ -274,8 +321,11 @@ namespace SharpEquations.Avalonia.MathTools
                 Axis("y", new Vector3(sx, -1, -1), new Vector3(sx, 1, -1), box.YMin, box.YMax);
                 Axis("z", new Vector3(sx, -sy, -1), new Vector3(sx, -sy, 1), box.ZMin, box.ZMax);
 
-                var renderer = Text(owner.Renderer, 11, brush);
-                context.DrawText(renderer, new Point(size.Width - renderer.Width - 10, size.Height - renderer.Height - 8));
+                if (renderer)
+                {
+                    var drawn = Text(owner.Renderer, 11, brush);
+                    context.DrawText(drawn, new Point(size.Width - drawn.Width - 10, size.Height - drawn.Height - 8));
+                }
 
                 void Axis(string name, Vector3 a, Vector3 b, double min, double max)
                 {

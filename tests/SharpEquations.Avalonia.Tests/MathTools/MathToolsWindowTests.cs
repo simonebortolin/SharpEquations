@@ -307,6 +307,46 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(turned).IsTrue();
         }
 
+        [Test]
+        public async Task GraphsInSpaceShareParametersAndWait()
+        {
+            var (pending, drawn, separate, shared, added, width, expected) = await Headless.Run(() =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                view.Tabs.SelectedIndex = 5;
+                var page = view.Space;
+                var display = new EquationOptions { Display = true };
+                page.Clear();
+                page.AddEquation(Equation.Parse("z=a x y", EquationFormat.UnicodeMath, display));
+                page.AddEquation(Equation.Parse("z=a sin x", EquationFormat.UnicodeMath, display));
+                var a = page.Sliders.Where(s => s.Key.Parameter == "a").ToList();
+                a[0].Value.Value = 2;
+                var pending = page.Space.IsRedrawPending;
+                page.Space.Redraw();
+                var drawn = !page.Space.IsRedrawPending;
+                var separate = page.Space.Surfaces[1].Plot["a"];
+                page.SharedParameters.IsChecked = true;
+                var shared = page.Space.Surfaces[1].Plot["a"];
+                a[0].Value.Value = 3;
+                page.AddEquation(Equation.Parse("z=a+x", EquationFormat.UnicodeMath, display));
+                var added = page.Space.Surfaces.Select(s => s.Plot["a"]).ToList();
+                window.UpdateLayout();
+                using var image = page.Space.Snapshot(2);
+                var result = (pending, drawn, separate, shared, added, image.PixelSize.Width, (int)Math.Ceiling(page.Space.Bounds.Width * 2));
+                window.Close();
+                return result;
+            });
+            await Assert.That(pending).IsTrue();
+            await Assert.That(drawn).IsTrue();
+            await Assert.That(separate).IsEqualTo(1);
+            await Assert.That(shared).IsEqualTo(2);
+            await Assert.That(added).IsEquivalentTo(new double[] { 3, 3, 3 });
+            await Assert.That(width).IsEqualTo(expected);
+            await Assert.That(width).IsGreaterThan(1);
+        }
+
         /// <summary>A formula of the library draws its graph, with its parameters (Greek letters too) at their starting values.</summary>
         [Test]
         public async Task FormulaDrawsItsGraph()
