@@ -4,7 +4,10 @@ namespace SharpEquations.MathTools.MathEngine
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Collections.Concurrent;
     using System.Runtime.InteropServices;
+    using System.Threading;
+    using System.Threading.Tasks;
     using AngouriMath;
     using SharpEquations;
     using SharpEquations.MathTools;
@@ -37,7 +40,11 @@ namespace SharpEquations.MathTools.MathEngine
         {
             if (!IsAvailable)
                 throw new PlatformNotSupportedException("The engine of Microsoft Mathematics is not installed (mathenginen.dll).");
-            Check(NativeMethods.CreateContext(Key, out context));
+            context = OnEngineThread(() =>
+            {
+                Check(NativeMethods.CreateContext(Key, out var created));
+                return created;
+            });
         }
 
         /// <summary>
@@ -133,8 +140,8 @@ namespace SharpEquations.MathTools.MathEngine
             {
                 ObjectDisposedException.ThrowIf(context == Guid.Empty, this);
                 return action == CasAction.Solve
-                    ? Execute(action, command, SolveEquation, system.Count > 1 ? letters : x != null ? new[] { x } : letters)
-                    : Execute(action, command, NonEquation, null);
+                    ? OnEngineThread(() => Execute(action, command, SolveEquation, system.Count > 1 ? letters : x != null ? new[] { x } : letters))
+                    : OnEngineThread(() => Execute(action, command, NonEquation, null));
             }
         }
 
@@ -222,10 +229,54 @@ namespace SharpEquations.MathTools.MathEngine
             {
                 if (context == Guid.Empty)
                     return;
-                NativeMethods.DestroyContext(context);
+                var destroyed = context;
                 context = Guid.Empty;
+                OnEngineThread(() => NativeMethods.DestroyContext(destroyed));
             }
         }
+
+        /// <summary>
+        /// Runs a call of the library on its own thread. The library keeps every context in one table, not guarded
+        /// against threads, keeps state per thread and initializes COM on the thread that calls it, as on the one
+        /// thread (single-threaded apartment) of Microsoft Mathematics: so all the calls, of every engine, go to one
+        /// such thread, one at a time.
+        /// </summary>
+        private static T OnEngineThread<T>(Func<T> call)
+        {
+            var done = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Calls.Value.Add(() =>
+            {
+                try
+                {
+                    done.SetResult(call());
+                }
+#pragma warning disable CA1031 // every failure goes back to the caller
+                catch (Exception exception)
+#pragma warning restore CA1031
+                {
+                    done.SetException(exception);
+                }
+            });
+            return done.Task.GetAwaiter().GetResult();
+        }
+
+        private static readonly Lazy<BlockingCollection<Action>> Calls = new Lazy<BlockingCollection<Action>>(() =>
+        {
+            var calls = new BlockingCollection<Action>();
+            var thread = new Thread(() =>
+            {
+                foreach (var call in calls.GetConsumingEnumerable())
+                    call();
+            })
+            {
+                IsBackground = true,
+                Name = "Microsoft Mathematics engine",
+            };
+            if (OperatingSystem.IsWindows())
+                thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            return calls;
+        });
 
         private static void Check(int code)
         {
