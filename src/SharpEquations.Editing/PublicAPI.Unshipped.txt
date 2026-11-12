@@ -120,3 +120,34 @@ SharpEquations.Editing.MathQuickBarMode.Symbols = 4 -> SharpEquations.Editing.Ma
 SharpEquations.Editing.MathQuickBarMode.Table = 3 -> SharpEquations.Editing.MathQuickBarMode
 SharpEquations.Editing.MathEditor.DismissCompletions() -> void
 SharpEquations.Editing.MathEditor.GetQuickBarMode(int maxCompletions, out System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>! completions) -> SharpEquations.Editing.MathQuickBarMode
+SharpEquations.Editing.MathEditor.ProcessKey(SharpEquations.Editing.MathKey key, SharpEquations.Editing.MathKeyModifiers modifiers, SharpEquations.Editing.IMathGeometry? geometry = null, bool readOnly = false) -> bool
+SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.Backspace = 6 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.Delete = 7 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.Down = 3 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.End = 5 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.Enter = 9 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.Escape = 10 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.Home = 4 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.Left = 0 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.Right = 1 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.Tab = 8 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKey.Up = 2 -> SharpEquations.Editing.MathKey
+SharpEquations.Editing.MathKeyModifiers
+SharpEquations.Editing.MathKeyModifiers.Alt = 4 -> SharpEquations.Editing.MathKeyModifiers
+SharpEquations.Editing.MathKeyModifiers.Control = 2 -> SharpEquations.Editing.MathKeyModifiers
+SharpEquations.Editing.MathKeyModifiers.Meta = 8 -> SharpEquations.Editing.MathKeyModifiers
+SharpEquations.Editing.MathKeyModifiers.None = 0 -> SharpEquations.Editing.MathKeyModifiers
+SharpEquations.Editing.MathKeyModifiers.Shift = 1 -> SharpEquations.Editing.MathKeyModifiers
+SharpEquations.Editing.MathQuickBarState
+SharpEquations.Editing.MathQuickBarState.AcceptCompletion() -> bool
+SharpEquations.Editing.MathQuickBarState.Completions.get -> System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>!
+SharpEquations.Editing.MathQuickBarState.Editor.get -> SharpEquations.Editing.MathEditor!
+SharpEquations.Editing.MathQuickBarState.MathQuickBarState(SharpEquations.Editing.MathEditor! editor) -> void
+SharpEquations.Editing.MathQuickBarState.MaxCompletions.get -> int
+SharpEquations.Editing.MathQuickBarState.MaxCompletions.set -> void
+SharpEquations.Editing.MathQuickBarState.Mode.get -> SharpEquations.Editing.MathQuickBarMode
+SharpEquations.Editing.MathQuickBarState.ProcessKey(SharpEquations.Editing.MathKey key, SharpEquations.Editing.MathKeyModifiers modifiers) -> bool
+SharpEquations.Editing.MathQuickBarState.SelectedIndex.get -> int
+SharpEquations.Editing.MathQuickBarState.SelectedIndex.set -> void
+SharpEquations.Editing.MathQuickBarState.Update(bool enabled) -> bool

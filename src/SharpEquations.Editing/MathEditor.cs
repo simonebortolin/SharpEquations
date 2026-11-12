@@ -743,6 +743,55 @@ namespace SharpEquations.Editing
             Move(Canonical(position), extend);
         }
 
+        /// <summary>
+        /// Acts on a key: the arrows, Home and End move the caret (Shift extends the selection; Up and Down to the nearest
+        /// position of the <paramref name="geometry"/>, when given); Backspace and Delete delete; Tab moves to the next
+        /// cell of a table (Shift+Tab to the previous one); Enter builds up the whole equation, Shift+Enter breaks the
+        /// line. Read only, the keys that edit are not used.
+        /// </summary>
+        /// <returns>Whether the key was used.</returns>
+        public bool ProcessKey(MathKey key, MathKeyModifiers modifiers, IMathGeometry? geometry = null, bool readOnly = false)
+        {
+            var shift = (modifiers & MathKeyModifiers.Shift) != 0;
+            switch (key)
+            {
+                case MathKey.Left:
+                    MoveLeft(shift);
+                    return true;
+                case MathKey.Right:
+                    MoveRight(shift);
+                    return true;
+                case MathKey.Up:
+                    MoveUp(shift, geometry);
+                    return true;
+                case MathKey.Down:
+                    MoveDown(shift, geometry);
+                    return true;
+                case MathKey.Home:
+                    MoveHome(shift);
+                    return true;
+                case MathKey.End:
+                    MoveEnd(shift);
+                    return true;
+                case MathKey.Backspace when !readOnly:
+                    Backspace();
+                    return true;
+                case MathKey.Delete when !readOnly:
+                    Delete();
+                    return true;
+                case MathKey.Tab when (modifiers & ~MathKeyModifiers.Shift) == 0 && MoveToNextCell(shift):
+                    return true;
+                case MathKey.Enter when !readOnly && shift:
+                    InsertLineBreak();
+                    return true;
+                case MathKey.Enter when !readOnly:
+                    BuildUpAll();
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         /// <summary>Undoes the last edit.</summary>
         public void Undo()
         {

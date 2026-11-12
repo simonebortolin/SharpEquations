@@ -20,12 +20,12 @@ namespace SharpEquations.Avalonia
     {
         private readonly MathEditBox owner;
         private readonly WrapPanel panel = new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 2, LineSpacing = 2, MaxWidth = 420 };
-        private IReadOnlyList<EquationCommand> completions = Array.Empty<EquationCommand>();
-        private int selectedIndex;
+        private readonly MathQuickBarState state;
 
         internal MathQuickBar(MathEditBox owner)
         {
             this.owner = owner;
+            state = new MathQuickBarState(owner.Editor);
             Child = panel;
             Padding = new Thickness(4);
             CornerRadius = new CornerRadius(6);
@@ -36,47 +36,44 @@ namespace SharpEquations.Avalonia
         }
 
         /// <summary>What the bar shows.</summary>
-        public MathQuickBarMode Mode { get; private set; }
+        public MathQuickBarMode Mode => state.Mode;
 
         /// <summary>The completions shown, in <see cref="MathQuickBarMode.Completions"/>.</summary>
-        public IReadOnlyList<EquationCommand> Completions => completions;
+        public IReadOnlyList<EquationCommand> Completions => state.Completions;
 
         /// <summary>The completion that Tab or Enter takes.</summary>
         public int SelectedIndex
         {
-            get => selectedIndex;
+            get => state.SelectedIndex;
             set
             {
-                if (completions.Count == 0)
-                    return;
-                selectedIndex = (value % completions.Count + completions.Count) % completions.Count;
+                state.SelectedIndex = value;
                 Highlight();
             }
         }
 
         /// <summary>Takes the selected completion; returns false when there is none.</summary>
-        public bool AcceptCompletion()
+        public bool AcceptCompletion() => state.AcceptCompletion();
+
+        internal bool ProcessKey(MathKey key, MathKeyModifiers modifiers)
         {
-            if (Mode != MathQuickBarMode.Completions || completions.Count == 0)
+            if (!state.ProcessKey(key, modifiers))
                 return false;
-            owner.Editor.Complete(completions[selectedIndex]);
+            Highlight();
             return true;
         }
 
-        internal void Show(MathQuickBarMode mode, IReadOnlyList<EquationCommand> commands)
+        /// <summary>Reads again what the bar shows, closed unless <paramref name="enabled"/>, and makes its buttons.</summary>
+        internal void Update(bool enabled)
         {
-            if (mode == Mode && mode == MathQuickBarMode.Completions && commands.Select(c => c.Name).SequenceEqual(completions.Select(c => c.Name)))
+            if (!state.Update(enabled) && Mode == MathQuickBarMode.Completions)
                 return;
-            Mode = mode;
-            completions = commands;
-            selectedIndex = 0;
             panel.Children.Clear();
-            switch (mode)
+            switch (Mode)
             {
                 case MathQuickBarMode.Completions:
-                    for (var i = 0; i < commands.Count; i++)
+                    foreach (var command in Completions)
                     {
-                        var command = commands[i];
                         var button = Button(command.Symbol.Length > 0 ? command.Symbol + "  \\" + command.Name : command.Text, "\\" + command.Name, () => owner.Editor.Complete(command));
                         button.HorizontalContentAlignment = HorizontalAlignment.Left;
                         button.MinWidth = 130;
@@ -181,7 +178,7 @@ namespace SharpEquations.Avalonia
             for (var i = 0; i < panel.Children.Count; i++)
             {
                 if (panel.Children[i] is Button button)
-                    button.Background = i == selectedIndex && Mode == MathQuickBarMode.Completions ? highlight : Brushes.Transparent;
+                    button.Background = i == state.SelectedIndex && Mode == MathQuickBarMode.Completions ? highlight : Brushes.Transparent;
             }
         }
     }

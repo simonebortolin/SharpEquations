@@ -574,8 +574,6 @@ namespace SharpEquations.Avalonia
             if (e.Handled)
                 return;
 
-            var shift = (e.KeyModifiers & KeyModifiers.Shift) != 0;
-
             // Shift+F10 opens the context menu, as the Menu key does (which Avalonia turns into ContextRequested)
             if (e.Key == Key.F10 && e.KeyModifiers == KeyModifiers.Shift)
             {
@@ -583,29 +581,13 @@ namespace SharpEquations.Avalonia
                 return;
             }
 
-            if (popup.IsOpen && QuickBar.Mode == MathQuickBarMode.Completions && e.KeyModifiers == KeyModifiers.None)
+            var mathKey = ToMathKey(e.Key);
+            var modifiers = ToMathKeyModifiers(e.KeyModifiers);
+            if (popup.IsOpen && mathKey is { } quickBarKey && QuickBar.ProcessKey(quickBarKey, modifiers))
             {
-                switch (e.Key)
-                {
-                    case Key.Down:
-                        QuickBar.SelectedIndex++;
-                        e.Handled = true;
-                        return;
-                    case Key.Up:
-                        QuickBar.SelectedIndex--;
-                        e.Handled = true;
-                        return;
-                    case Key.Tab or Key.Enter:
-                        e.Handled = QuickBar.AcceptCompletion();
-                        if (e.Handled)
-                            return;
-                        break;
-                    case Key.Escape:
-                        Editor.DismissCompletions();
-                        UpdateQuickBar();
-                        e.Handled = true;
-                        return;
-                }
+                UpdateQuickBar();
+                e.Handled = true;
+                return;
             }
 
             var hotkeys = Application.Current?.PlatformSettings?.HotkeyConfiguration;
@@ -628,47 +610,30 @@ namespace SharpEquations.Avalonia
             else if (Matches(hotkeys?.SelectAll, Key.A))
                 Editor.SelectAll();
             else
-            {
-                switch (e.Key)
-                {
-                    case Key.Left:
-                        Editor.MoveLeft(shift);
-                        break;
-                    case Key.Right:
-                        Editor.MoveRight(shift);
-                        break;
-                    case Key.Up:
-                        Editor.MoveUp(shift, Layout);
-                        break;
-                    case Key.Down:
-                        Editor.MoveDown(shift, Layout);
-                        break;
-                    case Key.Home:
-                        Editor.MoveHome(shift);
-                        break;
-                    case Key.End:
-                        Editor.MoveEnd(shift);
-                        break;
-                    case Key.Back when !IsReadOnly:
-                        Editor.Backspace();
-                        break;
-                    case Key.Delete when !IsReadOnly:
-                        Editor.Delete();
-                        break;
-                    case Key.Tab when (e.KeyModifiers & ~KeyModifiers.Shift) == 0 && Editor.MoveToNextCell(shift):
-                        break;
-                    case Key.Enter when !IsReadOnly && shift:
-                        Editor.InsertLineBreak();
-                        break;
-                    case Key.Enter when !IsReadOnly:
-                        Editor.BuildUpAll();
-                        break;
-                    default:
-                        e.Handled = false;
-                        break;
-                }
-            }
+                e.Handled = mathKey is { } editorKey && Editor.ProcessKey(editorKey, modifiers, Layout, IsReadOnly);
         }
+
+        private static MathKey? ToMathKey(Key key) => key switch
+        {
+            Key.Left => MathKey.Left,
+            Key.Right => MathKey.Right,
+            Key.Up => MathKey.Up,
+            Key.Down => MathKey.Down,
+            Key.Home => MathKey.Home,
+            Key.End => MathKey.End,
+            Key.Back => MathKey.Backspace,
+            Key.Delete => MathKey.Delete,
+            Key.Tab => MathKey.Tab,
+            Key.Enter => MathKey.Enter,
+            Key.Escape => MathKey.Escape,
+            _ => null,
+        };
+
+        private static MathKeyModifiers ToMathKeyModifiers(KeyModifiers modifiers) =>
+            ((modifiers & KeyModifiers.Shift) != 0 ? MathKeyModifiers.Shift : MathKeyModifiers.None)
+            | ((modifiers & KeyModifiers.Control) != 0 ? MathKeyModifiers.Control : MathKeyModifiers.None)
+            | ((modifiers & KeyModifiers.Alt) != 0 ? MathKeyModifiers.Alt : MathKeyModifiers.None)
+            | ((modifiers & KeyModifiers.Meta) != 0 ? MathKeyModifiers.Meta : MathKeyModifiers.None);
 
         /// <inheritdoc/>
         protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -729,19 +694,13 @@ namespace SharpEquations.Avalonia
         /// <summary>Opens the floating bar at the caret with what fits the place of the caret, or closes it.</summary>
         private void UpdateQuickBar()
         {
-            var mode = MathQuickBarMode.Hidden;
-            IReadOnlyList<EquationCommand> completions = Array.Empty<EquationCommand>();
-            if (IsQuickBarEnabled && IsFocused && !IsReadOnly && drawing != null)
-                mode = Editor.GetQuickBarMode(8, out completions);
-
-            if (mode == MathQuickBarMode.Hidden)
+            QuickBar.Update(IsQuickBarEnabled && IsFocused && !IsReadOnly && drawing != null);
+            if (QuickBar.Mode == MathQuickBarMode.Hidden)
             {
                 popup.IsOpen = false;
-                QuickBar.Show(mode, completions);
                 return;
             }
 
-            QuickBar.Show(mode, completions);
             var layout = drawing!.Layout;
             var rects = Editor.Selection is { } selection ? layout.GetSelectionRects(selection) : Array.Empty<MathRect>();
             var anchor = rects.Count > 0 && rects[0].Width > 0 ? rects[0] : layout.GetCaretRect(Editor.Caret) ?? default;

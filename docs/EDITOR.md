@@ -78,7 +78,9 @@ The behaviour is the one of the equations of Word and of `RichEditBox` in math m
 - **Floating bar** (`MathQuickBar`, `IsQuickBarEnabled`): under the equation, at the caret, it offers the completions of
   the command being typed (Up and Down choose, Tab or Enter take, Esc closes), the structures that take the selection
   (fraction, root, scripts, brackets, bar, box, build down), the commands of the table of the caret, and quick symbols
-  (`QuickSymbols`) in an empty slot. Its buttons do not take the focus.
+  (`QuickSymbols`) in an empty slot. Its buttons do not take the focus. What it shows and the completion chosen are
+  `MathQuickBarState` of Editing (`MathEditor.GetQuickBarMode`, `DismissCompletions`), so that a control of another
+  toolkit only places and draws it.
 - **Structures from code**: `InsertStructure("mfrac")`, `InsertFences`, `InsertMatrix(2, 2, "(", ")")`,
   `InsertTemplate(node)`, with the selection in the first slot and the caret in the first empty one, as the buttons of
   the equation tools of Word; Tab and Shift+Tab move through the cells of a table.
@@ -243,6 +245,10 @@ public class MathView : Control                             // read-only: Equati
   for the sizes of scripts and of scripts of scripts.
 - **Text input** comes from `TextInput`, so that IMEs and dead keys work, and a `TextInputMethodClient` gives the IME the
   rectangle of the caret.
+- **Keys**: the control maps the keys of Avalonia to `MathKey` and `MathKeyModifiers` of Editing and gives them to the
+  floating bar first (`MathQuickBarState.ProcessKey`), then to the editor (`MathEditor.ProcessKey`: arrows, Home, End,
+  Backspace, Delete, Tab, Enter); it keeps only what needs the toolkit: the gestures of the platform (copy, paste,
+  undo...), the view mode, Shift+F10 for the context menu.
 - The `Equation` property is set on every change of the content, with the runs built up where they parse.
 
 ## Plan
