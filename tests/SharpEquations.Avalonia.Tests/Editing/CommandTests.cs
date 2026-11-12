@@ -51,6 +51,24 @@ namespace SharpEquations.Avalonia.Tests.Editing
             await Assert.That(editor.ToEquation()).IsEqualTo(U("[a+b]"));
         }
 
+        /// <summary>What is typed between fences builds up without the opening fence, which alone does not parse (<c>|x</c>).</summary>
+        [Test]
+        [Arguments("|", "|", "|x+1/2|")]
+        [Arguments("‖", "‖", "‖x+1/2‖")]
+        [Arguments("(", ")", "(x+1/2)")]
+        [Arguments("[", "]", "[x+1/2]")]
+        [Arguments("⌊", "⌋", "⌊x+1/2⌋")]
+        public async Task TypedBetweenFencesBuildsUp(string open, string close, string expected)
+        {
+            var editor = new MathEditor();
+            editor.InsertFences(open, close);
+            editor.Insert("x+1/2 ");
+            await Assert.That(editor.ToEquation()).IsEqualTo(U(expected));
+            editor.Insert("-y");
+            editor.BuildUpAll();
+            await Assert.That(editor.ToEquation()).IsEqualTo(U(expected.Substring(0, expected.Length - close.Length) + "-y" + close));
+        }
+
         [Test]
         public async Task SelectedTextInEveryFormat()
         {
