@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+
+  <!-- The demo of the equation editor in the browser, with Avalonia on WebAssembly: the view of the desktop demo in a
+       page. Needs the wasm-tools workload (dotnet workload install wasm-tools); dotnet publish -c Release writes the
+       site to bin/Release/net10.0-browser/publish/wwwroot. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-browser</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SharpEquations.Avalonia.Demo</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- the stylesheets are C# compiled at build time (SharpEquations.XsltGenerator): nothing generates code at run
+         time, so the release build compiles to WebAssembly ahead of time -->
+    <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
+    <WasmBuildNative>true</WasmBuildNative>
+    <WasmEnableThreads>false</WasmEnableThreads>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\SharpEquations.Avalonia.Demo\DemoView.cs" Link="DemoView.cs" />
+    <Compile Include="..\SharpEquations.Avalonia.Demo\DemoTheme.cs" Link="DemoTheme.cs" />
+    <Compile Include="..\SharpEquations.Avalonia.Demo\DemoFonts.cs" Link="DemoFonts.cs" />
+    <AvaloniaResource Include="..\SharpEquations.Avalonia.Demo\Assets\Fonts\*.ttf" Link="Assets\Fonts\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Browser" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpEquations.Avalonia\SharpEquations.Avalonia.csproj" />
+  </ItemGroup>
+
+</Project>

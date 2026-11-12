@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The equation editor and viewer for Avalonia: MathEditBox, in the manner of the RichEditBox of WinUI in math
+       mode, and MathView. Libertinus Math (SIL Open Font License) is embedded for the systems without Cambria Math. -->
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <AssemblyName>SharpEquations.Avalonia</AssemblyName>
+    <RootNamespace>SharpEquations.Avalonia</RootNamespace>
+    <PackageId>SharpEquations.Avalonia</PackageId>
+    <Description>A real-time equation editor (MathEditBox) and viewer (MathView) for Avalonia: UnicodeMath or LaTeX typed and built up as in Word, the equation read and written as MathML through SharpEquations.</Description>
+    <PackageTags>equation math mathml editor avalonia unicodemath latex richeditbox</PackageTags>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\Fonts\*.otf" />
+    <None Include="Assets\Fonts\OFL.txt" Pack="true" PackagePath="LibertinusMath-OFL.txt" />
+    <InternalsVisibleTo Include="SharpEquations.Avalonia.Tests" />
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\NOTICE" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <!-- build time only: the public API is listed in PublicAPI.Shipped.txt and PublicAPI.Unshipped.txt -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpEquations.Rendering\SharpEquations.Rendering.csproj" />
+  </ItemGroup>
+
+</Project>

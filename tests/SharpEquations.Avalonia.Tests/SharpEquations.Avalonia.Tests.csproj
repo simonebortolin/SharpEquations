@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The tests of the equation editor: the editing model and the layout (which run on the netstandard2.0 build on
+       net8.0), and the Avalonia controls in a headless session that renders with Skia. -->
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>SharpEquations.Avalonia.Tests</RootNamespace>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TUnit" />
+    <PackageReference Include="Avalonia.Headless" />
+    <PackageReference Include="Avalonia.Skia" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpEquations.Avalonia\SharpEquations.Avalonia.csproj" />
+    <!-- the demo window, opened by a test so that it keeps working -->
+    <ProjectReference Include="..\..\samples\SharpEquations.Avalonia.Demo\SharpEquations.Avalonia.Demo.csproj" Condition=" '$(TargetFramework)' == 'net10.0' " />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\SharpEquations.Tests\TestData.cs" Link="TestData.cs" />
+  </ItemGroup>
+
+</Project>

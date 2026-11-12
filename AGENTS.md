@@ -14,8 +14,14 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | `src/SharpEquations/` | The library: `Public/` (the public API), `Internal/` (one folder per format), `Resources/` (XSLT stylesheets) |
 | `src/SharpEquations.RegexPolyfill/` | Build time only: the `[GeneratedRegex]` source generator of the netstandard2.0 build |
 | `src/SharpEquations.XsltGenerator/` | Build time only: the source generator that compiles the XSLT stylesheets of `Resources/` to C# |
+| `src/SharpEquations.Editing/` | The equation editor's model, no user interface: `MathNode` tree, caret, selection, undo, build up and build down |
+| `src/SharpEquations.Rendering/` | The layout of MathML Core over the OpenType MATH table, no user interface: `MathLayoutEngine`, `MathLayout` |
+| `src/SharpEquations.Avalonia/` | The controls for Avalonia: `MathEditBox` (the editor), `MathView`; embeds Libertinus Math |
+| `samples/SharpEquations.Avalonia.Demo/` | A window with the editor (`DemoView`, shared with the web demo) |
+| `samples/SharpEquations.Avalonia.Browser.Demo/` | The same demo on WebAssembly (needs the `wasm-tools` workload, so not in the solution; `.github/workflows/demo.yml` publishes it to GitHub Pages) |
 | `benchmarks/SharpEquations.Benchmarks/` | BenchmarkDotNet benchmarks of reading, writing and converting the corpora |
 | `tests/SharpEquations.Tests/` | TUnit tests, in folders by subject (PublicApi, MathML, Omml, Mtef, UnicodeMath, LaTeX, Property, Regression) |
+| `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia) |
 | `tests/data/` | Test data and its provenance (`tests/data/README.md`) |
 
 ## Code Style
@@ -82,6 +88,27 @@ init-only record: `Display`, `Strict`, `PreserveFormatting`, `LaTeXFlavor` stand
   UnicodeMath: a slash is a slash, not a fraction, and a bar without its pair is a bar, not an absolute value), and
   written as standard LaTeX or as the LaTeX Word writes (`LaTeXSerializer`).
 
+## The equation editor
+
+`docs/EDITOR.md` is its design. The core does not depend on it: the editor is built on the public API of the core only,
+and Avalonia is a dependency of `SharpEquations.Avalonia` alone (Editing and Rendering target netstandard2.0 and
+net10.0 with no package, as the core).
+
+- `Editing`: an equation being edited is a tree of `MathNode`s (the normalized MathML with a row, `mrow`, in every
+  slot) whose only text not built up is in runs. A run builds up with the nodes before it in its row: tokens are written
+  back as they were typed, structures as placeholders (Yi syllables, which the parsers read as identifiers) put back in
+  the result; this works because UnicodeMath round-trips exactly. Positions are paths of child indexes; offsets in runs
+  are code points.
+- `Rendering`: `Layout/Engine.cs` lays out after MathML Core with the constants of the MATH table; the ink boxes of the
+  glyphs come from the outlines of the font (`OpenType/GlyphOutlines.cs`: `glyf`, or the CFF charstrings), never from
+  the rasterizer, and the tables from a copy of the font file (`OpenType/FontFile.cs`).
+- `Avalonia`: `AvaloniaMathFont` reads the font file once with `TryGetStream` and asks Avalonia for its glyph typeface
+  only to draw, each time (`MathFonts.Register` registers the embedded font again with a new font manager: a headless
+  test session gives each test one, and a glyph typeface of the old one is released); the tests that use the headless
+  session are `[NotInParallel("headless")]`, since showing a window or typing runs the jobs of the dispatcher.
+- The core's `EquationCommands` (public) lists the control words of UnicodeMath and the commands of LaTeX with their
+  symbols, for the completion of the editor; `PublicApi/EquationCommandsTests` checks that the parsers read them.
+
 ## Building and Testing
 
 ```bash
@@ -94,12 +121,17 @@ net481 (Windows, where the test project targets net10.0 and net481). The 738 exa
 `tests/data/unicodemath/` test the UnicodeMath port, and `Property/RoundTripPropertyTests` checks, for all of them and
 for the equations of Word documents (`tests/data/omml/`), that an equation written in its own format (UnicodeMath,
 OMML) reads back to the same equation, and that one written in another format (standard LaTeX, Word's LaTeX, OMML)
-loses only the first time what that format cannot hold. Keep these at 100%.
+loses only the first time what that format cannot hold. Keep these at 100%. For the editor, an equation of the corpus
+loaded in the editor, or built down to linear text and up again, is the same equation (100%); typed one character at a
+time it is the equation of the whole text for 93% of the corpus (`Editing/CorpusTests`) and for 90% of the LaTeX of
+latex2mathml (`Editing/RepositoryCorporaTests`), which a change must not lower. The public API of the editor's
+packages is tracked in their `PublicAPI.*.txt`, as that of the core.
 
 ## Releases
 
 `.github/workflows/ci.yml`, the same pipeline as SharpMediaInfo and Letra200bSharp: it tests on Linux (net10.0, net8.0),
-Windows (net10.0, net481) and macOS (net10.0), packs, publishes a `pr-<N>-…` pre-release for each pull request (deleted on close by
+Windows (net10.0, net481) and macOS (net10.0), packs the four packages (`SharpEquations` and the editor's `SharpEquations.Editing`, `.Rendering`, `.Avalonia`, with
+one version), publishes a `pr-<N>-…` pre-release for each pull request (deleted on close by
 `prerelease-cleanup.yml`) and, on `main`, tags `v<VersionPrefix>` of `BuildVersion.props`, creates the GitHub release
 and pushes the package to GitHub Packages and nuget.org (Trusted Publishing, repository variable `NUGET_USER`). A change
 that should release bumps `VersionPrefix`; one that should not says `[no-new-version]` in its commit message.

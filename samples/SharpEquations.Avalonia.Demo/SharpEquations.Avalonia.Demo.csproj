@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A window with MathEditBox: type UnicodeMath or LaTeX and see the equation as MathML, UnicodeMath and LaTeX. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SharpEquations.Avalonia.Demo</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- STIX Two Math (SIL Open Font License, OFL.txt): a second math font, to show the change of font -->
+    <AvaloniaResource Include="Assets\Fonts\*.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpEquations.Avalonia\SharpEquations.Avalonia.csproj" />
+  </ItemGroup>
+
+</Project>

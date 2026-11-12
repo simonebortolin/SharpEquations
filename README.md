@@ -49,6 +49,46 @@ stream of its OLE object (`Equation.Parse(bytes, EquationFormat.Mtef)`); reading
 Equations compare by their normalized MathML: an equation written in its own format (UnicodeMath, OMML) reads back to
 the same equation, and one written in another format loses only what that format cannot hold.
 
+## Equation editor for Avalonia
+
+`SharpEquations.Avalonia` is a real-time equation editor in the manner of the `RichEditBox` of WinUI in math mode and of
+the equations of Word: UnicodeMath or LaTeX typed at the caret builds up into the equation when a space or an operator
+ends an argument (`a/b␣` becomes a fraction, `\alpha␣` α), the caret moves through the slots of the structures, and the
+equation is read and written as MathML or as an `Equation`.
+
+```xml
+<sharp:MathEditBox xmlns:sharp="using:SharpEquations.Avalonia" FontSize="28" InputFormat="UnicodeMath" Equation="{Binding Equation}" />
+```
+
+```csharp
+var editor = new MathEditBox { InputFormat = EquationFormat.LaTeX };
+editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(EquationFormat.MathML));
+string mathML = editor.GetMath();        // as RichEditTextDocument.GetMath
+editor.SetMath(mathML);                  // as RichEditTextDocument.SetMath
+editor.ViewMode = MathViewMode.Linear;   // the equation as one line of UnicodeMath (Ctrl+Shift+L)
+editor.EquationNumber = "(1)";           // at the right of the line, as #(1) or \tag{1}
+string latex = editor.GetSelectedText(EquationFormat.LaTeX)!;
+editor.CopyTextFormat = EquationFormat.MathML;   // Ctrl+C pastes as an equation into Word
+editor.Editor.InsertLineBreak();         // Shift+Enter: lines aligned at &
+editor.Editor.InsertTableRow();          // and columns, in the matrix of the caret
+```
+
+Typing `\` and the start of a command opens a floating bar at the caret with its completions
+(`EquationCommands.Complete("al", EquationFormat.UnicodeMath)` gives them from the core); the bar also offers structures
+for the selection, the commands of a table and quick symbols.
+
+The packages are `SharpEquations.Avalonia` (the controls), `SharpEquations.Rendering` and `SharpEquations.Editing`, with
+the version of `SharpEquations`.
+
+`MathView` shows an equation without editing it. Both lay out MathML after MathML Core with the OpenType MATH table of
+a math font: Cambria Math on Windows, and Libertinus Math (SIL Open Font License), embedded, elsewhere. The editor is
+three projects, so that the core keeps no dependency: `SharpEquations.Editing` (the editing model, no user interface),
+`SharpEquations.Rendering` (the layout, no user interface) and `SharpEquations.Avalonia` (the controls). The design is in
+[docs/EDITOR.md](docs/EDITOR.md); `samples/SharpEquations.Avalonia.Demo` is a window with the editor and its MathML,
+UnicodeMath and LaTeX, and `samples/SharpEquations.Avalonia.Browser.Demo` the same demo in the browser, on WebAssembly
+(published to GitHub Pages from `main`; to run it locally: `dotnet workload install wasm-tools`, then
+`dotnet run --project samples/SharpEquations.Avalonia.Browser.Demo`).
+
 ## Architecture
 
 How the conversions work, format by format, and how round trips are kept exact: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -67,7 +107,7 @@ its README).
 ## Releases
 
 CI (`.github/workflows/ci.yml`) tests every push and pull request on Linux (.NET 10 and .NET 8), Windows (.NET 10 and
-.NET Framework 4.8.1) and macOS (.NET 10), and packs the NuGet package. The release version is `VersionPrefix` in `BuildVersion.props`: bump it, and merging to
+.NET Framework 4.8.1) and macOS (.NET 10), and packs the NuGet packages (the converter and the three of the editor, with one version). The release version is `VersionPrefix` in `BuildVersion.props`: bump it, and merging to
 `main` tags `vX.Y.Z`, creates the GitHub release with the package attached, and publishes it to GitHub Packages and to
 nuget.org (with [Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing): the repository
 variable `NUGET_USER` names the nuget.org account; without it nuget.org is skipped). A push that keeps the version on

@@ -28,6 +28,8 @@ namespace System.Text
 
         public override string ToString() => char.ConvertFromUtf32(value);
 
+        public static bool IsLetter(Rune rune) => char.IsLetter(rune.ToString(), 0);
+
         public bool Equals(Rune other) => value == other.value;
 
         public override bool Equals(object obj) => obj is Rune other && Equals(other);

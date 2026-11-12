@@ -1,0 +1,179 @@
+#nullable enable
+SharpEquations.Avalonia.AvaloniaMathFont
+SharpEquations.Avalonia.AvaloniaMathFont.AvaloniaMathFont(Avalonia.Media.Typeface typeface) -> void
+SharpEquations.Avalonia.AvaloniaMathFont.GetAdvance(ushort glyph) -> double
+SharpEquations.Avalonia.AvaloniaMathFont.GetBounds(ushort glyph) -> SharpEquations.Rendering.GlyphBounds
+SharpEquations.Avalonia.AvaloniaMathFont.GetFallback(int codePoint) -> SharpEquations.Rendering.IMathFont?
+SharpEquations.Avalonia.AvaloniaMathFont.GetGlyphTypeface() -> Avalonia.Media.GlyphTypeface?
+SharpEquations.Avalonia.AvaloniaMathFont.GetScriptVariant(ushort glyph, int scriptLevel) -> ushort
+SharpEquations.Avalonia.AvaloniaMathFont.Math.get -> SharpEquations.Rendering.OpenType.MathTable?
+SharpEquations.Avalonia.AvaloniaMathFont.TryGetGlyph(int codePoint, out ushort glyph) -> bool
+SharpEquations.Avalonia.AvaloniaMathFont.Typeface.get -> Avalonia.Media.Typeface
+SharpEquations.Avalonia.AvaloniaMathFont.UnitsPerEm.get -> double
+SharpEquations.Avalonia.EquationChangedEventArgs
+SharpEquations.Avalonia.EquationChangedEventArgs.Equation.get -> SharpEquations.Equation?
+SharpEquations.Avalonia.EquationChangedEventArgs.EquationChangedEventArgs(SharpEquations.Equation? equation) -> void
+SharpEquations.Avalonia.MathClipboard
+SharpEquations.Avalonia.MathContextMenuEventArgs
+SharpEquations.Avalonia.MathContextMenuEventArgs.Cancel.get -> bool
+SharpEquations.Avalonia.MathContextMenuEventArgs.Cancel.set -> void
+SharpEquations.Avalonia.MathContextMenuEventArgs.MathContextMenuEventArgs(Avalonia.Controls.ContextMenu! menu) -> void
+SharpEquations.Avalonia.MathContextMenuEventArgs.Menu.get -> Avalonia.Controls.ContextMenu!
+SharpEquations.Avalonia.MathCopyingEventArgs
+SharpEquations.Avalonia.MathCopyingEventArgs.Cancel.get -> bool
+SharpEquations.Avalonia.MathCopyingEventArgs.Cancel.set -> void
+SharpEquations.Avalonia.MathCopyingEventArgs.Equation.get -> SharpEquations.Equation!
+SharpEquations.Avalonia.MathCopyingEventArgs.Item.get -> Avalonia.Input.DataTransferItem!
+SharpEquations.Avalonia.MathCopyingEventArgs.MathCopyingEventArgs(SharpEquations.Equation! equation, Avalonia.Input.DataTransferItem! item) -> void
+SharpEquations.Avalonia.MathEditBox
+SharpEquations.Avalonia.MathEditBox.AutoCorrect.get -> SharpEquations.Editing.MathAutoCorrect!
+SharpEquations.Avalonia.MathEditBox.AutoCorrect.set -> void
+SharpEquations.Avalonia.MathEditBox.Background.get -> Avalonia.Media.IBrush?
+SharpEquations.Avalonia.MathEditBox.Background.set -> void
+SharpEquations.Avalonia.MathEditBox.BorderBrush.get -> Avalonia.Media.IBrush?
+SharpEquations.Avalonia.MathEditBox.BorderBrush.set -> void
+SharpEquations.Avalonia.MathEditBox.BorderThickness.get -> double
+SharpEquations.Avalonia.MathEditBox.BorderThickness.set -> void
+SharpEquations.Avalonia.MathEditBox.BuildDown() -> void
+SharpEquations.Avalonia.MathEditBox.BuildUp() -> void
+SharpEquations.Avalonia.MathEditBox.CaretBrush.get -> Avalonia.Media.IBrush?
+SharpEquations.Avalonia.MathEditBox.CaretBrush.set -> void
+SharpEquations.Avalonia.MathEditBox.ContextMenuOpening -> System.EventHandler<SharpEquations.Avalonia.MathContextMenuEventArgs!>?
+SharpEquations.Avalonia.MathEditBox.CopyAsAsync(SharpEquations.EquationFormat format) -> System.Threading.Tasks.Task!
+SharpEquations.Avalonia.MathEditBox.CopyAsync() -> System.Threading.Tasks.Task!
+SharpEquations.Avalonia.MathEditBox.CopyTextFormat.get -> SharpEquations.EquationFormat?
+SharpEquations.Avalonia.MathEditBox.CopyTextFormat.set -> void
+SharpEquations.Avalonia.MathEditBox.Copying -> System.EventHandler<SharpEquations.Avalonia.MathCopyingEventArgs!>?
+SharpEquations.Avalonia.MathEditBox.CutAsync() -> System.Threading.Tasks.Task!
+SharpEquations.Avalonia.MathEditBox.Editor.get -> SharpEquations.Editing.MathEditor!
+SharpEquations.Avalonia.MathEditBox.Equation.get -> SharpEquations.Equation?
+SharpEquations.Avalonia.MathEditBox.Equation.set -> void
+SharpEquations.Avalonia.MathEditBox.EquationChanged -> System.EventHandler<SharpEquations.Avalonia.EquationChangedEventArgs!>?
+SharpEquations.Avalonia.MathEditBox.EquationNumber.get -> string?
+SharpEquations.Avalonia.MathEditBox.EquationNumber.set -> void
+SharpEquations.Avalonia.MathEditBox.FontSize.get -> double
+SharpEquations.Avalonia.MathEditBox.FontSize.set -> void
+SharpEquations.Avalonia.MathEditBox.Foreground.get -> Avalonia.Media.IBrush?
+SharpEquations.Avalonia.MathEditBox.Foreground.set -> void
+SharpEquations.Avalonia.MathEditBox.GetMath() -> string!
+SharpEquations.Avalonia.MathEditBox.GetSelectedText(SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null) -> string?
+SharpEquations.Avalonia.MathEditBox.GetText(SharpEquations.EquationFormat format) -> string!
+SharpEquations.Avalonia.MathEditBox.InputFormat.get -> SharpEquations.EquationFormat
+SharpEquations.Avalonia.MathEditBox.InputFormat.set -> void
+SharpEquations.Avalonia.MathEditBox.IsContextMenuEnabled.get -> bool
+SharpEquations.Avalonia.MathEditBox.IsContextMenuEnabled.set -> void
+SharpEquations.Avalonia.MathEditBox.IsDisplay.get -> bool
+SharpEquations.Avalonia.MathEditBox.IsDisplay.set -> void
+SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabled.get -> bool
+SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabled.set -> void
+SharpEquations.Avalonia.MathEditBox.IsQuickBarEnabled.get -> bool
+SharpEquations.Avalonia.MathEditBox.IsQuickBarEnabled.set -> void
+SharpEquations.Avalonia.MathEditBox.IsQuickBarOpen.get -> bool
+SharpEquations.Avalonia.MathEditBox.IsReadOnly.get -> bool
+SharpEquations.Avalonia.MathEditBox.IsReadOnly.set -> void
+SharpEquations.Avalonia.MathEditBox.Layout.get -> SharpEquations.Rendering.MathLayout?
+SharpEquations.Avalonia.MathEditBox.MathEditBox() -> void
+SharpEquations.Avalonia.MathEditBox.MathFontFamily.get -> Avalonia.Media.FontFamily?
+SharpEquations.Avalonia.MathEditBox.MathFontFamily.set -> void
+SharpEquations.Avalonia.MathEditBox.OpenContextMenu.get -> Avalonia.Controls.ContextMenu?
+SharpEquations.Avalonia.MathEditBox.Padding.get -> Avalonia.Thickness
+SharpEquations.Avalonia.MathEditBox.Padding.set -> void
+SharpEquations.Avalonia.MathEditBox.PasteAsync() -> System.Threading.Tasks.Task!
+SharpEquations.Avalonia.MathEditBox.PlaceholderBrush.get -> Avalonia.Media.IBrush?
+SharpEquations.Avalonia.MathEditBox.PlaceholderBrush.set -> void
+SharpEquations.Avalonia.MathEditBox.QuickBar.get -> SharpEquations.Avalonia.MathQuickBar!
+SharpEquations.Avalonia.MathEditBox.QuickSymbols.get -> System.Collections.Generic.IList<string!>!
+SharpEquations.Avalonia.MathEditBox.SelectionBrush.get -> Avalonia.Media.IBrush?
+SharpEquations.Avalonia.MathEditBox.SelectionBrush.set -> void
+SharpEquations.Avalonia.MathEditBox.SetMath(string! mathML) -> void
+SharpEquations.Avalonia.MathEditBox.ShowContextMenu(Avalonia.Point? point = null) -> bool
+SharpEquations.Avalonia.MathEditBox.ToggleViewModeGesture.get -> Avalonia.Input.KeyGesture?
+SharpEquations.Avalonia.MathEditBox.ToggleViewModeGesture.set -> void
+SharpEquations.Avalonia.MathEditBox.ViewMode.get -> SharpEquations.Avalonia.MathViewMode
+SharpEquations.Avalonia.MathEditBox.ViewMode.set -> void
+SharpEquations.Avalonia.MathEditBoxAutomationPeer
+SharpEquations.Avalonia.MathEditBoxAutomationPeer.IsReadOnly.get -> bool
+SharpEquations.Avalonia.MathEditBoxAutomationPeer.MathEditBoxAutomationPeer(SharpEquations.Avalonia.MathEditBox! owner) -> void
+SharpEquations.Avalonia.MathEditBoxAutomationPeer.Owner.get -> SharpEquations.Avalonia.MathEditBox!
+SharpEquations.Avalonia.MathEditBoxAutomationPeer.SetValue(string? value) -> void
+SharpEquations.Avalonia.MathEditBoxAutomationPeer.Value.get -> string!
+SharpEquations.Avalonia.MathFonts
+SharpEquations.Avalonia.MathQuickBar
+SharpEquations.Avalonia.MathQuickBar.AcceptCompletion() -> bool
+SharpEquations.Avalonia.MathQuickBar.Completions.get -> System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>!
+SharpEquations.Avalonia.MathQuickBar.Mode.get -> SharpEquations.Avalonia.MathQuickBarMode
+SharpEquations.Avalonia.MathQuickBar.SelectedIndex.get -> int
+SharpEquations.Avalonia.MathQuickBar.SelectedIndex.set -> void
+SharpEquations.Avalonia.MathQuickBarMode
+SharpEquations.Avalonia.MathQuickBarMode.Completions = 1 -> SharpEquations.Avalonia.MathQuickBarMode
+SharpEquations.Avalonia.MathQuickBarMode.Hidden = 0 -> SharpEquations.Avalonia.MathQuickBarMode
+SharpEquations.Avalonia.MathQuickBarMode.Selection = 2 -> SharpEquations.Avalonia.MathQuickBarMode
+SharpEquations.Avalonia.MathQuickBarMode.Symbols = 4 -> SharpEquations.Avalonia.MathQuickBarMode
+SharpEquations.Avalonia.MathQuickBarMode.Table = 3 -> SharpEquations.Avalonia.MathQuickBarMode
+SharpEquations.Avalonia.MathView
+SharpEquations.Avalonia.MathView.Equation.get -> SharpEquations.Equation?
+SharpEquations.Avalonia.MathView.Equation.set -> void
+SharpEquations.Avalonia.MathView.FontSize.get -> double
+SharpEquations.Avalonia.MathView.FontSize.set -> void
+SharpEquations.Avalonia.MathView.Foreground.get -> Avalonia.Media.IBrush?
+SharpEquations.Avalonia.MathView.Foreground.set -> void
+SharpEquations.Avalonia.MathView.IsDisplay.get -> bool
+SharpEquations.Avalonia.MathView.IsDisplay.set -> void
+SharpEquations.Avalonia.MathView.Layout.get -> SharpEquations.Rendering.MathLayout?
+SharpEquations.Avalonia.MathView.MathFontFamily.get -> Avalonia.Media.FontFamily?
+SharpEquations.Avalonia.MathView.MathFontFamily.set -> void
+SharpEquations.Avalonia.MathView.MathML.get -> string?
+SharpEquations.Avalonia.MathView.MathML.set -> void
+SharpEquations.Avalonia.MathView.MathView() -> void
+SharpEquations.Avalonia.MathViewMode
+SharpEquations.Avalonia.MathViewMode.Linear = 1 -> SharpEquations.Avalonia.MathViewMode
+SharpEquations.Avalonia.MathViewMode.Professional = 0 -> SharpEquations.Avalonia.MathViewMode
+override SharpEquations.Avalonia.MathEditBox.MeasureOverride(Avalonia.Size availableSize) -> Avalonia.Size
+override SharpEquations.Avalonia.MathEditBox.OnCreateAutomationPeer() -> Avalonia.Automation.Peers.AutomationPeer!
+override SharpEquations.Avalonia.MathEditBox.OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs! e) -> void
+override SharpEquations.Avalonia.MathEditBox.OnKeyDown(Avalonia.Input.KeyEventArgs! e) -> void
+override SharpEquations.Avalonia.MathEditBox.OnPointerMoved(Avalonia.Input.PointerEventArgs! e) -> void
+override SharpEquations.Avalonia.MathEditBox.OnPointerPressed(Avalonia.Input.PointerPressedEventArgs! e) -> void
+override SharpEquations.Avalonia.MathEditBox.OnPointerReleased(Avalonia.Input.PointerReleasedEventArgs! e) -> void
+override SharpEquations.Avalonia.MathEditBox.OnPropertyChanged(Avalonia.AvaloniaPropertyChangedEventArgs! change) -> void
+override SharpEquations.Avalonia.MathEditBox.OnTextInput(Avalonia.Input.TextInputEventArgs! e) -> void
+override SharpEquations.Avalonia.MathEditBox.Render(Avalonia.Media.DrawingContext! context) -> void
+override SharpEquations.Avalonia.MathEditBoxAutomationPeer.GetAutomationControlTypeCore() -> Avalonia.Automation.Peers.AutomationControlType
+override SharpEquations.Avalonia.MathEditBoxAutomationPeer.GetClassNameCore() -> string!
+override SharpEquations.Avalonia.MathEditBoxAutomationPeer.GetNameCore() -> string?
+override SharpEquations.Avalonia.MathView.MeasureOverride(Avalonia.Size availableSize) -> Avalonia.Size
+override SharpEquations.Avalonia.MathView.OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs! e) -> void
+override SharpEquations.Avalonia.MathView.Render(Avalonia.Media.DrawingContext! context) -> void
+static SharpEquations.Avalonia.MathClipboard.Decode(byte[]! data) -> string!
+static SharpEquations.Avalonia.MathClipboard.Encode(string! mathML) -> byte[]!
+static SharpEquations.Avalonia.MathEditBox.MathMLClipboardFormat.get -> Avalonia.Input.DataFormat<byte[]!>!
+static SharpEquations.Avalonia.MathFonts.Default.get -> SharpEquations.Avalonia.AvaloniaMathFont!
+static SharpEquations.Avalonia.MathFonts.Get(Avalonia.Media.FontFamily? family) -> SharpEquations.Avalonia.AvaloniaMathFont!
+static SharpEquations.Avalonia.MathFonts.LibertinusMath.get -> Avalonia.Media.FontFamily!
+static SharpEquations.Avalonia.MathFonts.TryGet(Avalonia.Media.FontFamily! family, out SharpEquations.Avalonia.AvaloniaMathFont? font) -> bool
+static readonly SharpEquations.Avalonia.MathEditBox.BackgroundProperty -> Avalonia.StyledProperty<Avalonia.Media.IBrush?>!
+static readonly SharpEquations.Avalonia.MathEditBox.BorderBrushProperty -> Avalonia.StyledProperty<Avalonia.Media.IBrush?>!
+static readonly SharpEquations.Avalonia.MathEditBox.BorderThicknessProperty -> Avalonia.StyledProperty<double>!
+static readonly SharpEquations.Avalonia.MathEditBox.CaretBrushProperty -> Avalonia.StyledProperty<Avalonia.Media.IBrush?>!
+static readonly SharpEquations.Avalonia.MathEditBox.CopyTextFormatProperty -> Avalonia.StyledProperty<SharpEquations.EquationFormat?>!
+static readonly SharpEquations.Avalonia.MathEditBox.EquationProperty -> Avalonia.StyledProperty<SharpEquations.Equation?>!
+static readonly SharpEquations.Avalonia.MathEditBox.FontSizeProperty -> Avalonia.StyledProperty<double>!
+static readonly SharpEquations.Avalonia.MathEditBox.ForegroundProperty -> Avalonia.StyledProperty<Avalonia.Media.IBrush?>!
+static readonly SharpEquations.Avalonia.MathEditBox.InputFormatProperty -> Avalonia.StyledProperty<SharpEquations.EquationFormat>!
+static readonly SharpEquations.Avalonia.MathEditBox.IsContextMenuEnabledProperty -> Avalonia.StyledProperty<bool>!
+static readonly SharpEquations.Avalonia.MathEditBox.IsDisplayProperty -> Avalonia.StyledProperty<bool>!
+static readonly SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabledProperty -> Avalonia.StyledProperty<bool>!
+static readonly SharpEquations.Avalonia.MathEditBox.IsQuickBarEnabledProperty -> Avalonia.StyledProperty<bool>!
+static readonly SharpEquations.Avalonia.MathEditBox.IsReadOnlyProperty -> Avalonia.StyledProperty<bool>!
+static readonly SharpEquations.Avalonia.MathEditBox.MathFontFamilyProperty -> Avalonia.StyledProperty<Avalonia.Media.FontFamily?>!
+static readonly SharpEquations.Avalonia.MathEditBox.PaddingProperty -> Avalonia.StyledProperty<Avalonia.Thickness>!
+static readonly SharpEquations.Avalonia.MathEditBox.PlaceholderBrushProperty -> Avalonia.StyledProperty<Avalonia.Media.IBrush?>!
+static readonly SharpEquations.Avalonia.MathEditBox.SelectionBrushProperty -> Avalonia.StyledProperty<Avalonia.Media.IBrush?>!
+static readonly SharpEquations.Avalonia.MathEditBox.ToggleViewModeGestureProperty -> Avalonia.StyledProperty<Avalonia.Input.KeyGesture?>!
+static readonly SharpEquations.Avalonia.MathEditBox.ViewModeProperty -> Avalonia.StyledProperty<SharpEquations.Avalonia.MathViewMode>!
+static readonly SharpEquations.Avalonia.MathView.EquationProperty -> Avalonia.StyledProperty<SharpEquations.Equation?>!
+static readonly SharpEquations.Avalonia.MathView.FontSizeProperty -> Avalonia.StyledProperty<double>!
+static readonly SharpEquations.Avalonia.MathView.ForegroundProperty -> Avalonia.StyledProperty<Avalonia.Media.IBrush?>!
+static readonly SharpEquations.Avalonia.MathView.IsDisplayProperty -> Avalonia.StyledProperty<bool>!
+static readonly SharpEquations.Avalonia.MathView.MathFontFamilyProperty -> Avalonia.StyledProperty<Avalonia.Media.FontFamily?>!
+virtual SharpEquations.Avalonia.MathEditBox.CreateContextMenu() -> Avalonia.Controls.ContextMenu!

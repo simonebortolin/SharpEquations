@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The editing model of the equation editor, with no dependency on a user interface: the tree of an equation being
+       edited, the caret and the selection, and the build up of what is typed (UnicodeMath or LaTeX) through
+       SharpEquations. -->
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <AssemblyName>SharpEquations.Editing</AssemblyName>
+    <RootNamespace>SharpEquations.Editing</RootNamespace>
+    <PackageId>SharpEquations.Editing</PackageId>
+    <Description>The editing model of an equation editor built on SharpEquations: the tree of the equation, the caret, the selection, undo, and the build up of UnicodeMath or LaTeX as it is typed. No dependency on a user interface.</Description>
+    <PackageTags>equation math mathml editor unicodemath latex</PackageTags>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- System.Text.Rune, which .NET Standard 2.0 lacks: the internal polyfill of the core -->
+    <Compile Include="..\SharpEquations\Internal\Text\Rune.cs" Link="Text\Rune.cs" />
+    <InternalsVisibleTo Include="SharpEquations.Avalonia.Tests" />
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\NOTICE" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <!-- build time only: the public API is listed in PublicAPI.Shipped.txt and PublicAPI.Unshipped.txt -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpEquations\SharpEquations.csproj" />
+  </ItemGroup>
+
+</Project>

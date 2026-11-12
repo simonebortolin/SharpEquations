@@ -1,0 +1,114 @@
+#nullable enable
+SharpEquations.Editing.IMathGeometry
+SharpEquations.Editing.IMathGeometry.GetCaretX(SharpEquations.Editing.MathPosition! position) -> double?
+SharpEquations.Editing.IMathGeometry.GetNearestPosition(System.Collections.Generic.IReadOnlyList<int>! rowPath, double x) -> SharpEquations.Editing.MathPosition?
+SharpEquations.Editing.IMathGeometry.GetPositionOnAdjacentLine(SharpEquations.Editing.MathPosition! position, int direction) -> SharpEquations.Editing.MathPosition?
+SharpEquations.Editing.MathAutoCorrect
+SharpEquations.Editing.MathAutoCorrect.Entries.get -> System.Collections.Generic.IDictionary<string!, string!>!
+SharpEquations.Editing.MathAutoCorrect.MathAutoCorrect(bool withDefaults = true) -> void
+SharpEquations.Editing.MathAutoCorrect.ReplaceCommands.get -> bool
+SharpEquations.Editing.MathAutoCorrect.ReplaceCommands.set -> void
+SharpEquations.Editing.MathEditor
+SharpEquations.Editing.MathEditor.Anchor.get -> SharpEquations.Editing.MathPosition!
+SharpEquations.Editing.MathEditor.AutoCorrect.get -> SharpEquations.Editing.MathAutoCorrect?
+SharpEquations.Editing.MathEditor.AutoCorrect.set -> void
+SharpEquations.Editing.MathEditor.Backspace() -> void
+SharpEquations.Editing.MathEditor.BuildDown() -> void
+SharpEquations.Editing.MathEditor.BuildUpAll() -> void
+SharpEquations.Editing.MathEditor.CanRedo.get -> bool
+SharpEquations.Editing.MathEditor.CanUndo.get -> bool
+SharpEquations.Editing.MathEditor.Caret.get -> SharpEquations.Editing.MathPosition!
+SharpEquations.Editing.MathEditor.Changed -> System.EventHandler?
+SharpEquations.Editing.MathEditor.CommandPrefix.get -> string?
+SharpEquations.Editing.MathEditor.Complete(SharpEquations.EquationCommand! command) -> void
+SharpEquations.Editing.MathEditor.ContentChanged -> System.EventHandler?
+SharpEquations.Editing.MathEditor.Delete() -> void
+SharpEquations.Editing.MathEditor.DeleteSelection() -> bool
+SharpEquations.Editing.MathEditor.DeleteTableColumn() -> bool
+SharpEquations.Editing.MathEditor.DeleteTableRow() -> bool
+SharpEquations.Editing.MathEditor.EquationNumber.get -> string?
+SharpEquations.Editing.MathEditor.GetCompletions(int max = 20) -> System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>!
+SharpEquations.Editing.MathEditor.GetSelectedEquation() -> SharpEquations.Equation?
+SharpEquations.Editing.MathEditor.GetSelectedNodes() -> System.Collections.Generic.IReadOnlyList<SharpEquations.Editing.MathNode!>!
+SharpEquations.Editing.MathEditor.GetSelectedText(SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null) -> string?
+SharpEquations.Editing.MathEditor.GetText(SharpEquations.EquationFormat format) -> string!
+SharpEquations.Editing.MathEditor.InputFormat.get -> SharpEquations.EquationFormat
+SharpEquations.Editing.MathEditor.InputFormat.set -> void
+SharpEquations.Editing.MathEditor.Insert(string! text) -> void
+SharpEquations.Editing.MathEditor.InsertFences(string! open = "(", string! close = ")") -> void
+SharpEquations.Editing.MathEditor.InsertLineBreak() -> void
+SharpEquations.Editing.MathEditor.InsertMatrix(int rows, int columns, string? open = null, string? close = null) -> void
+SharpEquations.Editing.MathEditor.InsertNodes(System.Collections.Generic.IEnumerable<SharpEquations.Editing.MathNode!>! nodes) -> void
+SharpEquations.Editing.MathEditor.InsertStructure(string! name, System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>? attributes = null) -> void
+SharpEquations.Editing.MathEditor.InsertTableColumn(bool before = false) -> bool
+SharpEquations.Editing.MathEditor.InsertTableRow(bool above = false) -> bool
+SharpEquations.Editing.MathEditor.InsertTemplate(SharpEquations.Editing.MathNode! node) -> void
+SharpEquations.Editing.MathEditor.IsDisplay.get -> bool
+SharpEquations.Editing.MathEditor.IsDisplay.set -> void
+SharpEquations.Editing.MathEditor.IsEmpty.get -> bool
+SharpEquations.Editing.MathEditor.IsInTable.get -> bool
+SharpEquations.Editing.MathEditor.IsLinear.get -> bool
+SharpEquations.Editing.MathEditor.LineCount.get -> int
+SharpEquations.Editing.MathEditor.Load(SharpEquations.Equation? equation) -> void
+SharpEquations.Editing.MathEditor.MathEditor(SharpEquations.Equation? equation = null) -> void
+SharpEquations.Editing.MathEditor.MoveDown(bool extend = false, SharpEquations.Editing.IMathGeometry? geometry = null) -> void
+SharpEquations.Editing.MathEditor.MoveEnd(bool extend = false) -> void
+SharpEquations.Editing.MathEditor.MoveHome(bool extend = false) -> void
+SharpEquations.Editing.MathEditor.MoveLeft(bool extend = false) -> void
+SharpEquations.Editing.MathEditor.MoveRight(bool extend = false) -> void
+SharpEquations.Editing.MathEditor.MoveToNextCell(bool backward = false) -> bool
+SharpEquations.Editing.MathEditor.MoveUp(bool extend = false, SharpEquations.Editing.IMathGeometry? geometry = null) -> void
+SharpEquations.Editing.MathEditor.Paste(string! text, SharpEquations.EquationFormat format) -> bool
+SharpEquations.Editing.MathEditor.Redo() -> void
+SharpEquations.Editing.MathEditor.Root.get -> SharpEquations.Editing.MathNode!
+SharpEquations.Editing.MathEditor.SelectAll() -> void
+SharpEquations.Editing.MathEditor.Selection.get -> SharpEquations.Editing.MathSelection?
+SharpEquations.Editing.MathEditor.SetCaret(SharpEquations.Editing.MathPosition! position, bool extend = false) -> void
+SharpEquations.Editing.MathEditor.SetEquationNumber(string? number) -> void
+SharpEquations.Editing.MathEditor.SetLinear(bool linear) -> void
+SharpEquations.Editing.MathEditor.ToEquation() -> SharpEquations.Equation?
+SharpEquations.Editing.MathEditor.ToMathML() -> System.Xml.Linq.XElement!
+SharpEquations.Editing.MathEditor.Undo() -> void
+SharpEquations.Editing.MathEditor.UndoLimit.get -> int
+SharpEquations.Editing.MathEditor.UndoLimit.set -> void
+SharpEquations.Editing.MathNode
+SharpEquations.Editing.MathNode.Attributes.get -> System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>!
+SharpEquations.Editing.MathNode.Children.get -> System.Collections.Generic.IReadOnlyList<SharpEquations.Editing.MathNode!>!
+SharpEquations.Editing.MathNode.GetAttribute(string! name) -> string?
+SharpEquations.Editing.MathNode.IsOpaque.get -> bool
+SharpEquations.Editing.MathNode.IsRow.get -> bool
+SharpEquations.Editing.MathNode.IsRun.get -> bool
+SharpEquations.Editing.MathNode.IsToken.get -> bool
+SharpEquations.Editing.MathNode.Name.get -> string!
+SharpEquations.Editing.MathNode.Source.get -> System.Xml.Linq.XElement?
+SharpEquations.Editing.MathNode.Text.get -> string!
+SharpEquations.Editing.MathNode.ToMathML() -> System.Xml.Linq.XElement!
+SharpEquations.Editing.MathNode.WithAttribute(string! name, string? value) -> SharpEquations.Editing.MathNode!
+SharpEquations.Editing.MathNode.WithChild(int index, SharpEquations.Editing.MathNode! child) -> SharpEquations.Editing.MathNode!
+SharpEquations.Editing.MathNode.WithChildren(System.Collections.Generic.IEnumerable<SharpEquations.Editing.MathNode!>! children) -> SharpEquations.Editing.MathNode!
+SharpEquations.Editing.MathNode.WithText(string! text) -> SharpEquations.Editing.MathNode!
+SharpEquations.Editing.MathPosition
+SharpEquations.Editing.MathPosition.Equals(SharpEquations.Editing.MathPosition? other) -> bool
+SharpEquations.Editing.MathPosition.MathPosition(System.Collections.Generic.IEnumerable<int>! path, int offset) -> void
+SharpEquations.Editing.MathPosition.Offset.get -> int
+SharpEquations.Editing.MathPosition.Path.get -> System.Collections.Generic.IReadOnlyList<int>!
+SharpEquations.Editing.MathSelection
+SharpEquations.Editing.MathSelection.End.get -> int
+SharpEquations.Editing.MathSelection.EndPosition.get -> SharpEquations.Editing.MathPosition!
+SharpEquations.Editing.MathSelection.IsInRun.get -> bool
+SharpEquations.Editing.MathSelection.Path.get -> System.Collections.Generic.IReadOnlyList<int>!
+SharpEquations.Editing.MathSelection.Start.get -> int
+SharpEquations.Editing.MathSelection.StartPosition.get -> SharpEquations.Editing.MathPosition!
+const SharpEquations.Editing.MathNode.RunName = "#run" -> string!
+override SharpEquations.Editing.MathNode.ToString() -> string!
+override SharpEquations.Editing.MathPosition.Equals(object? obj) -> bool
+override SharpEquations.Editing.MathPosition.GetHashCode() -> int
+override SharpEquations.Editing.MathPosition.ToString() -> string!
+static SharpEquations.Editing.MathAutoCorrect.Defaults.get -> System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>!
+static SharpEquations.Editing.MathNode.Element(string! name, System.Collections.Generic.IEnumerable<SharpEquations.Editing.MathNode!>! children, System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>? attributes = null) -> SharpEquations.Editing.MathNode!
+static SharpEquations.Editing.MathNode.FromMathML(System.Xml.Linq.XElement! element) -> SharpEquations.Editing.MathNode!
+static SharpEquations.Editing.MathNode.Row(System.Collections.Generic.IEnumerable<SharpEquations.Editing.MathNode!>! children, System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>? attributes = null) -> SharpEquations.Editing.MathNode!
+static SharpEquations.Editing.MathNode.Run(string! text) -> SharpEquations.Editing.MathNode!
+static SharpEquations.Editing.MathNode.Token(string! name, string! text, System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>? attributes = null) -> SharpEquations.Editing.MathNode!
+static SharpEquations.Editing.MathPosition.operator !=(SharpEquations.Editing.MathPosition? left, SharpEquations.Editing.MathPosition? right) -> bool
+static SharpEquations.Editing.MathPosition.operator ==(SharpEquations.Editing.MathPosition? left, SharpEquations.Editing.MathPosition? right) -> bool
