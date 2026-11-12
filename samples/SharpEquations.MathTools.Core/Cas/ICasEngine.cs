@@ -29,7 +29,14 @@ namespace SharpEquations.MathTools
     }
 
     /// <summary>A result of an <see cref="ICasEngine"/>: what was done, the result as an equation (null if it cannot be drawn) and as text.</summary>
-    public sealed record CasResult(CasAction Action, Equation? Math, string Text);
+    public sealed record CasResult(CasAction Action, Equation? Math, string Text)
+    {
+        /// <summary>The solutions as decimal numbers (<c>a+bi</c> for complex ones), when they are not plain numbers already; null otherwise.</summary>
+        public Equation? Approximate { get; init; }
+
+        /// <summary>The text of <see cref="Approximate"/>.</summary>
+        public string? ApproximateText { get; init; }
+    }
 
     /// <summary>
     /// A computer algebra system behind the math tools: it reads what an equation of the editor means and computes with
