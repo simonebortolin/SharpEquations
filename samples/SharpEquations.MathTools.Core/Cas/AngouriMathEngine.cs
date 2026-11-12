@@ -54,7 +54,7 @@ namespace SharpEquations.MathTools
         // the exact value, and the decimal one when it differs: 1/3 ≈ 0.333333, √2 ≈ 1.41421
         private static CasResult Value(Entity expression)
         {
-            if (expression is Entity.Equalsf || expression.Vars.Any())
+            if (expression is Entity.Equalsf || expression.Vars.Count > 0)
                 return Result(CasAction.Evaluate, expression.Simplify());
 
             var exact = expression.Simplify();
@@ -69,7 +69,7 @@ namespace SharpEquations.MathTools
         // x ∈ {…} with radicals gets a second line, x ≈ {1.2071, -0.5+0.866i}: the same solutions as decimal numbers
         private static CasResult Approximations(CasResult result, Entity.Variable x, Entity solutions)
         {
-            if (solutions is not Entity.Set.FiniteSet set || !set.Elements.Any())
+            if (solutions is not Entity.Set.FiniteSet set || set.Count == 0)
                 return result;
             var exact = set.Elements.ToList();
             if (exact.All(e => e is Entity.Number))
