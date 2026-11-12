@@ -3,10 +3,14 @@ namespace SharpEquations.Avalonia.MathTools
     using System;
     using System.Collections.Generic;
     using System.Globalization;
+    using System.Linq;
+    using System.Threading.Tasks;
     using global::Avalonia;
     using global::Avalonia.Controls;
+    using global::Avalonia.Input.Platform;
     using global::Avalonia.Layout;
     using global::Avalonia.Media;
+    using global::Avalonia.Media.Imaging;
     using SharpEquations;
     using SharpEquations.MathTools;
 
@@ -31,6 +35,8 @@ namespace SharpEquations.Avalonia.MathTools
         private readonly StackPanel list = new StackPanel { Spacing = 10 };
         private readonly TextBlock message = Ui.Muted("", 12.5);
         private int added;
+        private bool sharing;
+        private RenderTargetBitmap? copied;
 
         /// <param name="engine">The computer algebra system whose unit of angles and letters defined the Add button takes.</param>
         public Graphs3DPage(ICasEngine? engine = null)
@@ -66,9 +72,35 @@ namespace SharpEquations.Avalonia.MathTools
             var reset = new Button { Content = "Reset view", CornerRadius = new CornerRadius(8), Padding = new Thickness(16, 6) };
             ToolTip.SetTip(reset, "Turns the box back and shows the region around the origin (a double click on the graph does the same)");
 
+            var copy = new Button { Content = "Copy image", CornerRadius = new CornerRadius(8), Padding = new Thickness(16, 6) };
+            ToolTip.SetTip(copy, "Copies the graphs as an image");
+            copy.Click += async (_, _) => await CopyImageAsync().ConfigureAwait(true);
+            SharedParameters = new CheckBox { Content = "Same parameters for every graph", IsChecked = false };
+            ToolTip.SetTip(SharedParameters, "A letter is one parameter for all the graphs with it, or one per graph");
+            SharedParameters.IsCheckedChanged += (_, _) =>
+            {
+                if (SharedParameters.IsChecked == true)
+                {
+                    foreach (var name in Sliders.Keys.Select(k => k.Parameter).Distinct().ToList())
+                        Share(name, Sliders.First(s => s.Key.Parameter == name).Value.Value);
+                }
+            };
+
             Space = new Graph3DView { Height = 480, ForceSoftware = OperatingSystem.IsBrowser() };
             reset.Click += (_, _) => Space.Reset();
             var spaceFrame = new Border { CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1), ClipToBounds = true, Child = Space };
+            spaceFrame.ContextMenu = new ContextMenu
+            {
+                ItemsSource = new[]
+                {
+                    Item("Copy image", CopyImageAsync),
+                    Item("Reset view", () =>
+                    {
+                        Space.Reset();
+                        return Task.CompletedTask;
+                    }),
+                },
+            };
             spaceFrame.Bind(Border.BorderBrushProperty, spaceFrame.GetResourceObservable("CardBorderBrush"));
 
             Content = new StackPanel
@@ -76,10 +108,10 @@ namespace SharpEquations.Avalonia.MathTools
                 Spacing = 20,
                 Children =
                 {
-                    Ui.Card("Graphs in space", "z=f(x,y), or x=f(t), y=g(t) and z=h(t) on three lines, t from 0 to 2π: the other letters are parameters, with a slider each", new StackPanel
+                    Ui.Card("Graphs in space", Ui.Caption("$z=f(x,y)$, or $x=f(t)$, $y=g(t)$ and $z=h(t)$ on three lines, $t$ from $0$ to $2π$: the other letters are parameters, with a slider each"), new StackPanel
                     {
                         Spacing = 12,
-                        Children = { frame, Ui.Row(add, clear, reset), message, list },
+                        Children = { frame, Ui.Row(add, clear, reset, copy, SharedParameters), message, list },
                     }),
                     Ui.Card("Space", "Drag to turn, the wheel to zoom the region of x and y, a double click to start again", spaceFrame),
                 },
@@ -91,6 +123,9 @@ namespace SharpEquations.Avalonia.MathTools
 
         /// <summary>The box the graphs are drawn in.</summary>
         public Graph3DView Space { get; }
+
+        /// <summary>Whether a letter is one parameter for every graph with it (its sliders move together) or one per graph.</summary>
+        public CheckBox SharedParameters { get; }
 
         /// <summary>Why the last equation was not drawn, or null.</summary>
         public string? Error { get; private set; }
@@ -120,6 +155,15 @@ namespace SharpEquations.Avalonia.MathTools
             var graph = new SurfaceGraph(equation, plot, Palette[added++ % Palette.Length]);
             Space.Surfaces.Add(graph);
             list.Children.Add(Row(graph));
+            if (SharedParameters.IsChecked == true)
+            {
+                // a letter already drawn keeps its value
+                foreach (var name in plot.Parameters)
+                {
+                    if (Sliders.FirstOrDefault(s => s.Key.Parameter == name && s.Key.Graph != graph).Value is { } other)
+                        Sliders[(graph, name)].Value = other.Value;
+                }
+            }
             return true;
         }
 
@@ -153,7 +197,10 @@ namespace SharpEquations.Avalonia.MathTools
                         return;
                     graph.Plot[parameter] = slider.Value;
                     value.Text = Value(parameter, slider.Value);
-                    Space.Redraw();
+                    if (!sharing && SharedParameters.IsChecked == true)
+                        Share(parameter, slider.Value);
+                    // sampling the surfaces again is slow: it waits for the slider to stop
+                    Space.RedrawSoon();
                 };
                 Sliders[(graph, name)] = slider;
                 parameters.Children.Add(new DockPanel { Children = { Ui.Docked(value, Dock.Left), slider } });
@@ -176,6 +223,42 @@ namespace SharpEquations.Avalonia.MathTools
                     Sliders.Remove((graph, name));
             };
             return row;
+        }
+
+        // the sliders of a letter, on every graph, to a value
+        private void Share(string parameter, double value)
+        {
+            sharing = true;
+            try
+            {
+                foreach (var slider in Sliders.Where(s => s.Key.Parameter == parameter).Select(s => s.Value))
+                {
+                    if (slider.Value != value)
+                        slider.Value = value;
+                }
+            }
+            finally
+            {
+                sharing = false;
+            }
+        }
+
+        /// <summary>Copies the graphs to the clipboard as an image.</summary>
+        public async Task CopyImageAsync()
+        {
+            if (TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
+                return;
+            // the clipboard may read the image later: the last one copied is kept until the next
+            copied?.Dispose();
+            copied = Space.Snapshot();
+            await clipboard.SetBitmapAsync(copied).ConfigureAwait(true);
+        }
+
+        private static MenuItem Item(string header, Func<Task> action)
+        {
+            var item = new MenuItem { Header = header };
+            item.Click += async (_, _) => await action().ConfigureAwait(true);
+            return item;
         }
 
         private static string Value(string name, double value) => name + " = " + value.ToString("0.##", CultureInfo.InvariantCulture);
