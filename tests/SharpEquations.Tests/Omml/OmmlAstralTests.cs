@@ -14,11 +14,11 @@ namespace SharpEquations.Tests.Omml
     /// <remarks>
     /// The mathematical alphanumerics are written as Word writes them, the plain letter with its style (𝒢 is a G with
     /// m:scr), before mml2omml.xsl sees them, so how the stylesheet counts characters does not matter for them. An
-    /// emoji reaches the stylesheet as it is, and the stylesheet, run by XslCompiledTransform, counts UTF-16 units
-    /// where XPath counts code points: 🍕, one character, counts as two, so its mi is taken for a name of several
-    /// letters and is written upright (m:sty p), in a run of its own. The tests marked as depending on UTF-16 counting
-    /// pin that behaviour: an implementation that counts code points writes 🍕 as an italic identifier, without m:rPr,
-    /// in one run with the characters around it, and reads it back to the same equation.
+    /// emoji reaches the stylesheet as it is, and the stylesheet, compiled to C# by SharpEquations.XsltGenerator,
+    /// counts code points as XPath does (XslCompiledTransform counted UTF-16 units, so that 🍕 counted as two
+    /// characters and was written upright, in a run of its own): 🍕 is written as an italic identifier, without m:rPr,
+    /// in one run with the characters around it, and reads back to the same equation. The tests marked as counting
+    /// code points pin that behaviour.
     /// </remarks>
     public class OmmlAstralTests
     {
@@ -78,32 +78,30 @@ namespace SharpEquations.Tests.Omml
         }
 
         /// <summary>
-        /// Depends on UTF-16 counting: 🍕 counts as two characters in mml2omml.xsl and is written upright, in a run of
-        /// its own. Counting code points, it would be <c>&lt;m:r&gt;&lt;m:t&gt;🍕&lt;/m:t&gt;&lt;/m:r&gt;</c>, and
-        /// <c>-:x+🍕</c> in one run.
+        /// Counting code points: 🍕 is one character in mml2omml.xsl, an italic identifier written without m:rPr, in
+        /// one run with the characters around it.
         /// </summary>
         [Test]
-        [Arguments("🍕", "<m:oMath><m:r><m:rPr><m:sty m:val=\"p\" /></m:rPr><m:t>🍕</m:t></m:r></m:oMath>")]
-        [Arguments("𝑥+🍕", "<m:oMath><m:r><m:t>x+</m:t></m:r><m:r><m:rPr><m:sty m:val=\"p\" /></m:rPr><m:t>🍕</m:t></m:r></m:oMath>")]
-        public async Task WritesEmojiUprightCountingUtf16Units(string unicodeMath, string omml)
+        [Arguments("🍕", "<m:oMath><m:r><m:t>🍕</m:t></m:r></m:oMath>")]
+        [Arguments("𝑥+🍕", "<m:oMath><m:r><m:t>x+🍕</m:t></m:r></m:oMath>")]
+        public async Task WritesEmojiItalicCountingCodePoints(string unicodeMath, string omml)
         {
             await Assert.That(Compact(Equation.Parse(unicodeMath, EquationFormat.UnicodeMath).ToOmml())).IsEqualTo(omml);
         }
 
         /// <summary>
-        /// Depends on UTF-16 counting: each 🍕 of the corpus example is written upright (m:sty p). Counting code points,
-        /// the runs would be <c>nor=:pizza -:🍕 -:🍕</c>.
+        /// Counting code points: each 🍕 of the corpus example is written as an italic identifier, without m:rPr.
         /// </summary>
         [Test]
-        public async Task WritesThePizzaOfTheCorpusCountingUtf16Units()
+        public async Task WritesThePizzaOfTheCorpusCountingCodePoints()
         {
             var omml = Equation.Parse("(\"pizza\"^🍕)^🍕", EquationFormat.UnicodeMath).ToOmml();
-            await Assert.That(Runs(omml)).IsEqualTo("nor=:pizza sty=p:🍕 sty=p:🍕");
+            await Assert.That(Runs(omml)).IsEqualTo("nor=:pizza -:🍕 -:🍕");
             await Assert.That(Compact(omml)).IsEqualTo("<m:oMath><m:sSup><m:e><m:d><m:dPr /><m:e><m:sSup>"
                 + "<m:e><m:r><m:rPr><m:nor /></m:rPr><m:t>pizza</m:t></m:r></m:e>"
-                + "<m:sup><m:r><m:rPr><m:sty m:val=\"p\" /></m:rPr><m:t>🍕</m:t></m:r></m:sup>"
+                + "<m:sup><m:r><m:t>🍕</m:t></m:r></m:sup>"
                 + "</m:sSup></m:e></m:d></m:e>"
-                + "<m:sup><m:r><m:rPr><m:sty m:val=\"p\" /></m:rPr><m:t>🍕</m:t></m:r></m:sup></m:sSup></m:oMath>");
+                + "<m:sup><m:r><m:t>🍕</m:t></m:r></m:sup></m:sSup></m:oMath>");
         }
 
         [Test]
@@ -136,22 +134,20 @@ namespace SharpEquations.Tests.Omml
         }
 
         /// <summary>
-        /// Depends on UTF-16 counting: the upright 🍕 that mml2omml.xsl writes reads back with
-        /// <c>mathvariant="normal"</c>, so the first trip through OMML gives another equation, which then stays the same.
-        /// The UnicodeMath of both is the same. Counting code points, the first trip would give the same equation.
+        /// Counting code points: the italic 🍕 that mml2omml.xsl writes reads back as it was, so the first trip through
+        /// OMML gives the same equation.
         /// </summary>
         [Test]
-        [Arguments("🍕", "<mi mathvariant=\"normal\">🍕</mi>")]
-        [Arguments("𝑥+🍕", "<mi>x</mi><mo>+</mo><mi mathvariant=\"normal\">🍕</mi>")]
-        [Arguments("(\"pizza\"^🍕)^🍕", "<msup><mrow><mo>(</mo><msup><mtext>pizza</mtext><mi mathvariant=\"normal\">🍕</mi></msup><mo>)</mo></mrow><mi mathvariant=\"normal\">🍕</mi></msup>")]
-        public async Task RoundTripsEmojiThroughOmmlCountingUtf16Units(string unicodeMath, string mathML)
+        [Arguments("🍕", "<mi>🍕</mi>")]
+        [Arguments("𝑥+🍕", "<mi>x</mi><mo>+</mo><mi>🍕</mi>")]
+        [Arguments("(\"pizza\"^🍕)^🍕", "<msup><mrow><mo>(</mo><msup><mtext>pizza</mtext><mi>🍕</mi></msup><mo>)</mo></mrow><mi>🍕</mi></msup>")]
+        public async Task RoundTripsEmojiThroughOmmlCountingCodePoints(string unicodeMath, string mathML)
         {
             var equation = Equation.Parse(unicodeMath, EquationFormat.UnicodeMath);
             var back = Equation.Parse(equation.ToOmml(), EquationFormat.Omml);
             await Assert.That(back.ToMathML().ToString(SaveOptions.DisableFormatting)).IsEqualTo(MathML(mathML));
-            await Assert.That(back).IsNotEqualTo(equation);
+            await Assert.That(back).IsEqualTo(equation);
             await Assert.That(back.ToString(EquationFormat.UnicodeMath)).IsEqualTo(equation.ToString(EquationFormat.UnicodeMath));
-            await Assert.That(Equation.Parse(back.ToOmml(), EquationFormat.Omml)).IsEqualTo(back);
         }
 
         [Test]
@@ -222,17 +218,16 @@ namespace SharpEquations.Tests.Omml
         }
 
         /// <summary>
-        /// Depends on UTF-16 counting: an italic 🍕 of OMML (a run without m:sty) is written back upright, so it reads
-        /// back as another equation. Counting code points, it would be written as it was read.
+        /// Counting code points: an italic 🍕 of OMML (a run without m:sty) is written back as it was read.
         /// </summary>
         [Test]
-        public async Task ItalicEmojiOfOmmlComesBackUprightCountingUtf16Units()
+        public async Task ItalicEmojiOfOmmlComesBackItalicCountingCodePoints()
         {
             var equation = Equation.Parse("<m:oMath" + Namespaces + "><m:r><m:t>🍕</m:t></m:r></m:oMath>", EquationFormat.Omml);
-            await Assert.That(Runs(equation.ToOmml())).IsEqualTo("sty=p:🍕");
+            await Assert.That(Runs(equation.ToOmml())).IsEqualTo("-:🍕");
             var back = Equation.Parse(equation.ToOmml(), EquationFormat.Omml);
-            await Assert.That(back).IsNotEqualTo(equation);
-            await Assert.That(back.ToMathML().ToString(SaveOptions.DisableFormatting)).IsEqualTo(MathML("<mi mathvariant=\"normal\">🍕</mi>"));
+            await Assert.That(back).IsEqualTo(equation);
+            await Assert.That(back.ToMathML().ToString(SaveOptions.DisableFormatting)).IsEqualTo(MathML("<mi>🍕</mi>"));
         }
     }
 }

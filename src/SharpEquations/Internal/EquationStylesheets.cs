@@ -1,50 +1,40 @@
 namespace SharpEquations.Internal
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.IO;
-    using System.Xml;
     using System.Xml.Linq;
-    using System.Xml.Xsl;
+    using SharpEquations.Internal.Xslt;
 
     /// <summary>
-    /// The XSLT 1.0 stylesheets embedded under Resources/Equations, compiled once on first use.
+    /// The XSLT 1.0 stylesheets of Resources, compiled to C# at build time by SharpEquations.XsltGenerator
+    /// (Internal/Xslt), so that they run without generating code at run time.
     /// </summary>
     internal static class EquationStylesheets
     {
-        private const string ResourcePrefix = "SharpEquations.Resources.";
-
         /// <summary>
         /// The deepest input accepted: the stylesheets recurse over the tree, and a stack overflow cannot be caught.
         /// </summary>
         public const int MaxDepth = 512;
 
-        private static readonly ConcurrentDictionary<string, Lazy<XslCompiledTransform>> Compiled =
-            new ConcurrentDictionary<string, Lazy<XslCompiledTransform>>(StringComparer.Ordinal);
-
-        /// <summary>
-        /// Runs the stylesheet and parses its output, or returns null when the output is empty.
-        /// The output goes through text so that disable-output-escaping, used by mtef2mml.xsl
-        /// to write character references, takes effect.
-        /// </summary>
+        /// <summary>Runs the stylesheet, or returns null when its output is empty.</summary>
         /// <exception cref="ArgumentException">The input is nested more than <see cref="MaxDepth"/> levels deep.</exception>
         public static XElement Transform(string name, XElement input)
         {
             if (Depth(input) > MaxDepth)
                 throw new ArgumentException("The equation is nested too deeply.", nameof(input));
-            var stylesheet = Compiled.GetOrAdd(name, n => new Lazy<XslCompiledTransform>(() => Load(n))).Value;
-            var output = new StringWriter();
-            using (var reader = new XDocument(input).CreateReader())
+            switch (name)
             {
-                stylesheet.Transform(reader, null, output);
+                case "omml2mml.xsl":
+                    return Omml2mmlStylesheet.Transform(input);
+                case "mml2omml.xsl":
+                    return Mml2ommlStylesheet.Transform(input);
+                case "ctop.xsl":
+                    return CtopStylesheet.Transform(input);
+                case "mtef2mml.xsl":
+                    return Mtef2mmlStylesheet.Transform(input);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(name), name, "No such stylesheet.");
             }
-            var text = output.ToString();
-            if (text.Trim().Length == 0)
-                return null;
-            var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
-            using (var reader = XmlReader.Create(new StringReader(text), settings))
-                return XElement.Load(reader, LoadOptions.PreserveWhitespace);
         }
 
         private static int Depth(XElement root)
@@ -63,22 +53,6 @@ namespace SharpEquations.Internal
                     stack.Push((child, level + 1));
             }
             return depth;
-        }
-
-        private static XslCompiledTransform Load(string name)
-        {
-            using (var stream = typeof(EquationStylesheets).Assembly.GetManifestResourceStream(ResourcePrefix + name))
-            {
-                if (stream == null)
-                    throw new FileNotFoundException("Embedded stylesheet not found.", name);
-                var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
-                using (var reader = XmlReader.Create(stream, settings))
-                {
-                    var stylesheet = new XslCompiledTransform();
-                    stylesheet.Load(reader, XsltSettings.Default, null);
-                    return stylesheet;
-                }
-            }
         }
     }
 }
