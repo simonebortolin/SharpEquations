@@ -1,6 +1,7 @@
 name: Web demo
 
-# The equation editor on WebAssembly (samples/SharpEquations.Avalonia.Browser.Demo): built on every pull request,
+# The equation editor on WebAssembly (samples/SharpEquations.Avalonia.Browser.Demo), and the math tools under math/
+# (samples/SharpEquations.Avalonia.Browser.MathTools.Demo): built on every pull request,
 # published to GitHub Pages from main, or from any branch when the workflow is run by hand (Settings → Pages → Source:
 # GitHub Actions; a branch other than main must be allowed in Settings → Environments → github-pages).
 on:
@@ -22,6 +23,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
   PROJECT: samples/SharpEquations.Avalonia.Browser.Demo/SharpEquations.Avalonia.Browser.Demo.csproj
+  MATH_TOOLS_PROJECT: samples/SharpEquations.Avalonia.Browser.MathTools.Demo/SharpEquations.Avalonia.Browser.MathTools.Demo.csproj
 
 jobs:
   build:
@@ -43,11 +45,16 @@ jobs:
       - name: Publish
         run: dotnet publish "$PROJECT" -c Release -o publish
 
-      # GitHub Pages serves the site from a folder: no Jekyll, and the index for any path that is not a file
+      - name: Publish the math tools
+        run: dotnet publish "$MATH_TOOLS_PROJECT" -c Release -o publish-math-tools
+
+      # GitHub Pages serves the site from a folder: no Jekyll, and the index for any path that is not a file; the math
+      # tools are a site of their own in math/ (their pages are relative to it)
       - name: Prepare the site
         run: |
           touch publish/wwwroot/.nojekyll
           cp publish/wwwroot/index.html publish/wwwroot/404.html
+          cp -r publish-math-tools/wwwroot publish/wwwroot/math
 
       - uses: actions/upload-pages-artifact@v4
         with:

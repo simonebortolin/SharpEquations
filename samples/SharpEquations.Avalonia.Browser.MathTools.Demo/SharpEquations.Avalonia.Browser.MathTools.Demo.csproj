@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+
+  <!-- The math tools in the browser, with Avalonia on WebAssembly: the view of the desktop app in a page. Needs the
+       wasm-tools workload (dotnet workload install wasm-tools); dotnet publish -c Release writes the site to
+       bin/Release/net10.0-browser/publish/wwwroot. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-browser</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SharpEquations.Avalonia.MathTools</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
+    <WasmBuildNative>true</WasmBuildNative>
+    <WasmEnableThreads>false</WasmEnableThreads>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- every file of the desktop app but its window and its entry point -->
+    <Compile Include="..\SharpEquations.Avalonia.MathTools.Demo\*.cs" Exclude="..\SharpEquations.Avalonia.MathTools.Demo\Program.cs;..\SharpEquations.Avalonia.MathTools.Demo\MainWindow.cs" LinkBase="MathTools" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Browser" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpEquations.Avalonia\SharpEquations.Avalonia.csproj" />
+  </ItemGroup>
+
+</Project>

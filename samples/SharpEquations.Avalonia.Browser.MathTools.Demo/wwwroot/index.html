@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SharpEquations Math Tools</title>
+    <meta name="description" content="A scientific keypad, formulas, units and triangles around a real-time equation editor in .NET and Avalonia, running on WebAssembly." />
+    <base href="./" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="modulepreload" href="./main.js" />
+    <link rel="modulepreload" href="./_framework/dotnet.js" />
+    <link rel="stylesheet" href="./app.css" />
+</head>
+<body>
+    <div id="out"></div>
+    <div id="splash" aria-live="polite">
+        <div class="card">
+            <div class="formula">
+                <span>sin</span><span>√</span><span>π</span><span>△</span>
+            </div>
+            <h1>SharpEquations Math Tools</h1>
+            <p id="message">Loading the math tools…</p>
+            <div class="bar"><div id="progress"></div></div>
+            <small>.NET on WebAssembly · Avalonia · OpenType MATH</small>
+        </div>
+    </div>
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
