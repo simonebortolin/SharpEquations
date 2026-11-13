@@ -265,6 +265,25 @@ public class MathView : Control                             // read-only: Equati
   undo...), the view mode, Shift+F10 for the context menu.
 - The `Equation` property is set on every change of the content, with the runs built up where they parse.
 
+## The controls for Uno Platform (`SharpEquations.Uno`)
+
+`MathEditBox` and `MathView` with the API of those of Avalonia, as far as WinUI allows (dependency properties;
+`Foreground`, `Background`, `BorderBrush`, `BorderThickness`, `Padding` and `FontSize` of `Control`; a `MenuFlyout`
+for the context menu; a `Popup` for the floating bar). They run wherever Uno runs, since they are built only of what
+every renderer of Uno has, and the build fails on an API Uno does not implement (Uno0001):
+
+- **Drawing**: `MathCanvas` turns the `IMathCanvas` of the view into the children of a `Canvas`: rectangles, lines and
+  ellipses as shapes, each glyph as a `Path` from its outline (`OpenTypeMathFont.GetOutline`: the charstrings of CFF,
+  the contours of `glyf`, the quadratic curves of TrueType drawn as cubics). The canvas of the equation and that of the
+  caret are moved to the origin of the layout, so that a new size of the control only moves them.
+- **Font**: Libertinus Math, embedded as a resource and read by `OpenTypeMathFont`, the same on every platform; any
+  other math font is given as the bytes of its file (`MathFonts.FromFile`). There are no fallback fonts: a character
+  Libertinus Math lacks is not drawn.
+- **Input**: a transparent `TextBox` at the caret takes the focus: what is typed in it (after the composition of an
+  input method) goes to the editor, its `PreviewKeyDown` gives the keys to the view (`MathKey`), so that the keyboards of
+  touch screens and the windows of the input methods work as in any text box.
+- **Clipboard**: text, in `CopyTextFormat` (MathML pastes as an equation into Word).
+
 ## Plan
 
 | Phase | Content | State |

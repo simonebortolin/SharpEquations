@@ -1,0 +1,92 @@
+#nullable enable
+SharpEquations.Uno.EquationChangedEventArgs
+SharpEquations.Uno.EquationChangedEventArgs.Equation.get -> SharpEquations.Equation?
+SharpEquations.Uno.EquationChangedEventArgs.EquationChangedEventArgs(SharpEquations.Equation? equation) -> void
+SharpEquations.Uno.GlobalStaticResources
+SharpEquations.Uno.GlobalStaticResources.GlobalStaticResources() -> void
+SharpEquations.Uno.MathContextMenuEventArgs
+SharpEquations.Uno.MathContextMenuEventArgs.Cancel.get -> bool
+SharpEquations.Uno.MathContextMenuEventArgs.Cancel.set -> void
+SharpEquations.Uno.MathContextMenuEventArgs.MathContextMenuEventArgs(Microsoft.UI.Xaml.Controls.MenuFlyout! menu) -> void
+SharpEquations.Uno.MathContextMenuEventArgs.Menu.get -> Microsoft.UI.Xaml.Controls.MenuFlyout!
+SharpEquations.Uno.MathEditBox
+SharpEquations.Uno.MathEditBox.BuildDown() -> void
+SharpEquations.Uno.MathEditBox.BuildUp() -> void
+SharpEquations.Uno.MathEditBox.CaretBrush.get -> Microsoft.UI.Xaml.Media.Brush?
+SharpEquations.Uno.MathEditBox.CaretBrush.set -> void
+SharpEquations.Uno.MathEditBox.ContextMenuOpening -> System.EventHandler<SharpEquations.Uno.MathContextMenuEventArgs!>?
+SharpEquations.Uno.MathEditBox.CopyAsAsync(SharpEquations.EquationFormat format) -> System.Threading.Tasks.Task!
+SharpEquations.Uno.MathEditBox.CopyAsync() -> System.Threading.Tasks.Task!
+SharpEquations.Uno.MathEditBox.CopyTextFormat.get -> SharpEquations.EquationFormat?
+SharpEquations.Uno.MathEditBox.CopyTextFormat.set -> void
+SharpEquations.Uno.MathEditBox.CutAsync() -> System.Threading.Tasks.Task!
+SharpEquations.Uno.MathEditBox.Editor.get -> SharpEquations.Editing.MathEditor!
+SharpEquations.Uno.MathEditBox.Equation.get -> SharpEquations.Equation?
+SharpEquations.Uno.MathEditBox.Equation.set -> void
+SharpEquations.Uno.MathEditBox.EquationChanged -> System.EventHandler<SharpEquations.Uno.EquationChangedEventArgs!>?
+SharpEquations.Uno.MathEditBox.FocusEditor(Microsoft.UI.Xaml.FocusState state = Microsoft.UI.Xaml.FocusState.Programmatic) -> bool
+SharpEquations.Uno.MathEditBox.GetMath() -> string!
+SharpEquations.Uno.MathEditBox.GetText(SharpEquations.EquationFormat format) -> string!
+SharpEquations.Uno.MathEditBox.InputFormat.get -> SharpEquations.EquationFormat
+SharpEquations.Uno.MathEditBox.InputFormat.set -> void
+SharpEquations.Uno.MathEditBox.IsDisplay.get -> bool
+SharpEquations.Uno.MathEditBox.IsDisplay.set -> void
+SharpEquations.Uno.MathEditBox.IsQuickBarEnabled.get -> bool
+SharpEquations.Uno.MathEditBox.IsQuickBarEnabled.set -> void
+SharpEquations.Uno.MathEditBox.IsQuickBarOpen.get -> bool
+SharpEquations.Uno.MathEditBox.IsReadOnly.get -> bool
+SharpEquations.Uno.MathEditBox.IsReadOnly.set -> void
+SharpEquations.Uno.MathEditBox.Layout.get -> SharpEquations.Rendering.MathLayout?
+SharpEquations.Uno.MathEditBox.MathEditBox() -> void
+SharpEquations.Uno.MathEditBox.MathFont.get -> SharpEquations.Rendering.OpenTypeMathFont?
+SharpEquations.Uno.MathEditBox.MathFont.set -> void
+SharpEquations.Uno.MathEditBox.PasteAsync() -> System.Threading.Tasks.Task!
+SharpEquations.Uno.MathEditBox.PlaceholderBrush.get -> Microsoft.UI.Xaml.Media.Brush?
+SharpEquations.Uno.MathEditBox.PlaceholderBrush.set -> void
+SharpEquations.Uno.MathEditBox.QuickSymbols.get -> System.Collections.Generic.IList<string!>!
+SharpEquations.Uno.MathEditBox.SelectionBrush.get -> Microsoft.UI.Xaml.Media.Brush?
+SharpEquations.Uno.MathEditBox.SelectionBrush.set -> void
+SharpEquations.Uno.MathEditBox.SetMath(string! mathML) -> void
+SharpEquations.Uno.MathEditBox.ShowContextMenu(double? x = null, double? y = null) -> bool
+SharpEquations.Uno.MathEditBox.View.get -> SharpEquations.Rendering.MathEditorView!
+SharpEquations.Uno.MathEditBox.ViewMode.get -> SharpEquations.Uno.MathViewMode
+SharpEquations.Uno.MathEditBox.ViewMode.set -> void
+SharpEquations.Uno.MathFonts
+SharpEquations.Uno.MathView
+SharpEquations.Uno.MathView.Equation.get -> SharpEquations.Equation?
+SharpEquations.Uno.MathView.Equation.set -> void
+SharpEquations.Uno.MathView.IsDisplay.get -> bool
+SharpEquations.Uno.MathView.IsDisplay.set -> void
+SharpEquations.Uno.MathView.Layout.get -> SharpEquations.Rendering.MathLayout?
+SharpEquations.Uno.MathView.MathFont.get -> SharpEquations.Rendering.OpenTypeMathFont?
+SharpEquations.Uno.MathView.MathFont.set -> void
+SharpEquations.Uno.MathView.MathML.get -> string?
+SharpEquations.Uno.MathView.MathML.set -> void
+SharpEquations.Uno.MathView.MathView() -> void
+SharpEquations.Uno.MathViewMode
+SharpEquations.Uno.MathViewMode.Linear = 1 -> SharpEquations.Uno.MathViewMode
+SharpEquations.Uno.MathViewMode.Professional = 0 -> SharpEquations.Uno.MathViewMode
+override SharpEquations.Uno.MathEditBox.ArrangeOverride(Windows.Foundation.Size finalSize) -> Windows.Foundation.Size
+override SharpEquations.Uno.MathEditBox.MeasureOverride(Windows.Foundation.Size availableSize) -> Windows.Foundation.Size
+override SharpEquations.Uno.MathView.MeasureOverride(Windows.Foundation.Size availableSize) -> Windows.Foundation.Size
+static SharpEquations.Uno.GlobalStaticResources.Initialize() -> void
+static SharpEquations.Uno.GlobalStaticResources.RegisterDefaultStyles() -> void
+static SharpEquations.Uno.GlobalStaticResources.RegisterResourceDictionariesBySource() -> void
+static SharpEquations.Uno.MathFonts.Default.get -> SharpEquations.Rendering.OpenTypeMathFont!
+static SharpEquations.Uno.MathFonts.FromFile(byte[]! data) -> SharpEquations.Rendering.OpenTypeMathFont!
+static SharpEquations.Uno.MathFonts.LibertinusMath.get -> SharpEquations.Rendering.OpenTypeMathFont!
+static readonly SharpEquations.Uno.MathEditBox.CaretBrushProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathEditBox.CopyTextFormatProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathEditBox.EquationProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathEditBox.InputFormatProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathEditBox.IsDisplayProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathEditBox.IsQuickBarEnabledProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathEditBox.IsReadOnlyProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathEditBox.MathFontProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathEditBox.PlaceholderBrushProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathEditBox.SelectionBrushProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathEditBox.ViewModeProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathView.EquationProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathView.IsDisplayProperty -> Microsoft.UI.Xaml.DependencyProperty!
+static readonly SharpEquations.Uno.MathView.MathFontProperty -> Microsoft.UI.Xaml.DependencyProperty!
+virtual SharpEquations.Uno.MathEditBox.CreateContextMenu() -> Microsoft.UI.Xaml.Controls.MenuFlyout!

@@ -11,6 +11,7 @@
     <Project Path="samples/SharpEquations.Avalonia.MathTools.Demo/SharpEquations.Avalonia.MathTools.Demo.csproj" />
     <Project Path="samples/SharpEquations.MathTools.Core/SharpEquations.MathTools.Core.csproj" />
     <Project Path="samples/SharpEquations.MathTools.Graphing/SharpEquations.MathTools.Graphing.csproj" />
+    <Project Path="samples/SharpEquations.Uno.Demo/SharpEquations.Uno.Demo.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="AGENTS.md" />
@@ -26,6 +27,7 @@
     <Project Path="src/SharpEquations.Editing/SharpEquations.Editing.csproj" />
     <Project Path="src/SharpEquations.RegexPolyfill/SharpEquations.RegexPolyfill.csproj" />
     <Project Path="src/SharpEquations.Rendering/SharpEquations.Rendering.csproj" />
+    <Project Path="src/SharpEquations.Uno/SharpEquations.Uno.csproj" />
     <Project Path="src/SharpEquations.XsltGenerator/SharpEquations.XsltGenerator.csproj" />
     <Project Path="src/SharpEquations/SharpEquations.csproj" />
   </Folder>

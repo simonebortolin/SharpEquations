@@ -27,6 +27,7 @@ env:
     src/SharpEquations.Editing/SharpEquations.Editing.csproj
     src/SharpEquations.Rendering/SharpEquations.Rendering.csproj
     src/SharpEquations.Avalonia/SharpEquations.Avalonia.csproj
+    src/SharpEquations.Uno/SharpEquations.Uno.csproj
   TEST_PROJECT: tests/SharpEquations.Tests/SharpEquations.Tests.csproj
   EDITOR_TEST_PROJECT: tests/SharpEquations.Avalonia.Tests/SharpEquations.Avalonia.Tests.csproj
   MATH_TOOLS_TEST_PROJECT: tests/SharpEquations.MathTools.Tests/SharpEquations.MathTools.Tests.csproj

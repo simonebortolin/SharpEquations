@@ -64,48 +64,19 @@ namespace SharpEquations.Avalonia
                 return;
             }
             panel.Children.Clear();
-            switch (Mode)
+            var completions = Mode == MathQuickBarMode.Completions;
+            foreach (var item in state.GetItems(owner.QuickSymbols))
             {
-                case MathQuickBarMode.Completions:
-                    foreach (var command in Completions)
-                    {
-                        var button = Button(command.Symbol.Length > 0 ? command.Symbol + "  \\" + command.Name : command.Text, "\\" + command.Name, () => owner.Editor.Complete(command));
-                        button.HorizontalContentAlignment = HorizontalAlignment.Left;
-                        button.MinWidth = 130;
-                        panel.Children.Add(button);
-                    }
-                    Highlight();
-                    break;
-                case MathQuickBarMode.Selection:
-                    var e = owner.Editor;
-                    panel.Children.Add(Button("a/b", "Fraction of the selection", () => e.InsertStructure("mfrac")));
-                    panel.Children.Add(Button("√x", "Root of the selection", () => e.InsertStructure("msqrt")));
-                    panel.Children.Add(Button("xⁿ", "Superscript", () => e.InsertStructure("msup")));
-                    panel.Children.Add(Button("xₙ", "Subscript", () => e.InsertStructure("msub")));
-                    panel.Children.Add(Button("(x)", "Parentheses", () => e.InsertFences()));
-                    panel.Children.Add(Button("[x]", "Brackets", () => e.InsertFences("[", "]")));
-                    panel.Children.Add(Button("|x|", "Absolute value", () => e.InsertFences("|", "|")));
-                    panel.Children.Add(Button("x̄", "Overline", () => e.InsertStructure("menclose", Notation("top"))));
-                    panel.Children.Add(Button("▭", "Box", () => e.InsertStructure("menclose", Notation("box"))));
-                    panel.Children.Add(Button("Linear", "Build down the selection", () => e.BuildDown()));
-                    break;
-                case MathQuickBarMode.Table:
-                    var t = owner.Editor;
-                    panel.Children.Add(Button("+ row", "Insert a row below", () => t.InsertTableRow()));
-                    panel.Children.Add(Button("+ row ↑", "Insert a row above", () => t.InsertTableRow(above: true)));
-                    panel.Children.Add(Button("+ col", "Insert a column on the right", () => t.InsertTableColumn()));
-                    panel.Children.Add(Button("+ col ←", "Insert a column on the left", () => t.InsertTableColumn(before: true)));
-                    panel.Children.Add(Button("− row", "Delete the row", () => t.DeleteTableRow()));
-                    panel.Children.Add(Button("− col", "Delete the column", () => t.DeleteTableColumn()));
-                    break;
-                case MathQuickBarMode.Symbols:
-                    foreach (var symbol in owner.QuickSymbols)
-                        panel.Children.Add(Button(symbol, symbol, () => owner.Editor.Insert(symbol), 30));
-                    break;
+                var button = Button(item.Text, item.ToolTip, item.Invoke, Mode == MathQuickBarMode.Symbols ? 30 : 40);
+                if (completions)
+                {
+                    button.HorizontalContentAlignment = HorizontalAlignment.Left;
+                    button.MinWidth = 130;
+                }
+                panel.Children.Add(button);
             }
+            Highlight();
         }
-
-        private static KeyValuePair<string, string>[] Notation(string notation) => new[] { new KeyValuePair<string, string>("notation", notation) };
 
         private static Button Button(string content, string tip, Action action, double minWidth = 40)
         {

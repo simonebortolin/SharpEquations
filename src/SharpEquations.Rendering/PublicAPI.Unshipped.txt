@@ -128,6 +128,22 @@ SharpEquations.Rendering.MathPaint.Error = 3 -> SharpEquations.Rendering.MathPai
 SharpEquations.Rendering.MathPaint.Foreground = 0 -> SharpEquations.Rendering.MathPaint
 SharpEquations.Rendering.MathPaint.Placeholder = 2 -> SharpEquations.Rendering.MathPaint
 SharpEquations.Rendering.MathPaint.Selection = 4 -> SharpEquations.Rendering.MathPaint
+SharpEquations.Rendering.MathPathCommand
+SharpEquations.Rendering.MathPathCommand.Kind.get -> SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommand.MathPathCommand() -> void
+SharpEquations.Rendering.MathPathCommand.MathPathCommand(SharpEquations.Rendering.MathPathCommandKind kind, double x1, double y1, double x2, double y2, double x, double y) -> void
+SharpEquations.Rendering.MathPathCommand.X.get -> double
+SharpEquations.Rendering.MathPathCommand.X1.get -> double
+SharpEquations.Rendering.MathPathCommand.X2.get -> double
+SharpEquations.Rendering.MathPathCommand.Y.get -> double
+SharpEquations.Rendering.MathPathCommand.Y1.get -> double
+SharpEquations.Rendering.MathPathCommand.Y2.get -> double
+SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommandKind.Close = 4 -> SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommandKind.CubicTo = 3 -> SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommandKind.LineTo = 1 -> SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommandKind.MoveTo = 0 -> SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommandKind.QuadraticTo = 2 -> SharpEquations.Rendering.MathPathCommandKind
 SharpEquations.Rendering.MathRect
 SharpEquations.Rendering.MathRect.Bottom.get -> double
 SharpEquations.Rendering.MathRect.Height.get -> double
@@ -183,6 +199,7 @@ SharpEquations.Rendering.OpenType.GlyphConstruction.AssemblyItalicCorrection.get
 SharpEquations.Rendering.OpenType.GlyphConstruction.Variants.get -> System.Collections.Generic.IReadOnlyList<(ushort Glyph, int Advance)>!
 SharpEquations.Rendering.OpenType.GlyphOutlines
 SharpEquations.Rendering.OpenType.GlyphOutlines.Bounds(ushort glyph) -> SharpEquations.Rendering.GlyphBounds
+SharpEquations.Rendering.OpenType.GlyphOutlines.Outline(ushort glyph) -> System.Collections.Generic.IReadOnlyList<SharpEquations.Rendering.MathPathCommand>!
 SharpEquations.Rendering.OpenType.GlyphPart
 SharpEquations.Rendering.OpenType.GlyphPart.EndConnector.get -> int
 SharpEquations.Rendering.OpenType.GlyphPart.FullAdvance.get -> int
@@ -261,6 +278,7 @@ SharpEquations.Rendering.OpenTypeMathFont
 SharpEquations.Rendering.OpenTypeMathFont.File.get -> SharpEquations.Rendering.OpenType.FontFile!
 SharpEquations.Rendering.OpenTypeMathFont.GetAdvance(ushort glyph) -> double
 SharpEquations.Rendering.OpenTypeMathFont.GetBounds(ushort glyph) -> SharpEquations.Rendering.GlyphBounds
+SharpEquations.Rendering.OpenTypeMathFont.GetOutline(ushort glyph) -> System.Collections.Generic.IReadOnlyList<SharpEquations.Rendering.MathPathCommand>!
 SharpEquations.Rendering.OpenTypeMathFont.GetScriptVariant(ushort glyph, int scriptLevel) -> ushort
 SharpEquations.Rendering.OpenTypeMathFont.Math.get -> SharpEquations.Rendering.OpenType.MathTable?
 SharpEquations.Rendering.OpenTypeMathFont.OpenTypeMathFont(SharpEquations.Rendering.OpenType.FontFile! file) -> void
@@ -283,3 +301,4 @@ static SharpEquations.Rendering.OpenType.MathTable.Parse(System.ReadOnlySpan<byt
 static SharpEquations.Rendering.OpenType.MathTable.Parse(byte[]! data) -> SharpEquations.Rendering.OpenType.MathTable!
 static SharpEquations.Rendering.OpenType.ScriptStyles.Parse(byte[]? gsub) -> SharpEquations.Rendering.OpenType.ScriptStyles?
 virtual SharpEquations.Rendering.OpenTypeMathFont.GetFallback(int codePoint) -> SharpEquations.Rendering.IMathFont?
+SharpEquations.Rendering.OpenType.FontFile.GlyphCount.get -> int

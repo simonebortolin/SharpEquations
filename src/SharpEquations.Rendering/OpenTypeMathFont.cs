@@ -1,6 +1,7 @@
 namespace SharpEquations.Rendering
 {
     using System;
+    using System.Collections.Generic;
     using SharpEquations.Rendering.OpenType;
 
     /// <summary>
@@ -50,6 +51,12 @@ namespace SharpEquations.Rendering
 
         /// <inheritdoc/>
         public GlyphBounds GetBounds(ushort glyph) => outlines.Value?.Bounds(glyph) ?? LineBounds(glyph);
+
+        /// <summary>
+        /// The outline of a glyph in design units, y up (<see cref="GlyphOutlines.Outline"/>), for a toolkit that draws
+        /// glyphs as paths; empty for a glyph without outline.
+        /// </summary>
+        public IReadOnlyList<MathPathCommand> GetOutline(ushort glyph) => outlines.Value?.Outline(glyph) ?? Array.Empty<MathPathCommand>();
 
         /// <inheritdoc/>
         public ushort GetScriptVariant(ushort glyph, int scriptLevel) => scriptStyles.Value?.Variant(glyph, scriptLevel) ?? glyph;

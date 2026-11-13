@@ -4,16 +4,22 @@ namespace SharpEquations.Rendering.OpenType
     using System.Collections.Generic;
 
     /// <summary>
-    /// The ink boxes of the glyphs of a font, read from its outlines: the boxes of the <c>glyf</c> table of a
-    /// TrueType font, or the outlines of the charstrings of the <c>CFF</c> table of an OpenType font, so that the
-    /// layout depends on no rasterizer.
+    /// The outlines of the glyphs of a font and their ink boxes: the contours of the <c>glyf</c> table of a TrueType
+    /// font, or the outlines of the charstrings of the <c>CFF</c> table of an OpenType font, so that the layout depends
+    /// on no rasterizer, and a toolkit can draw a glyph as a path (<see cref="Outline"/>).
     /// </summary>
     public sealed class GlyphOutlines
     {
         private readonly Func<ushort, GlyphBounds?> reader;
+        private readonly Func<ushort, List<MathPathCommand>, bool> outliner;
         private readonly Dictionary<ushort, GlyphBounds> cache = new Dictionary<ushort, GlyphBounds>();
+        private readonly Dictionary<ushort, IReadOnlyList<MathPathCommand>> outlineCache = new Dictionary<ushort, IReadOnlyList<MathPathCommand>>();
 
-        private GlyphOutlines(Func<ushort, GlyphBounds?> reader) => this.reader = reader;
+        private GlyphOutlines(Func<ushort, GlyphBounds?> reader, Func<ushort, List<MathPathCommand>, bool> outliner)
+        {
+            this.reader = reader;
+            this.outliner = outliner;
+        }
 
         /// <summary>
         /// The outlines of a font from its tables, given by their tag (<c>head</c>, <c>loca</c>, <c>glyf</c>,
@@ -26,11 +32,15 @@ namespace SharpEquations.Rendering.OpenType
             try
             {
                 if (table("CFF ") is { Length: > 0 } cff)
-                    return new GlyphOutlines(new Cff(cff).Bounds);
+                {
+                    var charStrings = new Cff(cff);
+                    return new GlyphOutlines(charStrings.Bounds, charStrings.Trace);
+                }
                 if (table("glyf") is { Length: > 0 } glyf && table("loca") is { } loca && table("head") is { Length: >= 54 } head)
                 {
-                    var longOffsets = head[50] << 8 | head[51];
-                    return new GlyphOutlines(glyph => TrueType(glyf, loca, longOffsets != 0, glyph));
+                    var longOffsets = (head[50] << 8 | head[51]) != 0;
+                    return new GlyphOutlines(glyph => TrueType(glyf, loca, longOffsets, glyph),
+                        (glyph, path) => TrueTypeOutline(glyf, loca, longOffsets, glyph, path, 0, 1, 0, 0, 1, 0, 0));
                 }
             }
             catch (IndexOutOfRangeException)
@@ -60,23 +70,214 @@ namespace SharpEquations.Rendering.OpenType
             }
         }
 
+        /// <summary>
+        /// The outline of a glyph in design units, y up: contours of lines and quadratic (TrueType) or cubic (CFF)
+        /// curves, each closed; empty for a glyph without outline (a space).
+        /// </summary>
+        public IReadOnlyList<MathPathCommand> Outline(ushort glyph)
+        {
+            lock (outlineCache)
+            {
+                if (!outlineCache.TryGetValue(glyph, out var outline))
+                {
+                    var path = new List<MathPathCommand>();
+                    try
+                    {
+                        if (!outliner(glyph, path))
+                            path.Clear();
+                    }
+                    catch (Exception e) when (e is IndexOutOfRangeException or InvalidOperationException or ArgumentOutOfRangeException)
+                    {
+                        path.Clear();
+                    }
+                    outlineCache[glyph] = outline = path;
+                }
+                return outline;
+            }
+        }
+
         private static GlyphBounds? TrueType(byte[] glyf, byte[] loca, bool longOffsets, ushort glyph)
         {
-            int start, end;
-            if (longOffsets)
-            {
-                start = (int)U32(loca, glyph * 4);
-                end = (int)U32(loca, glyph * 4 + 4);
-            }
-            else
-            {
-                start = U16(loca, glyph * 2) * 2;
-                end = U16(loca, glyph * 2 + 2) * 2;
-            }
-            if (end <= start)
+            if (Range(loca, longOffsets, glyph) is not var (start, end) || end <= start)
                 return null;
             return new GlyphBounds(S16(glyf, start + 2), S16(glyf, start + 4), S16(glyf, start + 6), S16(glyf, start + 8));
         }
+
+        private static (int Start, int End)? Range(byte[] loca, bool longOffsets, ushort glyph)
+        {
+            if (longOffsets)
+                return glyph * 4 + 8 <= loca.Length ? ((int)U32(loca, glyph * 4), (int)U32(loca, glyph * 4 + 4)) : null;
+            return glyph * 2 + 4 <= loca.Length ? (U16(loca, glyph * 2) * 2, U16(loca, glyph * 2 + 2) * 2) : null;
+        }
+
+        /// <summary>
+        /// Adds the contours of a TrueType glyph to a path, through the transform of a composite glyph that uses it
+        /// (x' = a x + c y + dx, y' = b x + d y + dy).
+        /// </summary>
+        private static bool TrueTypeOutline(byte[] glyf, byte[] loca, bool longOffsets, ushort glyph, List<MathPathCommand> path, int depth,
+            double a, double b, double c, double d, double dx, double dy)
+        {
+            if (depth > 8 || Range(loca, longOffsets, glyph) is not var (start, end) || end <= start)
+                return true;
+            var contours = S16(glyf, start);
+            if (contours < 0)
+                return TrueTypeComposite(glyf, loca, longOffsets, start + 10, path, depth, a, b, c, d, dx, dy);
+
+            var endPoints = new int[contours];
+            for (var i = 0; i < contours; i++)
+                endPoints[i] = U16(glyf, start + 10 + i * 2);
+            var points = contours == 0 ? 0 : endPoints[contours - 1] + 1;
+            var at = start + 10 + contours * 2;
+            at += 2 + U16(glyf, at);
+            var flags = new byte[points];
+            for (var i = 0; i < points;)
+            {
+                var flag = glyf[at++];
+                flags[i++] = flag;
+                if ((flag & 8) != 0)
+                {
+                    for (var repeat = glyf[at++]; repeat > 0 && i < points; repeat--)
+                        flags[i++] = flag;
+                }
+            }
+            var xs = new int[points];
+            var ys = new int[points];
+            at = Coordinates(glyf, at, flags, xs, 2, 16);
+            Coordinates(glyf, at, flags, ys, 4, 32);
+
+            var first = 0;
+            foreach (var last in endPoints)
+            {
+                Contour(path, flags, xs, ys, first, last, (x, y) => (a * x + c * y + dx, b * x + d * y + dy));
+                first = last + 1;
+            }
+            return true;
+        }
+
+        private static int Coordinates(byte[] glyf, int at, byte[] flags, int[] values, int shortBit, int sameBit)
+        {
+            var value = 0;
+            for (var i = 0; i < flags.Length; i++)
+            {
+                var flag = flags[i];
+                if ((flag & shortBit) != 0)
+                {
+                    var delta = glyf[at++];
+                    value += (flag & sameBit) != 0 ? delta : -delta;
+                }
+                else if ((flag & sameBit) == 0)
+                {
+                    value += S16(glyf, at);
+                    at += 2;
+                }
+                values[i] = value;
+            }
+            return at;
+        }
+
+        /// <summary>
+        /// A closed contour of TrueType points: on-curve points joined by lines, off-curve points the controls of
+        /// quadratic curves, two in a row implying the on-curve point between them.
+        /// </summary>
+        private static void Contour(List<MathPathCommand> path, byte[] flags, int[] xs, int[] ys, int first, int last, Func<double, double, (double X, double Y)> map)
+        {
+            var count = last - first + 1;
+            if (count <= 0)
+                return;
+            bool On(int i) => (flags[first + i % count] & 1) != 0;
+            (double X, double Y) P(int i) => (xs[first + i % count], ys[first + i % count]);
+            static (double X, double Y) Mid((double X, double Y) p, (double X, double Y) q) => ((p.X + q.X) / 2, (p.Y + q.Y) / 2);
+            void Add(MathPathCommandKind kind, (double X, double Y)? control, (double X, double Y) to)
+            {
+                var c = control is { } k ? map(k.X, k.Y) : default;
+                var t = map(to.X, to.Y);
+                path.Add(new MathPathCommand(kind, c.X, c.Y, 0, 0, t.X, t.Y));
+            }
+
+            var startIndex = -1;
+            for (var i = 0; i < count && startIndex < 0; i++)
+            {
+                if (On(i))
+                    startIndex = i;
+            }
+            var start = startIndex >= 0 ? P(startIndex) : Mid(P(0), P(1));
+            Add(MathPathCommandKind.MoveTo, null, start);
+            (double X, double Y)? pending = null;
+            var from = startIndex >= 0 ? startIndex + 1 : 1;
+            for (var k = 0; k < count; k++)
+            {
+                var i = from + k;
+                var p = P(i);
+                if (On(i))
+                {
+                    Add(pending == null ? MathPathCommandKind.LineTo : MathPathCommandKind.QuadraticTo, pending, p);
+                    pending = null;
+                }
+                else
+                {
+                    if (pending is { } q)
+                        Add(MathPathCommandKind.QuadraticTo, q, Mid(q, p));
+                    pending = p;
+                }
+            }
+            if (pending is { } control)
+                Add(MathPathCommandKind.QuadraticTo, control, start);
+            path.Add(new MathPathCommand(MathPathCommandKind.Close, 0, 0, 0, 0, 0, 0));
+        }
+
+        private static bool TrueTypeComposite(byte[] glyf, byte[] loca, bool longOffsets, int at, List<MathPathCommand> path, int depth,
+            double a, double b, double c, double d, double dx, double dy)
+        {
+            const int ArgsAreWords = 1, ArgsAreXY = 2, HaveScale = 8, MoreComponents = 32, HaveXYScale = 64, HaveTwoByTwo = 128;
+            int flags;
+            do
+            {
+                flags = U16(glyf, at);
+                var component = (ushort)U16(glyf, at + 2);
+                at += 4;
+                double e, f;
+                if ((flags & ArgsAreWords) != 0)
+                {
+                    e = S16(glyf, at);
+                    f = S16(glyf, at + 2);
+                    at += 4;
+                }
+                else
+                {
+                    e = (sbyte)glyf[at];
+                    f = (sbyte)glyf[at + 1];
+                    at += 2;
+                }
+                if ((flags & ArgsAreXY) == 0)
+                    e = f = 0;
+                double ca = 1, cb = 0, cc = 0, cd = 1;
+                if ((flags & HaveScale) != 0)
+                {
+                    ca = cd = F2Dot14(glyf, at);
+                    at += 2;
+                }
+                else if ((flags & HaveXYScale) != 0)
+                {
+                    ca = F2Dot14(glyf, at);
+                    cd = F2Dot14(glyf, at + 2);
+                    at += 4;
+                }
+                else if ((flags & HaveTwoByTwo) != 0)
+                {
+                    ca = F2Dot14(glyf, at);
+                    cb = F2Dot14(glyf, at + 2);
+                    cc = F2Dot14(glyf, at + 4);
+                    cd = F2Dot14(glyf, at + 6);
+                    at += 8;
+                }
+                TrueTypeOutline(glyf, loca, longOffsets, component, path, depth + 1,
+                    a * ca + c * cb, b * ca + d * cb, a * cc + c * cd, b * cc + d * cd, a * e + c * f + dx, b * e + d * f + dy);
+            }
+            while ((flags & MoreComponents) != 0);
+            return true;
+        }
+
+        private static double F2Dot14(byte[] d, int at) => S16(d, at) / 16384.0;
 
         private static int U16(byte[] d, int at) => d[at] << 8 | d[at + 1];
 
@@ -166,10 +367,23 @@ namespace SharpEquations.Rendering.OpenType
             {
                 if (glyph >= glyphCount)
                     return null;
-                var outline = new Outline(this, localSubrs.Count == 0 ? new List<(int, int)>() : localSubrs[Math.Min(FontIndex(glyph), localSubrs.Count - 1)]);
+                var outline = new Outline(this, Local(glyph), null);
                 outline.Run(charStrings[glyph], 0);
                 return outline.HasPoints ? new GlyphBounds(outline.XMin, outline.YMin, outline.XMax, outline.YMax) : null;
             }
+
+            public bool Trace(ushort glyph, List<MathPathCommand> path)
+            {
+                if (glyph >= glyphCount)
+                    return false;
+                var outline = new Outline(this, Local(glyph), path);
+                outline.Run(charStrings[glyph], 0);
+                outline.Close();
+                return true;
+            }
+
+            private List<(int, int)> Local(ushort glyph) =>
+                localSubrs.Count == 0 ? new List<(int, int)>() : localSubrs[Math.Min(FontIndex(glyph), localSubrs.Count - 1)];
 
             private List<(int Start, int End)> Index(ref int at)
             {
@@ -263,16 +477,35 @@ namespace SharpEquations.Rendering.OpenType
                 private readonly Cff cff;
                 private readonly List<(int Start, int End)> local;
                 private readonly List<double> stack = new List<double>();
+                private readonly List<MathPathCommand>? path;
+                private bool open;
                 private double x;
                 private double y;
                 private int stems;
                 private bool widthDone;
                 private bool done;
 
-                public Outline(Cff cff, List<(int, int)> local)
+                public Outline(Cff cff, List<(int, int)> local, List<MathPathCommand>? path)
                 {
                     this.cff = cff;
                     this.local = local;
+                    this.path = path;
+                }
+
+                /// <summary>Closes the contour being drawn: a moveto and the end of the charstring close it.</summary>
+                public void Close()
+                {
+                    if (open)
+                        path!.Add(new MathPathCommand(MathPathCommandKind.Close, 0, 0, 0, 0, 0, 0));
+                    open = false;
+                }
+
+                private void Start()
+                {
+                    if (path == null || open)
+                        return;
+                    path.Add(new MathPathCommand(MathPathCommandKind.MoveTo, 0, 0, 0, 0, x, y));
+                    open = true;
                 }
 
                 public double XMin { get; private set; } = double.MaxValue;
@@ -520,6 +753,8 @@ namespace SharpEquations.Rendering.OpenType
 
                 private void MoveTo(double nx, double ny)
                 {
+                    if (path != null)
+                        Close();
                     x = nx;
                     y = ny;
                     stack.Clear();
@@ -527,10 +762,12 @@ namespace SharpEquations.Rendering.OpenType
 
                 private void LineTo(double nx, double ny)
                 {
+                    Start();
                     Add(x, y);
                     x = nx;
                     y = ny;
                     Add(x, y);
+                    path?.Add(new MathPathCommand(MathPathCommandKind.LineTo, 0, 0, 0, 0, x, y));
                 }
 
                 private void CurveBy(double dx1, double dy1, double dx2, double dy2, double dx3, double dy3)
@@ -543,6 +780,8 @@ namespace SharpEquations.Rendering.OpenType
                     var y2 = y1 + dy2;
                     var x3 = x2 + dx3;
                     var y3 = y2 + dy3;
+                    Start();
+                    path?.Add(new MathPathCommand(MathPathCommandKind.CubicTo, x1, y1, x2, y2, x3, y3));
                     Add(x0, y0);
                     Add(x3, y3);
                     foreach (var t in Extrema(x0, x1, x2, x3))

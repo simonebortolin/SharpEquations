@@ -64,6 +64,53 @@ namespace SharpEquations.Editing
             return !same;
         }
 
+        /// <summary>
+        /// The buttons of what the bar shows: a completion each, the structures that take the selection (fraction, root,
+        /// scripts, brackets, bar, box, build down), the commands of the table, or the quick symbols given.
+        /// </summary>
+        public IReadOnlyList<MathQuickBarItem> GetItems(IEnumerable<string> symbols)
+        {
+            if (symbols == null)
+                throw new ArgumentNullException(nameof(symbols));
+            var e = Editor;
+            switch (Mode)
+            {
+                case MathQuickBarMode.Completions:
+                    return Completions.Select(command => new MathQuickBarItem(
+                        command.Symbol.Length > 0 ? command.Symbol + "  \\" + command.Name : command.Text, "\\" + command.Name, () => e.Complete(command))).ToList();
+                case MathQuickBarMode.Selection:
+                    return new[]
+                    {
+                        new MathQuickBarItem("a/b", "Fraction of the selection", () => e.InsertStructure("mfrac")),
+                        new MathQuickBarItem("√x", "Root of the selection", () => e.InsertStructure("msqrt")),
+                        new MathQuickBarItem("xⁿ", "Superscript", () => e.InsertStructure("msup")),
+                        new MathQuickBarItem("xₙ", "Subscript", () => e.InsertStructure("msub")),
+                        new MathQuickBarItem("(x)", "Parentheses", () => e.InsertFences()),
+                        new MathQuickBarItem("[x]", "Brackets", () => e.InsertFences("[", "]")),
+                        new MathQuickBarItem("|x|", "Absolute value", () => e.InsertFences("|", "|")),
+                        new MathQuickBarItem("x̄", "Overline", () => e.InsertStructure("menclose", Notation("top"))),
+                        new MathQuickBarItem("▭", "Box", () => e.InsertStructure("menclose", Notation("box"))),
+                        new MathQuickBarItem("Linear", "Build down the selection", () => e.BuildDown()),
+                    };
+                case MathQuickBarMode.Table:
+                    return new[]
+                    {
+                        new MathQuickBarItem("+ row", "Insert a row below", () => e.InsertTableRow()),
+                        new MathQuickBarItem("+ row ↑", "Insert a row above", () => e.InsertTableRow(above: true)),
+                        new MathQuickBarItem("+ col", "Insert a column on the right", () => e.InsertTableColumn()),
+                        new MathQuickBarItem("+ col ←", "Insert a column on the left", () => e.InsertTableColumn(before: true)),
+                        new MathQuickBarItem("− row", "Delete the row", () => e.DeleteTableRow()),
+                        new MathQuickBarItem("− col", "Delete the column", () => e.DeleteTableColumn()),
+                    };
+                case MathQuickBarMode.Symbols:
+                    return symbols.Select(symbol => new MathQuickBarItem(symbol, symbol, () => e.Insert(symbol))).ToList();
+                default:
+                    return Array.Empty<MathQuickBarItem>();
+            }
+        }
+
+        private static KeyValuePair<string, string>[] Notation(string notation) => new[] { new KeyValuePair<string, string>("notation", notation) };
+
         /// <summary>Takes the selected completion; returns false when there is none.</summary>
         public bool AcceptCompletion()
         {
@@ -100,5 +147,27 @@ namespace SharpEquations.Editing
                     return false;
             }
         }
+    }
+
+    /// <summary>A button of the floating bar (<see cref="MathQuickBarState.GetItems"/>).</summary>
+    public sealed class MathQuickBarItem
+    {
+        private readonly Action action;
+
+        internal MathQuickBarItem(string text, string toolTip, Action action)
+        {
+            Text = text;
+            ToolTip = toolTip;
+            this.action = action;
+        }
+
+        /// <summary>The text of the button.</summary>
+        public string Text { get; }
+
+        /// <summary>What it does, for its tooltip.</summary>
+        public string ToolTip { get; }
+
+        /// <summary>Does what the button does, on the editor.</summary>
+        public void Invoke() => action();
     }
 }
