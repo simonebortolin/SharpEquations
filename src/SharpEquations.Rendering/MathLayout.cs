@@ -187,6 +187,40 @@ namespace SharpEquations.Rendering
         /// <summary>The shapes to draw, after the backgrounds and before the glyphs.</summary>
         public IReadOnlyList<MathShape> Shapes { get; }
 
+        /// <summary>Draws the equation on a canvas, its origin at a point: its shapes, then its glyphs.</summary>
+        public void Draw(IMathCanvas canvas, double x, double y)
+        {
+            if (canvas == null)
+                throw new ArgumentNullException(nameof(canvas));
+            foreach (var shape in Shapes)
+            {
+                var (paint, color) = shape.Role switch
+                {
+                    MathShapeRole.Placeholder => (MathPaint.Placeholder, (string?)null),
+                    MathShapeRole.Error => (MathPaint.Error, null),
+                    MathShapeRole.Background => (MathPaint.Background, shape.Color),
+                    _ => (MathPaint.Foreground, shape.Color),
+                };
+                var rect = new MathRect(shape.X + x, shape.Y + y, Math.Max(0, shape.Width), Math.Max(0, shape.Height));
+                switch (shape.Kind)
+                {
+                    case MathShapeKind.Fill:
+                        canvas.FillRectangle(rect, paint, color);
+                        break;
+                    case MathShapeKind.Outline:
+                        canvas.DrawRectangle(rect, shape.Thickness, shape.Role == MathShapeRole.Placeholder, paint, color);
+                        break;
+                    case MathShapeKind.Line:
+                        canvas.DrawLine(shape.X + x, shape.Y + y, shape.X2 + x, shape.Y2 + y, shape.Thickness, paint, color);
+                        break;
+                    case MathShapeKind.Ellipse:
+                        canvas.DrawEllipse(rect, shape.Thickness, paint, color);
+                        break;
+                }
+            }
+            canvas.DrawGlyphs(this, x, y);
+        }
+
         /// <summary>The rectangle of the caret at a position, or null if the position is not laid out.</summary>
         public MathRect? GetCaretRect(MathPosition position)
         {

@@ -25,7 +25,7 @@ namespace SharpEquations.Avalonia
         internal MathQuickBar(MathEditBox owner)
         {
             this.owner = owner;
-            state = new MathQuickBarState(owner.Editor);
+            state = owner.View.QuickBar;
             Child = panel;
             Padding = new Thickness(4);
             CornerRadius = new CornerRadius(6);
@@ -55,19 +55,14 @@ namespace SharpEquations.Avalonia
         /// <summary>Takes the selected completion; returns false when there is none.</summary>
         public bool AcceptCompletion() => state.AcceptCompletion();
 
-        internal bool ProcessKey(MathKey key, MathKeyModifiers modifiers)
+        /// <summary>Makes the buttons of what the bar shows again, if it <paramref name="changed"/>; highlights the chosen completion.</summary>
+        internal void Refresh(bool changed)
         {
-            if (!state.ProcessKey(key, modifiers))
-                return false;
-            Highlight();
-            return true;
-        }
-
-        /// <summary>Reads again what the bar shows, closed unless <paramref name="enabled"/>, and makes its buttons.</summary>
-        internal void Update(bool enabled)
-        {
-            if (!state.Update(enabled) && Mode == MathQuickBarMode.Completions)
+            if (!changed && Mode == MathQuickBarMode.Completions)
+            {
+                Highlight();
                 return;
+            }
             panel.Children.Clear();
             switch (Mode)
             {

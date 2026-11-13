@@ -15,7 +15,7 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | `src/SharpEquations.RegexPolyfill/` | Build time only: the `[GeneratedRegex]` source generator of the netstandard2.0 build |
 | `src/SharpEquations.XsltGenerator/` | Build time only: the source generator that compiles the XSLT stylesheets of `Resources/` to C# |
 | `src/SharpEquations.Editing/` | The equation editor's model, no user interface: `MathNode` tree, caret, selection, undo, build up and build down |
-| `src/SharpEquations.Rendering/` | The layout of MathML Core over the OpenType MATH table, no user interface: `MathLayoutEngine`, `MathLayout` |
+| `src/SharpEquations.Rendering/` | The layout of MathML Core over the OpenType MATH table, no user interface: `MathLayoutEngine`, `MathLayout`; the view of an editor without a toolkit (`MathEditorView`, drawn on an `IMathCanvas`), which the controls adapt |
 | `src/SharpEquations.Avalonia/` | The controls for Avalonia: `MathEditBox` (the editor), `MathView`; embeds Libertinus Math |
 | `samples/SharpEquations.Avalonia.Demo/` | A window with the editor (`DemoView`, shared with the web demo) |
 | `samples/SharpEquations.Avalonia.Browser.Demo/` | The same demo on WebAssembly (needs the `wasm-tools` workload, so not in the solution; `.github/workflows/demo.yml` publishes it to GitHub Pages) |
@@ -106,7 +106,10 @@ net10.0 with no package, as the core).
   are code points.
 - `Rendering`: `Layout/Engine.cs` lays out after MathML Core with the constants of the MATH table; the ink boxes of the
   glyphs come from the outlines of the font (`OpenType/GlyphOutlines.cs`: `glyf`, or the CFF charstrings), never from
-  the rasterizer, and the tables from a copy of the font file (`OpenType/FontFile.cs`).
+  the rasterizer, and the tables from a copy of the font file (`OpenType/FontFile.cs`, `OpenTypeMathFont`).
+  `MathEditorView` is what an editor control does without its toolkit (layout, placement, pointer, caret, floating
+  bar, context menu, clipboard content); a control of a toolkit is an adapter over it: keep there what needs no
+  toolkit.
 - `Avalonia`: `AvaloniaMathFont` reads the font file once with `TryGetStream` and asks Avalonia for its glyph typeface
   only to draw, each time (`MathFonts.Register` registers the embedded font again with a new font manager: a headless
   test session gives each test one, and a glyph typeface of the old one is released); the tests that use the headless

@@ -1,4 +1,4 @@
-namespace SharpEquations.Avalonia
+namespace SharpEquations.Rendering
 {
     using System;
     using System.Text;
