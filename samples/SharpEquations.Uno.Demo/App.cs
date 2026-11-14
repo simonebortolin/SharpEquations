@@ -51,7 +51,8 @@ namespace SharpEquations.Uno.Demo
             panel.Children.Add(view);
             if (System.Environment.GetEnvironmentVariable("SHARPEQUATIONS_DEMO_EQUATION") is { Length: > 0 } initial)
                 editor.Equation = Equation.Parse(initial, EquationFormat.UnicodeMath, new EquationOptions { Display = true });
-            window = new Window { Content = new Grid { Background = new SolidColorBrush(Microsoft.UI.Colors.White), Children = { panel } } };
+            // a white page in the light theme: with the dark theme of the system, WinUI would write the text white on it
+            window = new Window { Content = new Grid { Background = new SolidColorBrush(Microsoft.UI.Colors.White), RequestedTheme = ElementTheme.Light, Children = { panel } } };
             window.Activate();
             editor.Loaded += (_, _) => editor.FocusEditor();
         }
