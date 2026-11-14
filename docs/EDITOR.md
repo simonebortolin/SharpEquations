@@ -284,6 +284,26 @@ every renderer of Uno has, and the build fails on an API Uno does not implement 
   touch screens and the windows of the input methods work as in any text box.
 - **Clipboard**: text, in `CopyTextFormat` (MathML pastes as an equation into Word).
 
+## The controls for WPF (`SharpEquations.Wpf`)
+
+`MathEditBox` (a `Control` without a template) and `MathView` (a `FrameworkElement`) with the API of those of
+Avalonia, for net10.0-windows and net481 (Editing and Rendering are netstandard2.0); the project builds on every system
+(`EnableWindowsTargeting`) and runs on Windows:
+
+- **Drawing**: in `OnRender`, through `MathCanvas` over the `DrawingContext`: the shapes as they are, each glyph as a
+  frozen `StreamGeometry` of its outline, made once for each glyph of a font in the units of its design (TrueType
+  quadratic curves as they are) and scaled where it is drawn. The caret is a child element of its own, so that its
+  blinking draws nothing else again.
+- **Font**: Libertinus Math, embedded and read by `OpenTypeMathFont`, as for Uno, rather than `GlyphTypeface` (which
+  needs a file or a pack URI); any other math font by the bytes or the path of its file (`MathFonts.FromFile`), of a
+  collection the face with the MATH table (Cambria Math of `cambria.ttc`). No fallback fonts.
+- **Input**: `OnTextInput` (the control characters that keys give are left to `OnKeyDown`), `OnKeyDown` with the
+  keys of WPF mapped to `MathKey`; the context menu on a right click, the Menu key and Shift+F10, through
+  `OnContextMenuOpening`, built by `CreateContextMenu` (`MathContextMenuOpening` to change it: `ContextMenuOpening`
+  is the event of WPF); the floating bar in a `Popup`.
+- **Clipboard**: the text in `CopyTextFormat` and the MathML of Word (`MathML`, UTF-8), read back first on a paste.
+- **Accessibility**: `MathEditBoxAutomationPeer`, the value pattern with the equation in UnicodeMath.
+
 ## Plan
 
 | Phase | Content | State |

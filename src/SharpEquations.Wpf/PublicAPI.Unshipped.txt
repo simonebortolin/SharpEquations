@@ -1,0 +1,137 @@
+#nullable enable
+SharpEquations.Wpf.EquationChangedEventArgs
+SharpEquations.Wpf.EquationChangedEventArgs.Equation.get -> SharpEquations.Equation?
+SharpEquations.Wpf.EquationChangedEventArgs.EquationChangedEventArgs(SharpEquations.Equation? equation) -> void
+SharpEquations.Wpf.MathContextMenuEventArgs
+SharpEquations.Wpf.MathContextMenuEventArgs.Cancel.get -> bool
+SharpEquations.Wpf.MathContextMenuEventArgs.Cancel.set -> void
+SharpEquations.Wpf.MathContextMenuEventArgs.MathContextMenuEventArgs(System.Windows.Controls.ContextMenu! menu) -> void
+SharpEquations.Wpf.MathContextMenuEventArgs.Menu.get -> System.Windows.Controls.ContextMenu!
+SharpEquations.Wpf.MathCopyingEventArgs
+SharpEquations.Wpf.MathCopyingEventArgs.Cancel.get -> bool
+SharpEquations.Wpf.MathCopyingEventArgs.Cancel.set -> void
+SharpEquations.Wpf.MathCopyingEventArgs.Data.get -> System.Windows.DataObject!
+SharpEquations.Wpf.MathCopyingEventArgs.Equation.get -> SharpEquations.Equation!
+SharpEquations.Wpf.MathCopyingEventArgs.MathCopyingEventArgs(SharpEquations.Equation! equation, System.Windows.DataObject! data) -> void
+SharpEquations.Wpf.MathEditBox
+SharpEquations.Wpf.MathEditBox.AutoCorrect.get -> SharpEquations.Editing.MathAutoCorrect!
+SharpEquations.Wpf.MathEditBox.AutoCorrect.set -> void
+SharpEquations.Wpf.MathEditBox.BuildDown() -> void
+SharpEquations.Wpf.MathEditBox.BuildUp() -> void
+SharpEquations.Wpf.MathEditBox.CaretBrush.get -> System.Windows.Media.Brush?
+SharpEquations.Wpf.MathEditBox.CaretBrush.set -> void
+SharpEquations.Wpf.MathEditBox.Copy() -> void
+SharpEquations.Wpf.MathEditBox.CopyAs(SharpEquations.EquationFormat format) -> void
+SharpEquations.Wpf.MathEditBox.CopyTextFormat.get -> SharpEquations.EquationFormat?
+SharpEquations.Wpf.MathEditBox.CopyTextFormat.set -> void
+SharpEquations.Wpf.MathEditBox.Copying -> System.EventHandler<SharpEquations.Wpf.MathCopyingEventArgs!>?
+SharpEquations.Wpf.MathEditBox.Cut() -> void
+SharpEquations.Wpf.MathEditBox.Editor.get -> SharpEquations.Editing.MathEditor!
+SharpEquations.Wpf.MathEditBox.Equation.get -> SharpEquations.Equation?
+SharpEquations.Wpf.MathEditBox.Equation.set -> void
+SharpEquations.Wpf.MathEditBox.EquationChanged -> System.EventHandler<SharpEquations.Wpf.EquationChangedEventArgs!>?
+SharpEquations.Wpf.MathEditBox.EquationNumber.get -> string?
+SharpEquations.Wpf.MathEditBox.EquationNumber.set -> void
+SharpEquations.Wpf.MathEditBox.GetMath() -> string!
+SharpEquations.Wpf.MathEditBox.GetSelectedText(SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null) -> string?
+SharpEquations.Wpf.MathEditBox.GetText(SharpEquations.EquationFormat format) -> string!
+SharpEquations.Wpf.MathEditBox.InputFormat.get -> SharpEquations.EquationFormat
+SharpEquations.Wpf.MathEditBox.InputFormat.set -> void
+SharpEquations.Wpf.MathEditBox.IsAutoCorrectEnabled.get -> bool
+SharpEquations.Wpf.MathEditBox.IsAutoCorrectEnabled.set -> void
+SharpEquations.Wpf.MathEditBox.IsContextMenuEnabled.get -> bool
+SharpEquations.Wpf.MathEditBox.IsContextMenuEnabled.set -> void
+SharpEquations.Wpf.MathEditBox.IsDisplay.get -> bool
+SharpEquations.Wpf.MathEditBox.IsDisplay.set -> void
+SharpEquations.Wpf.MathEditBox.IsQuickBarEnabled.get -> bool
+SharpEquations.Wpf.MathEditBox.IsQuickBarEnabled.set -> void
+SharpEquations.Wpf.MathEditBox.IsQuickBarOpen.get -> bool
+SharpEquations.Wpf.MathEditBox.IsReadOnly.get -> bool
+SharpEquations.Wpf.MathEditBox.IsReadOnly.set -> void
+SharpEquations.Wpf.MathEditBox.Layout.get -> SharpEquations.Rendering.MathLayout?
+SharpEquations.Wpf.MathEditBox.MathContextMenuOpening -> System.EventHandler<SharpEquations.Wpf.MathContextMenuEventArgs!>?
+SharpEquations.Wpf.MathEditBox.MathEditBox() -> void
+SharpEquations.Wpf.MathEditBox.MathFont.get -> SharpEquations.Rendering.OpenTypeMathFont?
+SharpEquations.Wpf.MathEditBox.MathFont.set -> void
+SharpEquations.Wpf.MathEditBox.OpenContextMenu.get -> System.Windows.Controls.ContextMenu?
+SharpEquations.Wpf.MathEditBox.Paste() -> void
+SharpEquations.Wpf.MathEditBox.PlaceholderBrush.get -> System.Windows.Media.Brush?
+SharpEquations.Wpf.MathEditBox.PlaceholderBrush.set -> void
+SharpEquations.Wpf.MathEditBox.QuickSymbols.get -> System.Collections.Generic.IList<string!>!
+SharpEquations.Wpf.MathEditBox.SelectionBrush.get -> System.Windows.Media.Brush?
+SharpEquations.Wpf.MathEditBox.SelectionBrush.set -> void
+SharpEquations.Wpf.MathEditBox.SetMath(string! mathML) -> void
+SharpEquations.Wpf.MathEditBox.ShowContextMenu(System.Windows.Point? point = null) -> bool
+SharpEquations.Wpf.MathEditBox.View.get -> SharpEquations.Rendering.MathEditorView!
+SharpEquations.Wpf.MathEditBox.ViewMode.get -> SharpEquations.Wpf.MathViewMode
+SharpEquations.Wpf.MathEditBox.ViewMode.set -> void
+SharpEquations.Wpf.MathEditBoxAutomationPeer
+SharpEquations.Wpf.MathEditBoxAutomationPeer.IsReadOnly.get -> bool
+SharpEquations.Wpf.MathEditBoxAutomationPeer.MathEditBoxAutomationPeer(SharpEquations.Wpf.MathEditBox! owner) -> void
+SharpEquations.Wpf.MathEditBoxAutomationPeer.Owner.get -> SharpEquations.Wpf.MathEditBox!
+SharpEquations.Wpf.MathEditBoxAutomationPeer.SetValue(string! value) -> void
+SharpEquations.Wpf.MathEditBoxAutomationPeer.Value.get -> string!
+SharpEquations.Wpf.MathFonts
+SharpEquations.Wpf.MathView
+SharpEquations.Wpf.MathView.Equation.get -> SharpEquations.Equation?
+SharpEquations.Wpf.MathView.Equation.set -> void
+SharpEquations.Wpf.MathView.FontSize.get -> double
+SharpEquations.Wpf.MathView.FontSize.set -> void
+SharpEquations.Wpf.MathView.Foreground.get -> System.Windows.Media.Brush?
+SharpEquations.Wpf.MathView.Foreground.set -> void
+SharpEquations.Wpf.MathView.IsDisplay.get -> bool
+SharpEquations.Wpf.MathView.IsDisplay.set -> void
+SharpEquations.Wpf.MathView.Layout.get -> SharpEquations.Rendering.MathLayout?
+SharpEquations.Wpf.MathView.MathFont.get -> SharpEquations.Rendering.OpenTypeMathFont?
+SharpEquations.Wpf.MathView.MathFont.set -> void
+SharpEquations.Wpf.MathView.MathML.get -> string?
+SharpEquations.Wpf.MathView.MathML.set -> void
+SharpEquations.Wpf.MathView.MathView() -> void
+SharpEquations.Wpf.MathViewMode
+SharpEquations.Wpf.MathViewMode.Linear = 1 -> SharpEquations.Wpf.MathViewMode
+SharpEquations.Wpf.MathViewMode.Professional = 0 -> SharpEquations.Wpf.MathViewMode
+const SharpEquations.Wpf.MathEditBox.MathMLClipboardFormat = "MathML" -> string!
+override SharpEquations.Wpf.MathEditBox.ArrangeOverride(System.Windows.Size arrangeBounds) -> System.Windows.Size
+override SharpEquations.Wpf.MathEditBox.GetVisualChild(int index) -> System.Windows.Media.Visual!
+override SharpEquations.Wpf.MathEditBox.MeasureOverride(System.Windows.Size constraint) -> System.Windows.Size
+override SharpEquations.Wpf.MathEditBox.OnContextMenuOpening(System.Windows.Controls.ContextMenuEventArgs! e) -> void
+override SharpEquations.Wpf.MathEditBox.OnCreateAutomationPeer() -> System.Windows.Automation.Peers.AutomationPeer!
+override SharpEquations.Wpf.MathEditBox.OnGotKeyboardFocus(System.Windows.Input.KeyboardFocusChangedEventArgs! e) -> void
+override SharpEquations.Wpf.MathEditBox.OnKeyDown(System.Windows.Input.KeyEventArgs! e) -> void
+override SharpEquations.Wpf.MathEditBox.OnLostKeyboardFocus(System.Windows.Input.KeyboardFocusChangedEventArgs! e) -> void
+override SharpEquations.Wpf.MathEditBox.OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs! e) -> void
+override SharpEquations.Wpf.MathEditBox.OnMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs! e) -> void
+override SharpEquations.Wpf.MathEditBox.OnMouseMove(System.Windows.Input.MouseEventArgs! e) -> void
+override SharpEquations.Wpf.MathEditBox.OnPropertyChanged(System.Windows.DependencyPropertyChangedEventArgs e) -> void
+override SharpEquations.Wpf.MathEditBox.OnRender(System.Windows.Media.DrawingContext! drawingContext) -> void
+override SharpEquations.Wpf.MathEditBox.OnTextInput(System.Windows.Input.TextCompositionEventArgs! e) -> void
+override SharpEquations.Wpf.MathEditBox.VisualChildrenCount.get -> int
+override SharpEquations.Wpf.MathEditBoxAutomationPeer.GetAutomationControlTypeCore() -> System.Windows.Automation.Peers.AutomationControlType
+override SharpEquations.Wpf.MathEditBoxAutomationPeer.GetClassNameCore() -> string!
+override SharpEquations.Wpf.MathEditBoxAutomationPeer.GetNameCore() -> string!
+override SharpEquations.Wpf.MathEditBoxAutomationPeer.GetPattern(System.Windows.Automation.Peers.PatternInterface patternInterface) -> object!
+override SharpEquations.Wpf.MathView.MeasureOverride(System.Windows.Size availableSize) -> System.Windows.Size
+override SharpEquations.Wpf.MathView.OnRender(System.Windows.Media.DrawingContext! drawingContext) -> void
+static SharpEquations.Wpf.MathFonts.Default.get -> SharpEquations.Rendering.OpenTypeMathFont!
+static SharpEquations.Wpf.MathFonts.FromFile(byte[]! data) -> SharpEquations.Rendering.OpenTypeMathFont!
+static SharpEquations.Wpf.MathFonts.FromFile(string! path) -> SharpEquations.Rendering.OpenTypeMathFont!
+static SharpEquations.Wpf.MathFonts.LibertinusMath.get -> SharpEquations.Rendering.OpenTypeMathFont!
+static readonly SharpEquations.Wpf.MathEditBox.CaretBrushProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.CopyTextFormatProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.EquationProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.InputFormatProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.IsAutoCorrectEnabledProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.IsContextMenuEnabledProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.IsDisplayProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.IsQuickBarEnabledProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.IsReadOnlyProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.MathFontProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.PlaceholderBrushProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.SelectionBrushProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathEditBox.ViewModeProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathView.EquationProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathView.FontSizeProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathView.ForegroundProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathView.IsDisplayProperty -> System.Windows.DependencyProperty!
+static readonly SharpEquations.Wpf.MathView.MathFontProperty -> System.Windows.DependencyProperty!
+virtual SharpEquations.Wpf.MathEditBox.CreateContextMenu() -> System.Windows.Controls.ContextMenu!
