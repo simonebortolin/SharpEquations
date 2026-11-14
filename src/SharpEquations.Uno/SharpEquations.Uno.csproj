@@ -1,0 +1,51 @@
+<Project Sdk="Uno.Sdk">
+
+  <!-- The equation editor and viewer for Uno Platform (and WinUI): MathEditBox and MathView, built of the elements every
+       renderer of Uno has (shapes, paths, a TextBox for the input), with the glyphs of Libertinus Math (SIL Open Font
+       License, embedded) drawn as paths from their outlines. -->
+  <PropertyGroup>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <OutputType>Library</OutputType>
+    <UnoSingleProject>false</UnoSingleProject>
+    <AssemblyName>SharpEquations.Uno</AssemblyName>
+    <RootNamespace>SharpEquations.Uno</RootNamespace>
+    <PackageId>SharpEquations.Uno</PackageId>
+    <!-- Uno.Sdk packs a library only when told so -->
+    <IsPackable>true</IsPackable>
+    <Description>A real-time equation editor (MathEditBox) and viewer (MathView) for Uno Platform: UnicodeMath or LaTeX typed and built up as in Word, the equation read and written as MathML through SharpEquations.</Description>
+    <PackageTags>equation math mathml editor uno winui unicodemath latex richeditbox</PackageTags>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- a library has no icons nor splash screen to resize -->
+    <DisableUnoResizetizer>true</DisableUnoResizetizer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\SharpEquations.Avalonia\Assets\Fonts\LibertinusMath-Regular.otf" Link="Assets\LibertinusMath-Regular.otf" LogicalName="SharpEquations.Uno.LibertinusMath-Regular.otf" />
+    <None Include="..\SharpEquations.Avalonia\Assets\Fonts\OFL.txt" Pack="true" PackagePath="LibertinusMath-OFL.txt" Link="Assets\OFL.txt" />
+    <InternalsVisibleTo Include="SharpEquations.Uno.Tests" />
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\NOTICE" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <!-- build time only: the public API is listed in PublicAPI.Shipped.txt and PublicAPI.Unshipped.txt -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpEquations.Rendering\SharpEquations.Rendering.csproj" />
+  </ItemGroup>
+
+  <!-- the generator of Uno.Resizetizer, which Uno.Sdk adds to every project, writes the window icon of an app: none in a library -->
+  <Target Name="RemoveResizetizerGenerator" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition=" '%(Filename)' == 'Uno.Resizetizer.Generators' " />
+    </ItemGroup>
+  </Target>
+
+</Project>

@@ -6,6 +6,12 @@ SharpEquations.Rendering.GlyphBounds.XMax.get -> double
 SharpEquations.Rendering.GlyphBounds.XMin.get -> double
 SharpEquations.Rendering.GlyphBounds.YMax.get -> double
 SharpEquations.Rendering.GlyphBounds.YMin.get -> double
+SharpEquations.Rendering.IMathCanvas
+SharpEquations.Rendering.IMathCanvas.DrawEllipse(SharpEquations.Rendering.MathRect rect, double thickness, SharpEquations.Rendering.MathPaint paint, string? color) -> void
+SharpEquations.Rendering.IMathCanvas.DrawGlyphs(SharpEquations.Rendering.MathLayout! layout, double x, double y) -> void
+SharpEquations.Rendering.IMathCanvas.DrawLine(double x1, double y1, double x2, double y2, double thickness, SharpEquations.Rendering.MathPaint paint, string? color) -> void
+SharpEquations.Rendering.IMathCanvas.DrawRectangle(SharpEquations.Rendering.MathRect rect, double thickness, bool dashed, SharpEquations.Rendering.MathPaint paint, string? color) -> void
+SharpEquations.Rendering.IMathCanvas.FillRectangle(SharpEquations.Rendering.MathRect rect, SharpEquations.Rendering.MathPaint paint, string? color) -> void
 SharpEquations.Rendering.IMathFont
 SharpEquations.Rendering.IMathFont.GetAdvance(ushort glyph) -> double
 SharpEquations.Rendering.IMathFont.GetBounds(ushort glyph) -> SharpEquations.Rendering.GlyphBounds
@@ -14,6 +20,63 @@ SharpEquations.Rendering.IMathFont.GetScriptVariant(ushort glyph, int scriptLeve
 SharpEquations.Rendering.IMathFont.Math.get -> SharpEquations.Rendering.OpenType.MathTable?
 SharpEquations.Rendering.IMathFont.TryGetGlyph(int codePoint, out ushort glyph) -> bool
 SharpEquations.Rendering.IMathFont.UnitsPerEm.get -> double
+SharpEquations.Rendering.MathClipboard
+SharpEquations.Rendering.MathEditorView
+SharpEquations.Rendering.MathEditorView.Arrange(double width, double height) -> void
+SharpEquations.Rendering.MathEditorView.BlinkCaret() -> void
+SharpEquations.Rendering.MathEditorView.BorderThickness.get -> double
+SharpEquations.Rendering.MathEditorView.BorderThickness.set -> void
+SharpEquations.Rendering.MathEditorView.Changed -> System.EventHandler<SharpEquations.Rendering.MathEditorViewChangedEventArgs!>?
+SharpEquations.Rendering.MathEditorView.ContentX.get -> double
+SharpEquations.Rendering.MathEditorView.ContentY.get -> double
+SharpEquations.Rendering.MathEditorView.Editor.get -> SharpEquations.Editing.MathEditor!
+SharpEquations.Rendering.MathEditorView.ExecuteCommand(string! command) -> bool
+SharpEquations.Rendering.MathEditorView.Font.get -> SharpEquations.Rendering.IMathFont?
+SharpEquations.Rendering.MathEditorView.Font.set -> void
+SharpEquations.Rendering.MathEditorView.FontSize.get -> double
+SharpEquations.Rendering.MathEditorView.FontSize.set -> void
+SharpEquations.Rendering.MathEditorView.GetCaretRect() -> SharpEquations.Rendering.MathRect?
+SharpEquations.Rendering.MathEditorView.GetContextMenu() -> System.Collections.Generic.IReadOnlyList<SharpEquations.Rendering.MathMenuItem!>!
+SharpEquations.Rendering.MathEditorView.GetCopyAsText(SharpEquations.EquationFormat format) -> string?
+SharpEquations.Rendering.MathEditorView.HitTest(double x, double y) -> SharpEquations.Editing.MathPosition?
+SharpEquations.Rendering.MathEditorView.IsCaretVisible.get -> bool
+SharpEquations.Rendering.MathEditorView.IsFocused.get -> bool
+SharpEquations.Rendering.MathEditorView.IsFocused.set -> void
+SharpEquations.Rendering.MathEditorView.IsInSelection(double x, double y) -> bool
+SharpEquations.Rendering.MathEditorView.IsQuickBarEnabled.get -> bool
+SharpEquations.Rendering.MathEditorView.IsQuickBarEnabled.set -> void
+SharpEquations.Rendering.MathEditorView.IsReadOnly.get -> bool
+SharpEquations.Rendering.MathEditorView.IsReadOnly.set -> void
+SharpEquations.Rendering.MathEditorView.Layout.get -> SharpEquations.Rendering.MathLayout?
+SharpEquations.Rendering.MathEditorView.MathEditorView(SharpEquations.Editing.MathEditor! editor) -> void
+SharpEquations.Rendering.MathEditorView.Measure(double availableWidth) -> SharpEquations.Rendering.MathSize
+SharpEquations.Rendering.MathEditorView.Padding.get -> SharpEquations.Rendering.MathThickness
+SharpEquations.Rendering.MathEditorView.Padding.set -> void
+SharpEquations.Rendering.MathEditorView.PasteMathML(string! mathML) -> bool
+SharpEquations.Rendering.MathEditorView.PasteText(string! text) -> void
+SharpEquations.Rendering.MathEditorView.PointerMoved(double x, double y) -> void
+SharpEquations.Rendering.MathEditorView.PointerPressed(double x, double y, bool extend) -> void
+SharpEquations.Rendering.MathEditorView.PointerReleased() -> bool
+SharpEquations.Rendering.MathEditorView.PrepareContextMenu(double? x, double? y) -> SharpEquations.Rendering.MathRect?
+SharpEquations.Rendering.MathEditorView.ProcessKey(SharpEquations.Editing.MathKey key, SharpEquations.Editing.MathKeyModifiers modifiers) -> bool
+SharpEquations.Rendering.MathEditorView.ProcessQuickBarKey(SharpEquations.Editing.MathKey key, SharpEquations.Editing.MathKeyModifiers modifiers) -> bool
+SharpEquations.Rendering.MathEditorView.QuickBar.get -> SharpEquations.Editing.MathQuickBarState!
+SharpEquations.Rendering.MathEditorView.QuickBarAnchor.get -> SharpEquations.Rendering.MathRect?
+SharpEquations.Rendering.MathEditorView.Render(SharpEquations.Rendering.IMathCanvas! canvas) -> void
+SharpEquations.Rendering.MathEditorView.RenderCaret(SharpEquations.Rendering.IMathCanvas! canvas) -> void
+SharpEquations.Rendering.MathEditorView.Reset() -> void
+SharpEquations.Rendering.MathEditorView.Size.get -> SharpEquations.Rendering.MathSize
+SharpEquations.Rendering.MathEditorView.TryGetCopy(SharpEquations.EquationFormat? textFormat, out SharpEquations.Equation! equation, out string! text, out string! mathML) -> bool
+SharpEquations.Rendering.MathEditorView.UpdateQuickBar() -> bool
+SharpEquations.Rendering.MathEditorViewChangedEventArgs
+SharpEquations.Rendering.MathEditorViewChangedEventArgs.Changes.get -> SharpEquations.Rendering.MathEditorViewChanges
+SharpEquations.Rendering.MathEditorViewChangedEventArgs.MathEditorViewChangedEventArgs(SharpEquations.Rendering.MathEditorViewChanges changes) -> void
+SharpEquations.Rendering.MathEditorViewChanges
+SharpEquations.Rendering.MathEditorViewChanges.Caret = 4 -> SharpEquations.Rendering.MathEditorViewChanges
+SharpEquations.Rendering.MathEditorViewChanges.Measure = 1 -> SharpEquations.Rendering.MathEditorViewChanges
+SharpEquations.Rendering.MathEditorViewChanges.None = 0 -> SharpEquations.Rendering.MathEditorViewChanges
+SharpEquations.Rendering.MathEditorViewChanges.QuickBar = 8 -> SharpEquations.Rendering.MathEditorViewChanges
+SharpEquations.Rendering.MathEditorViewChanges.Render = 2 -> SharpEquations.Rendering.MathEditorViewChanges
 SharpEquations.Rendering.MathGlyph
 SharpEquations.Rendering.MathGlyph.Color.get -> string?
 SharpEquations.Rendering.MathGlyph.Font.get -> SharpEquations.Rendering.IMathFont!
@@ -24,6 +87,7 @@ SharpEquations.Rendering.MathGlyph.X.get -> double
 SharpEquations.Rendering.MathGlyph.Y.get -> double
 SharpEquations.Rendering.MathLayout
 SharpEquations.Rendering.MathLayout.Baseline.get -> double
+SharpEquations.Rendering.MathLayout.Draw(SharpEquations.Rendering.IMathCanvas! canvas, double x, double y) -> void
 SharpEquations.Rendering.MathLayout.GetCaretRect(SharpEquations.Editing.MathPosition! position) -> SharpEquations.Rendering.MathRect?
 SharpEquations.Rendering.MathLayout.GetCaretX(SharpEquations.Editing.MathPosition! position) -> double?
 SharpEquations.Rendering.MathLayout.GetNearestPosition(System.Collections.Generic.IReadOnlyList<int>! rowPath, double x) -> SharpEquations.Editing.MathPosition?
@@ -51,6 +115,35 @@ SharpEquations.Rendering.MathLayoutOptions.LineWidth.set -> void
 SharpEquations.Rendering.MathLayoutOptions.MathLayoutOptions() -> void
 SharpEquations.Rendering.MathLayoutOptions.ShowPlaceholders.get -> bool
 SharpEquations.Rendering.MathLayoutOptions.ShowPlaceholders.set -> void
+SharpEquations.Rendering.MathMenuItem
+SharpEquations.Rendering.MathMenuItem.Command.get -> string?
+SharpEquations.Rendering.MathMenuItem.Header.get -> string?
+SharpEquations.Rendering.MathMenuItem.IsEnabled.get -> bool
+SharpEquations.Rendering.MathMenuItem.IsSeparator.get -> bool
+SharpEquations.Rendering.MathMenuItem.Items.get -> System.Collections.Generic.IReadOnlyList<SharpEquations.Rendering.MathMenuItem!>!
+SharpEquations.Rendering.MathPaint
+SharpEquations.Rendering.MathPaint.Background = 1 -> SharpEquations.Rendering.MathPaint
+SharpEquations.Rendering.MathPaint.Caret = 5 -> SharpEquations.Rendering.MathPaint
+SharpEquations.Rendering.MathPaint.Error = 3 -> SharpEquations.Rendering.MathPaint
+SharpEquations.Rendering.MathPaint.Foreground = 0 -> SharpEquations.Rendering.MathPaint
+SharpEquations.Rendering.MathPaint.Placeholder = 2 -> SharpEquations.Rendering.MathPaint
+SharpEquations.Rendering.MathPaint.Selection = 4 -> SharpEquations.Rendering.MathPaint
+SharpEquations.Rendering.MathPathCommand
+SharpEquations.Rendering.MathPathCommand.Kind.get -> SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommand.MathPathCommand() -> void
+SharpEquations.Rendering.MathPathCommand.MathPathCommand(SharpEquations.Rendering.MathPathCommandKind kind, double x1, double y1, double x2, double y2, double x, double y) -> void
+SharpEquations.Rendering.MathPathCommand.X.get -> double
+SharpEquations.Rendering.MathPathCommand.X1.get -> double
+SharpEquations.Rendering.MathPathCommand.X2.get -> double
+SharpEquations.Rendering.MathPathCommand.Y.get -> double
+SharpEquations.Rendering.MathPathCommand.Y1.get -> double
+SharpEquations.Rendering.MathPathCommand.Y2.get -> double
+SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommandKind.Close = 4 -> SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommandKind.CubicTo = 3 -> SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommandKind.LineTo = 1 -> SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommandKind.MoveTo = 0 -> SharpEquations.Rendering.MathPathCommandKind
+SharpEquations.Rendering.MathPathCommandKind.QuadraticTo = 2 -> SharpEquations.Rendering.MathPathCommandKind
 SharpEquations.Rendering.MathRect
 SharpEquations.Rendering.MathRect.Bottom.get -> double
 SharpEquations.Rendering.MathRect.Height.get -> double
@@ -82,6 +175,19 @@ SharpEquations.Rendering.MathShapeRole.Background = 1 -> SharpEquations.Renderin
 SharpEquations.Rendering.MathShapeRole.Error = 3 -> SharpEquations.Rendering.MathShapeRole
 SharpEquations.Rendering.MathShapeRole.Ink = 0 -> SharpEquations.Rendering.MathShapeRole
 SharpEquations.Rendering.MathShapeRole.Placeholder = 2 -> SharpEquations.Rendering.MathShapeRole
+SharpEquations.Rendering.MathSize
+SharpEquations.Rendering.MathSize.Height.get -> double
+SharpEquations.Rendering.MathSize.MathSize() -> void
+SharpEquations.Rendering.MathSize.MathSize(double width, double height) -> void
+SharpEquations.Rendering.MathSize.Width.get -> double
+SharpEquations.Rendering.MathThickness
+SharpEquations.Rendering.MathThickness.Bottom.get -> double
+SharpEquations.Rendering.MathThickness.Left.get -> double
+SharpEquations.Rendering.MathThickness.MathThickness() -> void
+SharpEquations.Rendering.MathThickness.MathThickness(double left, double top, double right, double bottom) -> void
+SharpEquations.Rendering.MathThickness.MathThickness(double uniform) -> void
+SharpEquations.Rendering.MathThickness.Right.get -> double
+SharpEquations.Rendering.MathThickness.Top.get -> double
 SharpEquations.Rendering.OpenType.FontFile
 SharpEquations.Rendering.OpenType.FontFile.Advance(ushort glyph) -> int
 SharpEquations.Rendering.OpenType.FontFile.Table(string! tag) -> byte[]?
@@ -93,6 +199,7 @@ SharpEquations.Rendering.OpenType.GlyphConstruction.AssemblyItalicCorrection.get
 SharpEquations.Rendering.OpenType.GlyphConstruction.Variants.get -> System.Collections.Generic.IReadOnlyList<(ushort Glyph, int Advance)>!
 SharpEquations.Rendering.OpenType.GlyphOutlines
 SharpEquations.Rendering.OpenType.GlyphOutlines.Bounds(ushort glyph) -> SharpEquations.Rendering.GlyphBounds
+SharpEquations.Rendering.OpenType.GlyphOutlines.Outline(ushort glyph) -> System.Collections.Generic.IReadOnlyList<SharpEquations.Rendering.MathPathCommand>!
 SharpEquations.Rendering.OpenType.GlyphPart
 SharpEquations.Rendering.OpenType.GlyphPart.EndConnector.get -> int
 SharpEquations.Rendering.OpenType.GlyphPart.FullAdvance.get -> int
@@ -167,13 +274,31 @@ SharpEquations.Rendering.OpenType.MathTable.Vertical(ushort glyph) -> SharpEquat
 SharpEquations.Rendering.OpenType.MathTable.this[SharpEquations.Rendering.OpenType.MathConstant constant].get -> int
 SharpEquations.Rendering.OpenType.ScriptStyles
 SharpEquations.Rendering.OpenType.ScriptStyles.Variant(ushort glyph, int level) -> ushort
+SharpEquations.Rendering.OpenTypeMathFont
+SharpEquations.Rendering.OpenTypeMathFont.File.get -> SharpEquations.Rendering.OpenType.FontFile!
+SharpEquations.Rendering.OpenTypeMathFont.GetAdvance(ushort glyph) -> double
+SharpEquations.Rendering.OpenTypeMathFont.GetBounds(ushort glyph) -> SharpEquations.Rendering.GlyphBounds
+SharpEquations.Rendering.OpenTypeMathFont.GetOutline(ushort glyph) -> System.Collections.Generic.IReadOnlyList<SharpEquations.Rendering.MathPathCommand>!
+SharpEquations.Rendering.OpenTypeMathFont.GetScriptVariant(ushort glyph, int scriptLevel) -> ushort
+SharpEquations.Rendering.OpenTypeMathFont.Math.get -> SharpEquations.Rendering.OpenType.MathTable?
+SharpEquations.Rendering.OpenTypeMathFont.OpenTypeMathFont(SharpEquations.Rendering.OpenType.FontFile! file) -> void
+SharpEquations.Rendering.OpenTypeMathFont.OpenTypeMathFont(byte[]! data) -> void
+SharpEquations.Rendering.OpenTypeMathFont.TryGetGlyph(int codePoint, out ushort glyph) -> bool
+SharpEquations.Rendering.OpenTypeMathFont.UnitsPerEm.get -> double
 override SharpEquations.Rendering.MathRect.ToString() -> string!
+static SharpEquations.Rendering.MathClipboard.Decode(byte[]! data) -> string!
+static SharpEquations.Rendering.MathClipboard.Encode(string! mathML) -> byte[]!
+static SharpEquations.Rendering.MathEditorView.CaretBlinkInterval.get -> System.TimeSpan
+static SharpEquations.Rendering.MathEditorView.CopyAsFormat(string! command) -> SharpEquations.EquationFormat?
 static SharpEquations.Rendering.MathLayoutEngine.Layout(SharpEquations.Editing.MathNode! root, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options) -> SharpEquations.Rendering.MathLayout!
 static SharpEquations.Rendering.MathLayoutEngine.Layout(SharpEquations.Editing.MathNode! root, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options, SharpEquations.Rendering.MathLayoutCache? cache) -> SharpEquations.Rendering.MathLayout!
 static SharpEquations.Rendering.MathLayoutEngine.Layout(SharpEquations.Equation! equation, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options) -> SharpEquations.Rendering.MathLayout!
 static SharpEquations.Rendering.MathLayoutEngine.Layout(System.Xml.Linq.XElement! math, SharpEquations.Rendering.IMathFont! font, SharpEquations.Rendering.MathLayoutOptions? options) -> SharpEquations.Rendering.MathLayout!
+static SharpEquations.Rendering.MathMenuItem.Separator.get -> SharpEquations.Rendering.MathMenuItem!
 static SharpEquations.Rendering.OpenType.FontFile.Parse(byte[]! data, int glyphCount = -1) -> SharpEquations.Rendering.OpenType.FontFile!
 static SharpEquations.Rendering.OpenType.GlyphOutlines.Create(System.Func<string!, byte[]?>! table) -> SharpEquations.Rendering.OpenType.GlyphOutlines?
 static SharpEquations.Rendering.OpenType.MathTable.Parse(System.ReadOnlySpan<byte> data) -> SharpEquations.Rendering.OpenType.MathTable!
 static SharpEquations.Rendering.OpenType.MathTable.Parse(byte[]! data) -> SharpEquations.Rendering.OpenType.MathTable!
 static SharpEquations.Rendering.OpenType.ScriptStyles.Parse(byte[]? gsub) -> SharpEquations.Rendering.OpenType.ScriptStyles?
+virtual SharpEquations.Rendering.OpenTypeMathFont.GetFallback(int codePoint) -> SharpEquations.Rendering.IMathFont?
+SharpEquations.Rendering.OpenType.FontFile.GlyphCount.get -> int

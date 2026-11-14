@@ -1,19 +1,11 @@
 #nullable enable
 SharpEquations.Avalonia.AvaloniaMathFont
 SharpEquations.Avalonia.AvaloniaMathFont.AvaloniaMathFont(Avalonia.Media.Typeface typeface) -> void
-SharpEquations.Avalonia.AvaloniaMathFont.GetAdvance(ushort glyph) -> double
-SharpEquations.Avalonia.AvaloniaMathFont.GetBounds(ushort glyph) -> SharpEquations.Rendering.GlyphBounds
-SharpEquations.Avalonia.AvaloniaMathFont.GetFallback(int codePoint) -> SharpEquations.Rendering.IMathFont?
 SharpEquations.Avalonia.AvaloniaMathFont.GetGlyphTypeface() -> Avalonia.Media.GlyphTypeface?
-SharpEquations.Avalonia.AvaloniaMathFont.GetScriptVariant(ushort glyph, int scriptLevel) -> ushort
-SharpEquations.Avalonia.AvaloniaMathFont.Math.get -> SharpEquations.Rendering.OpenType.MathTable?
-SharpEquations.Avalonia.AvaloniaMathFont.TryGetGlyph(int codePoint, out ushort glyph) -> bool
 SharpEquations.Avalonia.AvaloniaMathFont.Typeface.get -> Avalonia.Media.Typeface
-SharpEquations.Avalonia.AvaloniaMathFont.UnitsPerEm.get -> double
 SharpEquations.Avalonia.EquationChangedEventArgs
 SharpEquations.Avalonia.EquationChangedEventArgs.Equation.get -> SharpEquations.Equation?
 SharpEquations.Avalonia.EquationChangedEventArgs.EquationChangedEventArgs(SharpEquations.Equation? equation) -> void
-SharpEquations.Avalonia.MathClipboard
 SharpEquations.Avalonia.MathContextMenuEventArgs
 SharpEquations.Avalonia.MathContextMenuEventArgs.Cancel.get -> bool
 SharpEquations.Avalonia.MathContextMenuEventArgs.Cancel.set -> void
@@ -60,12 +52,12 @@ SharpEquations.Avalonia.MathEditBox.GetSelectedText(SharpEquations.EquationForma
 SharpEquations.Avalonia.MathEditBox.GetText(SharpEquations.EquationFormat format) -> string!
 SharpEquations.Avalonia.MathEditBox.InputFormat.get -> SharpEquations.EquationFormat
 SharpEquations.Avalonia.MathEditBox.InputFormat.set -> void
+SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabled.get -> bool
+SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabled.set -> void
 SharpEquations.Avalonia.MathEditBox.IsContextMenuEnabled.get -> bool
 SharpEquations.Avalonia.MathEditBox.IsContextMenuEnabled.set -> void
 SharpEquations.Avalonia.MathEditBox.IsDisplay.get -> bool
 SharpEquations.Avalonia.MathEditBox.IsDisplay.set -> void
-SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabled.get -> bool
-SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabled.set -> void
 SharpEquations.Avalonia.MathEditBox.IsQuickBarEnabled.get -> bool
 SharpEquations.Avalonia.MathEditBox.IsQuickBarEnabled.set -> void
 SharpEquations.Avalonia.MathEditBox.IsQuickBarOpen.get -> bool
@@ -89,6 +81,7 @@ SharpEquations.Avalonia.MathEditBox.SetMath(string! mathML) -> void
 SharpEquations.Avalonia.MathEditBox.ShowContextMenu(Avalonia.Point? point = null) -> bool
 SharpEquations.Avalonia.MathEditBox.ToggleViewModeGesture.get -> Avalonia.Input.KeyGesture?
 SharpEquations.Avalonia.MathEditBox.ToggleViewModeGesture.set -> void
+SharpEquations.Avalonia.MathEditBox.View.get -> SharpEquations.Rendering.MathEditorView!
 SharpEquations.Avalonia.MathEditBox.ViewMode.get -> SharpEquations.Avalonia.MathViewMode
 SharpEquations.Avalonia.MathEditBox.ViewMode.set -> void
 SharpEquations.Avalonia.MathEditBoxAutomationPeer
@@ -101,15 +94,9 @@ SharpEquations.Avalonia.MathFonts
 SharpEquations.Avalonia.MathQuickBar
 SharpEquations.Avalonia.MathQuickBar.AcceptCompletion() -> bool
 SharpEquations.Avalonia.MathQuickBar.Completions.get -> System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>!
-SharpEquations.Avalonia.MathQuickBar.Mode.get -> SharpEquations.Avalonia.MathQuickBarMode
+SharpEquations.Avalonia.MathQuickBar.Mode.get -> SharpEquations.Editing.MathQuickBarMode
 SharpEquations.Avalonia.MathQuickBar.SelectedIndex.get -> int
 SharpEquations.Avalonia.MathQuickBar.SelectedIndex.set -> void
-SharpEquations.Avalonia.MathQuickBarMode
-SharpEquations.Avalonia.MathQuickBarMode.Completions = 1 -> SharpEquations.Avalonia.MathQuickBarMode
-SharpEquations.Avalonia.MathQuickBarMode.Hidden = 0 -> SharpEquations.Avalonia.MathQuickBarMode
-SharpEquations.Avalonia.MathQuickBarMode.Selection = 2 -> SharpEquations.Avalonia.MathQuickBarMode
-SharpEquations.Avalonia.MathQuickBarMode.Symbols = 4 -> SharpEquations.Avalonia.MathQuickBarMode
-SharpEquations.Avalonia.MathQuickBarMode.Table = 3 -> SharpEquations.Avalonia.MathQuickBarMode
 SharpEquations.Avalonia.MathView
 SharpEquations.Avalonia.MathView.Equation.get -> SharpEquations.Equation?
 SharpEquations.Avalonia.MathView.Equation.set -> void
@@ -128,6 +115,7 @@ SharpEquations.Avalonia.MathView.MathView() -> void
 SharpEquations.Avalonia.MathViewMode
 SharpEquations.Avalonia.MathViewMode.Linear = 1 -> SharpEquations.Avalonia.MathViewMode
 SharpEquations.Avalonia.MathViewMode.Professional = 0 -> SharpEquations.Avalonia.MathViewMode
+override SharpEquations.Avalonia.AvaloniaMathFont.GetFallback(int codePoint) -> SharpEquations.Rendering.IMathFont?
 override SharpEquations.Avalonia.MathEditBox.MeasureOverride(Avalonia.Size availableSize) -> Avalonia.Size
 override SharpEquations.Avalonia.MathEditBox.OnCreateAutomationPeer() -> Avalonia.Automation.Peers.AutomationPeer!
 override SharpEquations.Avalonia.MathEditBox.OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs! e) -> void
@@ -144,8 +132,6 @@ override SharpEquations.Avalonia.MathEditBoxAutomationPeer.GetNameCore() -> stri
 override SharpEquations.Avalonia.MathView.MeasureOverride(Avalonia.Size availableSize) -> Avalonia.Size
 override SharpEquations.Avalonia.MathView.OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs! e) -> void
 override SharpEquations.Avalonia.MathView.Render(Avalonia.Media.DrawingContext! context) -> void
-static SharpEquations.Avalonia.MathClipboard.Decode(byte[]! data) -> string!
-static SharpEquations.Avalonia.MathClipboard.Encode(string! mathML) -> byte[]!
 static SharpEquations.Avalonia.MathEditBox.MathMLClipboardFormat.get -> Avalonia.Input.DataFormat<byte[]!>!
 static SharpEquations.Avalonia.MathFonts.Default.get -> SharpEquations.Avalonia.AvaloniaMathFont!
 static SharpEquations.Avalonia.MathFonts.Get(Avalonia.Media.FontFamily? family) -> SharpEquations.Avalonia.AvaloniaMathFont!
@@ -160,9 +146,9 @@ static readonly SharpEquations.Avalonia.MathEditBox.EquationProperty -> Avalonia
 static readonly SharpEquations.Avalonia.MathEditBox.FontSizeProperty -> Avalonia.StyledProperty<double>!
 static readonly SharpEquations.Avalonia.MathEditBox.ForegroundProperty -> Avalonia.StyledProperty<Avalonia.Media.IBrush?>!
 static readonly SharpEquations.Avalonia.MathEditBox.InputFormatProperty -> Avalonia.StyledProperty<SharpEquations.EquationFormat>!
+static readonly SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabledProperty -> Avalonia.StyledProperty<bool>!
 static readonly SharpEquations.Avalonia.MathEditBox.IsContextMenuEnabledProperty -> Avalonia.StyledProperty<bool>!
 static readonly SharpEquations.Avalonia.MathEditBox.IsDisplayProperty -> Avalonia.StyledProperty<bool>!
-static readonly SharpEquations.Avalonia.MathEditBox.IsAutoCorrectEnabledProperty -> Avalonia.StyledProperty<bool>!
 static readonly SharpEquations.Avalonia.MathEditBox.IsQuickBarEnabledProperty -> Avalonia.StyledProperty<bool>!
 static readonly SharpEquations.Avalonia.MathEditBox.IsReadOnlyProperty -> Avalonia.StyledProperty<bool>!
 static readonly SharpEquations.Avalonia.MathEditBox.MathFontFamilyProperty -> Avalonia.StyledProperty<Avalonia.Media.FontFamily?>!

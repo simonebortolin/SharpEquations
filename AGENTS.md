@@ -15,9 +15,11 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | `src/SharpEquations.RegexPolyfill/` | Build time only: the `[GeneratedRegex]` source generator of the netstandard2.0 build |
 | `src/SharpEquations.XsltGenerator/` | Build time only: the source generator that compiles the XSLT stylesheets of `Resources/` to C# |
 | `src/SharpEquations.Editing/` | The equation editor's model, no user interface: `MathNode` tree, caret, selection, undo, build up and build down |
-| `src/SharpEquations.Rendering/` | The layout of MathML Core over the OpenType MATH table, no user interface: `MathLayoutEngine`, `MathLayout` |
+| `src/SharpEquations.Rendering/` | The layout of MathML Core over the OpenType MATH table, no user interface: `MathLayoutEngine`, `MathLayout`; the view of an editor without a toolkit (`MathEditorView`, drawn on an `IMathCanvas`), which the controls adapt |
 | `src/SharpEquations.Avalonia/` | The controls for Avalonia: `MathEditBox` (the editor), `MathView`; embeds Libertinus Math |
+| `src/SharpEquations.Uno/` | The same controls for Uno Platform (`Uno.Sdk` of `global.json`), of the elements every renderer of Uno has: glyphs as paths from their outlines, shapes, a transparent `TextBox` for the input |
 | `samples/SharpEquations.Avalonia.Demo/` | A window with the editor (`DemoView`, shared with the web demo) |
+| `samples/SharpEquations.Uno.Demo/` | A window with the editor of `SharpEquations.Uno`, on the desktop (Skia) |
 | `samples/SharpEquations.Avalonia.Browser.Demo/` | The same demo on WebAssembly (needs the `wasm-tools` workload, so not in the solution; `.github/workflows/demo.yml` publishes it to GitHub Pages) |
 | `samples/SharpEquations.Avalonia.MathTools.Demo/` | A second app, math tools around the editor: its views (`MathToolsView`, a page each: the scientific keypad, the library of formulas, whose Graph button draws a formula on the graphs page, the unit converter, the solver of triangles, the graphs: `GraphsPage` on a `GraphView`, a slider for each parameter; the graphs in space: `Graphs3DPage` on a `Graph3DView`, OpenGL through Silk.NET where there is a context and the Skia painter elsewhere, in the browser too; the worksheet: `WorksheetPage`) and the desktop window |
 | `samples/SharpEquations.MathTools.Core/` | The math tools without a user interface: `ICasEngine` (`AngouriMathEngine`, through `MathReader`, which reads what the normalized presentation MathML means: in radians or degrees, systems of equations, definitions `a≔5`), the formulas (a `GraphPreset` for those with a graph: the equation drawn and its parameters at their starting values, Greek letters too), the units (NIST factors) and triangles, the equations of the graphs in space (`SurfacePlot`: z=f(x,y) or a curve x,y,z of t, with their parameters), the `Worksheet` (the history of what was computed, kept as JSON in the settings, its definitions made again when it is read back), and the services the views ask the platform for (`ISettingsStore`: a file on the desktop, the local storage in the browser) |
@@ -26,6 +28,7 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | `benchmarks/SharpEquations.Benchmarks/` | BenchmarkDotNet benchmarks of reading, writing and converting the corpora |
 | `tests/SharpEquations.Tests/` | TUnit tests, in folders by subject (PublicApi, MathML, Omml, Mtef, UnicodeMath, LaTeX, Property, Regression) |
 | `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia), and of the views of the math tools |
+| `tests/SharpEquations.Uno.Tests/` | TUnit tests of the controls of `SharpEquations.Uno` in a real Uno app on the desktop (`Program` starts the app, then runs TUnit; the tests work on its thread through `Ui.Run`); it needs a display: `xvfb-run` on Linux |
 | `tests/SharpEquations.MathTools.Tests/` | TUnit tests of `SharpEquations.MathTools.Core` and `.Graphing` (net10.0), with the reference tests of the computer algebra and the units (`tests/data/mathtools/`: cases compared by their value, the ones not reached yet `pending` with the reason; a change makes no passing case fail) |
 | `tests/data/` | Test data and its provenance (`tests/data/README.md`) |
 
@@ -106,11 +109,25 @@ net10.0 with no package, as the core).
   are code points.
 - `Rendering`: `Layout/Engine.cs` lays out after MathML Core with the constants of the MATH table; the ink boxes of the
   glyphs come from the outlines of the font (`OpenType/GlyphOutlines.cs`: `glyf`, or the CFF charstrings), never from
-  the rasterizer, and the tables from a copy of the font file (`OpenType/FontFile.cs`).
+  the rasterizer, and the tables from a copy of the font file (`OpenType/FontFile.cs`, `OpenTypeMathFont`).
+  `MathEditorView` is what an editor control does without its toolkit (layout, placement, pointer, caret, floating
+  bar, context menu, clipboard content); a control of a toolkit is an adapter over it: keep there what needs no
+  toolkit.
 - `Avalonia`: `AvaloniaMathFont` reads the font file once with `TryGetStream` and asks Avalonia for its glyph typeface
   only to draw, each time (`MathFonts.Register` registers the embedded font again with a new font manager: a headless
   test session gives each test one, and a glyph typeface of the old one is released); the tests that use the headless
   session are `[NotInParallel("headless")]`, since showing a window or typing runs the jobs of the dispatcher.
+- `Uno`: `MathEditBox` and `MathView` use only the WinUI API that Uno implements on every platform (the build fails on
+  Uno0001, an API Uno does not implement): the equation is a `Canvas` of shapes and of a `Path` for each glyph, from
+  `OpenTypeMathFont.GetOutline` (the outlines of `GlyphOutlines`, CFF or TrueType); the font is Libertinus Math,
+  embedded as a resource and read with `OpenTypeMathFont` (no font API of a platform); what is typed goes through a
+  transparent `TextBox` at the caret, the keys through its `PreviewKeyDown`. `samples/SharpEquations.Uno.Demo` runs it
+  on the desktop, also under Xvfb (`xdotool` to type). Uno has no headless session: `tests/SharpEquations.Uno.Tests` is
+  an Uno app whose `Main` starts Uno and, once the window is up, runs TUnit on another thread (`TUnit0034` is off for
+  it); the tests type, press keys and click through the internal `Type`, `HandleKey` and `PressAt`, which the handlers
+  of the real events call, and check the shapes drawn and the pixels (`RenderTargetBitmap`). Run them with
+  `xvfb-run -a dotnet run --project tests/SharpEquations.Uno.Tests -f net10.0-desktop` on Linux; without a display the
+  app stops at once ("No platform host could be selected"). The CI runs them on Linux.
 - The core's `EquationCommands` (public) lists the control words of UnicodeMath and the commands of LaTeX with their
   symbols, for the completion of the editor; `PublicApi/EquationCommandsTests` checks that the parsers read them.
 
@@ -120,6 +137,8 @@ net10.0 with no package, as the core).
 dotnet build SharpEquations.slnx
 dotnet test --solution SharpEquations.slnx
 ```
+
+On Linux, the tests of Uno need a display: `xvfb-run -a dotnet test --solution SharpEquations.slnx`.
 
 The tests run on net10.0 against the net10.0 build, and against the netstandard2.0 build on net8.0 (Linux, macOS) or
 net481 (Windows, where the test project targets net10.0 and net481). The 738 examples of
@@ -135,8 +154,8 @@ packages is tracked in their `PublicAPI.*.txt`, as that of the core.
 ## Releases
 
 `.github/workflows/ci.yml`, the same pipeline as SharpMediaInfo and Letra200bSharp: it tests on Linux (net10.0, net8.0),
-Windows (net10.0, net481) and macOS (net10.0), packs the four packages (`SharpEquations` and the editor's `SharpEquations.Editing`, `.Rendering`, `.Avalonia`, with
-one version), publishes a `pr-<N>-…` pre-release for each pull request (deleted on close by
+Windows (net10.0, net481) and macOS (net10.0), packs the five packages (`SharpEquations` and the editor's `SharpEquations.Editing`, `.Rendering`, `.Avalonia`, `.Uno`,
+with one version), publishes a `pr-<N>-…` pre-release for each pull request (deleted on close by
 `prerelease-cleanup.yml`) and, on `main`, tags `v<VersionPrefix>` of `BuildVersion.props`, creates the GitHub release
 and pushes the package to GitHub Packages and nuget.org (Trusted Publishing, repository variable `NUGET_USER`). A change
 that should release bumps `VersionPrefix`; one that should not says `[no-new-version]` in its commit message.

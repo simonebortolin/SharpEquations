@@ -11,6 +11,7 @@ namespace SharpEquations.Avalonia.MathTools
     using global::Avalonia.Threading;
     using SharpEquations;
     using SharpEquations.MathTools;
+    using SharpEquations.Rendering;
 
     /// <summary>
     /// What the calculator computes from the equation of the editor, with a computer algebra system (<see cref="ICasEngine"/>):

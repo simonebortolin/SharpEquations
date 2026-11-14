@@ -2,6 +2,7 @@ namespace SharpEquations.Avalonia.Tests.Controls
 {
     using System.Text;
     using System.Threading.Tasks;
+    using SharpEquations.Rendering;
 
     /// <summary>The bytes of the MathML of the clipboard, as Word and others write them.</summary>
     public class ClipboardTests

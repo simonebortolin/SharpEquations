@@ -49,6 +49,9 @@ namespace SharpEquations.Rendering.OpenType
             }
         }
 
+        /// <summary>The number of glyphs, from the <c>maxp</c> table; 0 without one.</summary>
+        public int GlyphCount => tables.TryGetValue("maxp", out var maxp) ? U16(data, maxp.Offset + 4) : 0;
+
         /// <summary>The units of the design in an em, from the <c>head</c> table; 1000 without one.</summary>
         public int UnitsPerEm => tables.TryGetValue("head", out var head) ? U16(data, head.Offset + 18) : 1000;
 

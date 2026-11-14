@@ -24,6 +24,7 @@ namespace SharpEquations.Editing
         private EquationFormat inputFormat = EquationFormat.UnicodeMath;
         private MathPosition? typingAt;
         private MathPosition? deferredAt;
+        private string? dismissedPrefix;
 
         /// <summary>An editor of the equation, or of an empty equation.</summary>
         public MathEditor(Equation? equation = null)
@@ -483,6 +484,46 @@ namespace SharpEquations.Editing
             OnChanged(true);
         }
 
+        /// <summary>
+        /// What the floating bar at the caret shows: the completions of the command typed before the caret (unless
+        /// <see cref="DismissCompletions"/> closed them), the structures for the selection, the commands of the table of
+        /// the caret, or the quick symbols in an empty slot; nothing in the linear format.
+        /// </summary>
+        /// <param name="maxCompletions">The most completions to give.</param>
+        /// <param name="completions">The completions, in <see cref="MathQuickBarMode.Completions"/>; empty otherwise.</param>
+        public MathQuickBarMode GetQuickBarMode(int maxCompletions, out IReadOnlyList<EquationCommand> completions)
+        {
+            completions = Array.Empty<EquationCommand>();
+            if (IsLinear)
+                return MathQuickBarMode.Hidden;
+
+            var prefix = CommandPrefix;
+            if (prefix != null)
+            {
+                if (prefix.Length > 1 && prefix != dismissedPrefix && GetCompletions(maxCompletions) is { Count: > 0 } found)
+                {
+                    completions = found;
+                    return MathQuickBarMode.Completions;
+                }
+                return MathQuickBarMode.Hidden;
+            }
+
+            if (Selection != null)
+                return MathQuickBarMode.Selection;
+            if (IsInTable)
+                return MathQuickBarMode.Table;
+            return IsInEmptySlot() ? MathQuickBarMode.Symbols : MathQuickBarMode.Hidden;
+        }
+
+        /// <summary>
+        /// Closes the completions of the command typed before the caret (Esc), until the command typed changes:
+        /// <see cref="GetQuickBarMode"/> no longer gives them.
+        /// </summary>
+        public void DismissCompletions() => dismissedPrefix = CommandPrefix;
+
+        private bool IsInEmptySlot() =>
+            Caret.Path.Count > 1 && MathTree.TryGet(Root, Caret.Path, out var node) && node is { IsRow: true, Children.Count: 0 };
+
         /// <summary>Whether the caret is in a cell of a table (a matrix, an equation array): the table commands apply.</summary>
         public bool IsInTable => CellAtCaret() != null;
 
@@ -700,6 +741,55 @@ namespace SharpEquations.Editing
             if (!IsValid(position))
                 throw new ArgumentException("The position is not in the equation.", nameof(position));
             Move(Canonical(position), extend);
+        }
+
+        /// <summary>
+        /// Acts on a key: the arrows, Home and End move the caret (Shift extends the selection; Up and Down to the nearest
+        /// position of the <paramref name="geometry"/>, when given); Backspace and Delete delete; Tab moves to the next
+        /// cell of a table (Shift+Tab to the previous one); Enter builds up the whole equation, Shift+Enter breaks the
+        /// line. Read only, the keys that edit are not used.
+        /// </summary>
+        /// <returns>Whether the key was used.</returns>
+        public bool ProcessKey(MathKey key, MathKeyModifiers modifiers, IMathGeometry? geometry = null, bool readOnly = false)
+        {
+            var shift = (modifiers & MathKeyModifiers.Shift) != 0;
+            switch (key)
+            {
+                case MathKey.Left:
+                    MoveLeft(shift);
+                    return true;
+                case MathKey.Right:
+                    MoveRight(shift);
+                    return true;
+                case MathKey.Up:
+                    MoveUp(shift, geometry);
+                    return true;
+                case MathKey.Down:
+                    MoveDown(shift, geometry);
+                    return true;
+                case MathKey.Home:
+                    MoveHome(shift);
+                    return true;
+                case MathKey.End:
+                    MoveEnd(shift);
+                    return true;
+                case MathKey.Backspace when !readOnly:
+                    Backspace();
+                    return true;
+                case MathKey.Delete when !readOnly:
+                    Delete();
+                    return true;
+                case MathKey.Tab when (modifiers & ~MathKeyModifiers.Shift) == 0 && MoveToNextCell(shift):
+                    return true;
+                case MathKey.Enter when !readOnly && shift:
+                    InsertLineBreak();
+                    return true;
+                case MathKey.Enter when !readOnly:
+                    BuildUpAll();
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /// <summary>Undoes the last edit.</summary>
@@ -1454,6 +1544,8 @@ namespace SharpEquations.Editing
 
         private void OnChanged(bool content)
         {
+            if (dismissedPrefix != null && CommandPrefix != dismissedPrefix)
+                dismissedPrefix = null;
             if (content)
                 ContentChanged?.Invoke(this, EventArgs.Empty);
             Changed?.Invoke(this, EventArgs.Empty);

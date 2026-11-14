@@ -78,7 +78,9 @@ The behaviour is the one of the equations of Word and of `RichEditBox` in math m
 - **Floating bar** (`MathQuickBar`, `IsQuickBarEnabled`): under the equation, at the caret, it offers the completions of
   the command being typed (Up and Down choose, Tab or Enter take, Esc closes), the structures that take the selection
   (fraction, root, scripts, brackets, bar, box, build down), the commands of the table of the caret, and quick symbols
-  (`QuickSymbols`) in an empty slot. Its buttons do not take the focus.
+  (`QuickSymbols`) in an empty slot. Its buttons do not take the focus. What it shows and the completion chosen are
+  `MathQuickBarState` of Editing (`MathEditor.GetQuickBarMode`, `DismissCompletions`), so that a control of another
+  toolkit only places and draws it.
 - **Structures from code**: `InsertStructure("mfrac")`, `InsertFences`, `InsertMatrix(2, 2, "(", ")")`,
   `InsertTemplate(node)`, with the selection in the first slot and the caret in the first empty one, as the buttons of
   the equation tools of Word; Tab and Shift+Tab move through the cells of a table.
@@ -102,17 +104,19 @@ flowchart TB
         M["OpenType: MathTable, GlyphOutlines, FontFile"]
         L["Layout/Engine: MathML Core layout"]
         H["MathLayout: glyphs, shapes, caret geometry, hit testing"]
+        R["MathEditorView: the view without a toolkit; IMathCanvas; OpenTypeMathFont"]
     end
     subgraph Avalonia["SharpEquations.Avalonia (net8.0, net10.0)"]
         E["MathEditBox"]
         V["MathView"]
-        F["AvaloniaMathFont, MathFonts, MathDrawing"]
+        F["AvaloniaMathFont, MathFonts, MathDrawing: the adapter"]
     end
     B --> P
     B --> W
     C --> X
-    E --> C
-    E --> H
+    E --> R
+    R --> C
+    R --> H
     V --> H
     L --> M
     F --> M
@@ -204,6 +208,18 @@ step with the first).
   a keystroke only the nodes the edit replaced are laid out again. `MathEditBox` and `MathView` keep one each;
   `MathEditBox` lays out again only when the tree changed, and draws its caret in a layer of its own, so that a move of
   the caret or its blinking draws nothing else again.
+- **The view of an editor** (`MathEditorView`): all an editor control does that needs no toolkit, so that a control of
+  Avalonia, WPF or Uno is only an adapter. It lays out the equation of its `MathEditor` and gives the size the control
+  wants; places it inside the border and the padding, in the middle of the height; turns the pointer into positions
+  of the caret (press, drag, release); draws the selection, the equation and the caret on an `IMathCanvas` (rectangles,
+  lines and ellipses with a `MathPaint`, and the glyphs of the layout, which the toolkit draws with its own glyph runs);
+  knows when the caret is shown as it blinks (`CaretBlinkInterval`, `BlinkCaret`); places the floating bar
+  (`QuickBarAnchor`, with the `MathQuickBarState` of Editing); makes the context menu (`MathMenuItem`s with a command,
+  and `ExecuteCommand` for those of the editor); reads and writes what the clipboard holds (`TryGetCopy`,
+  `GetCopyAsText`, `PasteMathML`, `PasteText`, and `MathClipboard` for the bytes of MathML). It raises `Changed` with
+  what the control does again: measure, draw, the caret, the floating bar. `OpenTypeMathFont` is a math font read from
+  its file, which a toolkit derives from to draw and to find fallbacks (`AvaloniaMathFont`). The control keeps its
+  properties, the events of its toolkit, the timer of the caret, the popups, the clipboard and the input method.
 
 ## The controls (`SharpEquations.Avalonia`)
 
@@ -235,15 +251,38 @@ public class MathView : Control                             // read-only: Equati
 - **Fonts**: `MathFonts.Default` is Cambria Math on Windows, where it is a font of the system, and Libertinus Math
   (SIL Open Font License, embedded as an Avalonia resource) elsewhere or when Cambria Math is missing; `MathFontFamily`
   takes any family with a MATH table. Characters the font lacks come from a fallback font of the system.
-  `AvaloniaMathFont` reads the font file once (`TryGetStream`) and takes from it the glyphs, advances, ink boxes, MATH
-  and GSUB tables; it asks Avalonia for its glyph typeface only to draw, each time, after registering the embedded font
+  `AvaloniaMathFont` reads the font file once (`TryGetStream`) and takes from it, through `OpenTypeMathFont`, the
+  glyphs, advances, ink boxes, MATH and GSUB tables; it asks Avalonia for its glyph typeface only to draw, each time, after registering the embedded font
   with the current font manager: a glyph typeface held for long can be released with its font manager (a headless
   test session gives each test a new one), and its memory given to another font.
 - **Script variants**: in scripts the glyphs are the `ssty` variants of the GSUB table of the font (`ScriptStyles`), drawn
   for the sizes of scripts and of scripts of scripts.
 - **Text input** comes from `TextInput`, so that IMEs and dead keys work, and a `TextInputMethodClient` gives the IME the
   rectangle of the caret.
+- **Keys**: the control maps the keys of Avalonia to `MathKey` and `MathKeyModifiers` of Editing and gives them to the
+  floating bar first (`MathQuickBarState.ProcessKey`), then to the editor (`MathEditor.ProcessKey`: arrows, Home, End,
+  Backspace, Delete, Tab, Enter); it keeps only what needs the toolkit: the gestures of the platform (copy, paste,
+  undo...), the view mode, Shift+F10 for the context menu.
 - The `Equation` property is set on every change of the content, with the runs built up where they parse.
+
+## The controls for Uno Platform (`SharpEquations.Uno`)
+
+`MathEditBox` and `MathView` with the API of those of Avalonia, as far as WinUI allows (dependency properties;
+`Foreground`, `Background`, `BorderBrush`, `BorderThickness`, `Padding` and `FontSize` of `Control`; a `MenuFlyout`
+for the context menu; a `Popup` for the floating bar). They run wherever Uno runs, since they are built only of what
+every renderer of Uno has, and the build fails on an API Uno does not implement (Uno0001):
+
+- **Drawing**: `MathCanvas` turns the `IMathCanvas` of the view into the children of a `Canvas`: rectangles, lines and
+  ellipses as shapes, each glyph as a `Path` from its outline (`OpenTypeMathFont.GetOutline`: the charstrings of CFF,
+  the contours of `glyf`, the quadratic curves of TrueType drawn as cubics). The canvas of the equation and that of the
+  caret are moved to the origin of the layout, so that a new size of the control only moves them.
+- **Font**: Libertinus Math, embedded as a resource and read by `OpenTypeMathFont`, the same on every platform; any
+  other math font is given as the bytes of its file (`MathFonts.FromFile`). There are no fallback fonts: a character
+  Libertinus Math lacks is not drawn.
+- **Input**: a transparent `TextBox` at the caret takes the focus: what is typed in it (after the composition of an
+  input method) goes to the editor, its `PreviewKeyDown` gives the keys to the view (`MathKey`), so that the keyboards of
+  touch screens and the windows of the input methods work as in any text box.
+- **Clipboard**: text, in `CopyTextFormat` (MathML pastes as an equation into Word).
 
 ## Plan
 

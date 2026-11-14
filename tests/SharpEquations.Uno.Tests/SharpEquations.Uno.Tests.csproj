@@ -1,0 +1,33 @@
+<Project Sdk="Uno.Sdk">
+
+  <!-- The tests of the controls of SharpEquations.Uno, in a real Uno app on the desktop (Skia): Uno has no headless
+       session, so Program starts the app, and once its window is up runs TUnit, whose tests do their work on the
+       thread of the user interface (Ui). On Linux it needs a display: xvfb-run. -->
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-desktop</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <UnoSingleProject>true</UnoSingleProject>
+    <UnoFeatures>SkiaRenderer</UnoFeatures>
+    <RootNamespace>SharpEquations.Uno.Tests</RootNamespace>
+    <ApplicationTitle>SharpEquations.Uno.Tests</ApplicationTitle>
+    <ApplicationId>com.github.simonebortolin.sharpequations.uno.tests</ApplicationId>
+    <ApplicationDisplayVersion>$(VersionPrefix)</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <StartupObject>SharpEquations.Uno.Tests.Program</StartupObject>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <!-- the app head of Uno writes no assembly version -->
+    <NoWarn>$(NoWarn);CA1016</NoWarn>
+    <!-- Main is ours: the app of Uno has the main thread, and runs the generated entry point of the tests -->
+    <NoWarn>$(NoWarn);TUnit0034</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TUnit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpEquations.Uno\SharpEquations.Uno.csproj" />
+  </ItemGroup>
+
+</Project>

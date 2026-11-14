@@ -11,25 +11,6 @@ namespace SharpEquations.Avalonia
     using global::Avalonia.Styling;
     using SharpEquations.Editing;
 
-    /// <summary>What <see cref="MathQuickBar"/> shows.</summary>
-    public enum MathQuickBarMode
-    {
-        /// <summary>Nothing: the bar is closed.</summary>
-        Hidden,
-
-        /// <summary>The commands that complete the one typed before the caret (<c>\al</c>: <c>\alpha</c>, <c>\aleph</c>...).</summary>
-        Completions,
-
-        /// <summary>The structures that take the selection (a fraction of it, its root, brackets around it...).</summary>
-        Selection,
-
-        /// <summary>The commands of the table of the caret: rows and columns.</summary>
-        Table,
-
-        /// <summary>The quick symbols, in an empty slot.</summary>
-        Symbols,
-    }
-
     /// <summary>
     /// The floating bar of <see cref="MathEditBox"/>, at the caret: the completions of a command being typed (Up and
     /// Down choose, Tab or Enter take, Esc closes), the structures for the selection, the commands of a table, and quick
@@ -39,12 +20,12 @@ namespace SharpEquations.Avalonia
     {
         private readonly MathEditBox owner;
         private readonly WrapPanel panel = new WrapPanel { Orientation = Orientation.Horizontal, ItemSpacing = 2, LineSpacing = 2, MaxWidth = 420 };
-        private IReadOnlyList<EquationCommand> completions = Array.Empty<EquationCommand>();
-        private int selectedIndex;
+        private readonly MathQuickBarState state;
 
         internal MathQuickBar(MathEditBox owner)
         {
             this.owner = owner;
+            state = owner.View.QuickBar;
             Child = panel;
             Padding = new Thickness(4);
             CornerRadius = new CornerRadius(6);
@@ -55,84 +36,47 @@ namespace SharpEquations.Avalonia
         }
 
         /// <summary>What the bar shows.</summary>
-        public MathQuickBarMode Mode { get; private set; }
+        public MathQuickBarMode Mode => state.Mode;
 
         /// <summary>The completions shown, in <see cref="MathQuickBarMode.Completions"/>.</summary>
-        public IReadOnlyList<EquationCommand> Completions => completions;
+        public IReadOnlyList<EquationCommand> Completions => state.Completions;
 
         /// <summary>The completion that Tab or Enter takes.</summary>
         public int SelectedIndex
         {
-            get => selectedIndex;
+            get => state.SelectedIndex;
             set
             {
-                if (completions.Count == 0)
-                    return;
-                selectedIndex = (value % completions.Count + completions.Count) % completions.Count;
+                state.SelectedIndex = value;
                 Highlight();
             }
         }
 
         /// <summary>Takes the selected completion; returns false when there is none.</summary>
-        public bool AcceptCompletion()
-        {
-            if (Mode != MathQuickBarMode.Completions || completions.Count == 0)
-                return false;
-            owner.Editor.Complete(completions[selectedIndex]);
-            return true;
-        }
+        public bool AcceptCompletion() => state.AcceptCompletion();
 
-        internal void Show(MathQuickBarMode mode, IReadOnlyList<EquationCommand> commands)
+        /// <summary>Makes the buttons of what the bar shows again, if it <paramref name="changed"/>; highlights the chosen completion.</summary>
+        internal void Refresh(bool changed)
         {
-            if (mode == Mode && mode == MathQuickBarMode.Completions && commands.Select(c => c.Name).SequenceEqual(completions.Select(c => c.Name)))
-                return;
-            Mode = mode;
-            completions = commands;
-            selectedIndex = 0;
-            panel.Children.Clear();
-            switch (mode)
+            if (!changed && Mode == MathQuickBarMode.Completions)
             {
-                case MathQuickBarMode.Completions:
-                    for (var i = 0; i < commands.Count; i++)
-                    {
-                        var command = commands[i];
-                        var button = Button(command.Symbol.Length > 0 ? command.Symbol + "  \\" + command.Name : command.Text, "\\" + command.Name, () => owner.Editor.Complete(command));
-                        button.HorizontalContentAlignment = HorizontalAlignment.Left;
-                        button.MinWidth = 130;
-                        panel.Children.Add(button);
-                    }
-                    Highlight();
-                    break;
-                case MathQuickBarMode.Selection:
-                    var e = owner.Editor;
-                    panel.Children.Add(Button("a/b", "Fraction of the selection", () => e.InsertStructure("mfrac")));
-                    panel.Children.Add(Button("√x", "Root of the selection", () => e.InsertStructure("msqrt")));
-                    panel.Children.Add(Button("xⁿ", "Superscript", () => e.InsertStructure("msup")));
-                    panel.Children.Add(Button("xₙ", "Subscript", () => e.InsertStructure("msub")));
-                    panel.Children.Add(Button("(x)", "Parentheses", () => e.InsertFences()));
-                    panel.Children.Add(Button("[x]", "Brackets", () => e.InsertFences("[", "]")));
-                    panel.Children.Add(Button("|x|", "Absolute value", () => e.InsertFences("|", "|")));
-                    panel.Children.Add(Button("x̄", "Overline", () => e.InsertStructure("menclose", Notation("top"))));
-                    panel.Children.Add(Button("▭", "Box", () => e.InsertStructure("menclose", Notation("box"))));
-                    panel.Children.Add(Button("Linear", "Build down the selection", () => e.BuildDown()));
-                    break;
-                case MathQuickBarMode.Table:
-                    var t = owner.Editor;
-                    panel.Children.Add(Button("+ row", "Insert a row below", () => t.InsertTableRow()));
-                    panel.Children.Add(Button("+ row ↑", "Insert a row above", () => t.InsertTableRow(above: true)));
-                    panel.Children.Add(Button("+ col", "Insert a column on the right", () => t.InsertTableColumn()));
-                    panel.Children.Add(Button("+ col ←", "Insert a column on the left", () => t.InsertTableColumn(before: true)));
-                    panel.Children.Add(Button("− row", "Delete the row", () => t.DeleteTableRow()));
-                    panel.Children.Add(Button("− col", "Delete the column", () => t.DeleteTableColumn()));
-                    break;
-                case MathQuickBarMode.Symbols:
-                    foreach (var symbol in owner.QuickSymbols)
-                        panel.Children.Add(Button(symbol, symbol, () => owner.Editor.Insert(symbol), 30));
-                    break;
+                Highlight();
+                return;
             }
+            panel.Children.Clear();
+            var completions = Mode == MathQuickBarMode.Completions;
+            foreach (var item in state.GetItems(owner.QuickSymbols))
+            {
+                var button = Button(item.Text, item.ToolTip, item.Invoke, Mode == MathQuickBarMode.Symbols ? 30 : 40);
+                if (completions)
+                {
+                    button.HorizontalContentAlignment = HorizontalAlignment.Left;
+                    button.MinWidth = 130;
+                }
+                panel.Children.Add(button);
+            }
+            Highlight();
         }
-
-        private static KeyValuePair<string, string>[] Notation(string notation) => new[] { new KeyValuePair<string, string>("notation", notation) };
 
         private static Button Button(string content, string tip, Action action, double minWidth = 40)
         {
@@ -200,7 +144,7 @@ namespace SharpEquations.Avalonia
             for (var i = 0; i < panel.Children.Count; i++)
             {
                 if (panel.Children[i] is Button button)
-                    button.Background = i == selectedIndex && Mode == MathQuickBarMode.Completions ? highlight : Brushes.Transparent;
+                    button.Background = i == state.SelectedIndex && Mode == MathQuickBarMode.Completions ? highlight : Brushes.Transparent;
             }
         }
     }

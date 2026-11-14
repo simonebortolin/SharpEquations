@@ -110,15 +110,9 @@ namespace SharpEquations.Avalonia
 
         private readonly DispatcherTimer blink;
         private readonly Popup popup;
-        private string? dismissedPrefix;
         private readonly InputClient inputClient;
-        private readonly MathLayoutCache layoutCache = new MathLayoutCache();
         private readonly CaretLayer caretLayer;
         private MathDrawing? drawing;
-        private (MathNode Root, IMathFont Font, double FontSize, double? LineWidth)? laidOut;
-        private MathSelection? drawnSelection;
-        private bool caretVisible = true;
-        private bool selecting;
         private bool updatingEquation;
         private MathAutoCorrect autoCorrect;
 
@@ -134,8 +128,9 @@ namespace SharpEquations.Avalonia
         public MathEditBox()
         {
             Editor = new MathEditor { IsDisplay = true };
-            Editor.Changed += OnEditorChanged;
             Editor.ContentChanged += OnEditorContentChanged;
+            View = new MathEditorView(Editor);
+            View.Changed += OnViewChanged;
             autoCorrect = Editor.AutoCorrect ?? new MathAutoCorrect();
             inputClient = new InputClient(this);
             TextInputMethodClientRequested += (_, e) => e.Client = inputClient;
@@ -153,10 +148,10 @@ namespace SharpEquations.Avalonia
             caretLayer = new CaretLayer(this);
             VisualChildren.Add(caretLayer);
             AddHandler(ContextRequestedEvent, OnContextRequested);
-            blink = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(530) };
+            blink = new DispatcherTimer { Interval = MathEditorView.CaretBlinkInterval };
             blink.Tick += (_, _) =>
             {
-                caretVisible = !caretVisible;
+                View.BlinkCaret();
                 caretLayer.InvalidateVisual();
             };
         }
@@ -172,6 +167,12 @@ namespace SharpEquations.Avalonia
 
         /// <summary>The editing model: the tree of the equation, the caret and the selection, and the commands.</summary>
         public MathEditor Editor { get; }
+
+        /// <summary>
+        /// The view of the editor without a toolkit, which the control is built on: the layout and where it is drawn, the
+        /// pointer, the floating bar, the context menu and the clipboard.
+        /// </summary>
+        public MathEditorView View { get; }
 
         /// <summary>The equation edited, with what is not built up yet built up where it parses; null when empty.</summary>
         public Equation? Equation
@@ -309,24 +310,7 @@ namespace SharpEquations.Avalonia
         }
 
         /// <summary>The layout of the equation, after a measure.</summary>
-        public MathLayout? Layout => drawing?.Layout;
-
-        /// <summary>Where the layout is drawn: inside the border and the padding, in the middle of the height.</summary>
-        private Point ContentOrigin()
-        {
-            var origin = Origin;
-            var height = drawing?.Layout.Height ?? 0;
-            return new Point(origin.X, origin.Y + Math.Max(0, (Bounds.Height - Padding.Top - Padding.Bottom - BorderThickness * 2 - height) / 2));
-        }
-
-        private Point Origin
-        {
-            get
-            {
-                var b = BorderThickness;
-                return new Point(Padding.Left + b, Padding.Top + b);
-            }
-        }
+        public MathLayout? Layout => View.Layout;
 
         /// <summary>The MathML of the equation, as <c>RichEditTextDocument.GetMath</c>.</summary>
         public string GetMath() => Editor.ToMathML().ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
@@ -385,12 +369,11 @@ namespace SharpEquations.Avalonia
         /// </summary>
         public async Task CopyAsync()
         {
-            if (TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard || Editor.GetSelectedEquation() is not { } equation)
+            if (TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard || !View.TryGetCopy(CopyTextFormat, out var equation, out var text, out var mathML))
                 return;
             var item = new DataTransferItem();
-            var format = CopyTextFormat ?? Editor.InputFormat;
-            item.SetText(format is EquationFormat.UnicodeMath or EquationFormat.LaTeX ? Editor.GetSelectedText(format)! : equation.ToString(format));
-            item.Set(MathMLClipboardFormat, MathClipboard.Encode(equation.ToString(EquationFormat.MathML)));
+            item.SetText(text);
+            item.Set(MathMLClipboardFormat, MathClipboard.Encode(mathML));
             var args = new MathCopyingEventArgs(equation, item);
             Copying?.Invoke(this, args);
             if (args.Cancel)
@@ -416,17 +399,12 @@ namespace SharpEquations.Avalonia
                 return;
             var formats = await clipboard.GetDataFormatsAsync().ConfigureAwait(true);
             if (formats.Contains(MathMLClipboardFormat) && await clipboard.TryGetValueAsync(MathMLClipboardFormat).ConfigureAwait(true) is { Length: > 0 } bytes
-                && Editor.Paste(MathClipboard.Decode(bytes), EquationFormat.MathML))
+                && View.PasteMathML(MathClipboard.Decode(bytes)))
             {
                 return;
             }
-            var text = await clipboard.TryGetTextAsync().ConfigureAwait(true);
-            if (string.IsNullOrEmpty(text))
-                return;
-            if (text!.TrimStart() is { Length: > 0 } trimmed && trimmed[0] == '<' && Equation.TryParse(text, EquationFormat.MathML, out _))
-                Editor.Paste(text, EquationFormat.MathML);
-            else
-                Editor.Paste(text, Editor.InputFormat);
+            if (await clipboard.TryGetTextAsync().ConfigureAwait(true) is { Length: > 0 } text)
+                View.PasteText(text);
         }
 
         /// <summary>
@@ -461,9 +439,9 @@ namespace SharpEquations.Avalonia
             }
             else if (change.Property == IsFocusedProperty)
             {
+                View.IsFocused = IsFocused;
                 if (IsFocused)
                 {
-                    caretVisible = true;
                     blink.Start();
                 }
                 else
@@ -473,13 +451,23 @@ namespace SharpEquations.Avalonia
                 caretLayer.InvalidateVisual();
                 UpdateQuickBar();
             }
-            else if (change.Property == CaretBrushProperty || change.Property == ForegroundProperty || change.Property == IsReadOnlyProperty)
+            else if (change.Property == IsReadOnlyProperty)
+            {
+                View.IsReadOnly = IsReadOnly;
+                caretLayer.InvalidateVisual();
+            }
+            else if (change.Property == CaretBrushProperty || change.Property == ForegroundProperty)
             {
                 caretLayer.InvalidateVisual();
             }
             else if (change.Property == IsQuickBarEnabledProperty)
             {
+                View.IsQuickBarEnabled = IsQuickBarEnabled;
                 UpdateQuickBar();
+            }
+            else if (change.Property == BoundsProperty)
+            {
+                View.Arrange(Bounds.Width, Bounds.Height);
             }
             else if (change.Property == IsAutoCorrectEnabledProperty)
             {
@@ -491,24 +479,19 @@ namespace SharpEquations.Avalonia
         protected override Size MeasureOverride(Size availableSize)
         {
             caretLayer.Measure(availableSize);
-            var line = availableSize.Width - Padding.Left - Padding.Right - BorderThickness * 2;
-            var lineWidth = double.IsInfinity(line) ? (double?)null : line;
-            var font = MathFonts.Get(MathFontFamily);
-            var key = (Editor.Root, (IMathFont)font, FontSize, lineWidth);
-            if (drawing == null || laidOut != key)
+            View.Font = MathFonts.Get(MathFontFamily);
+            View.FontSize = FontSize;
+            View.Padding = new MathThickness(Padding.Left, Padding.Top, Padding.Right, Padding.Bottom);
+            View.BorderThickness = BorderThickness;
+            var size = View.Measure(availableSize.Width);
+            if (!ReferenceEquals(drawing?.Layout, View.Layout))
             {
                 drawing?.Dispose();
-                var options = new MathLayoutOptions { FontSize = FontSize, ShowPlaceholders = true, LineWidth = lineWidth };
-                drawing = new MathDrawing(MathLayoutEngine.Layout(Editor.Root, font, options, layoutCache));
-                laidOut = key;
+                drawing = View.Layout is { } layout ? new MathDrawing(layout) : null;
                 InvalidateVisual();
                 caretLayer.InvalidateVisual();
             }
-            var layout = drawing.Layout;
-            var b = BorderThickness * 2;
-            var width = Math.Max(layout.Width, FontSize * 0.6);
-            var height = Math.Max(layout.Height, FontSize * 1.2);
-            return new Size(width + Padding.Left + Padding.Right + b, height + Padding.Top + Padding.Bottom + b);
+            return new Size(size.Width, size.Height);
         }
 
         /// <inheritdoc/>
@@ -519,29 +502,14 @@ namespace SharpEquations.Avalonia
             context.DrawRectangle(Background, BorderBrush != null && BorderThickness > 0 ? new Pen(BorderBrush, BorderThickness) : null, bounds.Deflate(half));
             if (drawing == null)
                 return;
-
-            var origin = ContentOrigin();
-            var layout = drawing.Layout;
-
-            drawnSelection = Editor.Selection;
-            if (Editor.Selection is { } selection && SelectionBrush != null)
-            {
-                foreach (var rect in layout.GetSelectionRects(selection))
-                    context.FillRectangle(SelectionBrush, new Rect(rect.X + origin.X, rect.Y + origin.Y, rect.Width, rect.Height));
-            }
-
-            drawing.Draw(context, origin, new MathBrushes(Foreground, PlaceholderBrush, MathDrawing.ErrorBrush(ActualThemeVariant)));
+            View.Render(new MathCanvas(context, new MathBrushes(Foreground, PlaceholderBrush, MathDrawing.ErrorBrush(ActualThemeVariant), SelectionBrush), drawing));
         }
 
         /// <summary>Draws the caret, over the equation: a layer of its own, so that its blinking draws nothing else again.</summary>
         private void RenderCaret(DrawingContext context)
         {
-            if (drawing != null && IsFocused && caretVisible && !IsReadOnly && drawing.Layout.GetCaretRect(Editor.Caret) is { } caret)
-            {
-                var origin = ContentOrigin();
-                var brush = CaretBrush ?? Foreground ?? Brushes.Black;
-                context.FillRectangle(brush, new Rect(caret.X + origin.X - 0.5, caret.Y + origin.Y, 1.2, caret.Height));
-            }
+            if (drawing != null)
+                View.RenderCaret(new MathCanvas(context, new MathBrushes(Foreground, null, null, caret: CaretBrush ?? Foreground ?? Brushes.Black), drawing));
         }
 
         /// <inheritdoc/>
@@ -554,8 +522,7 @@ namespace SharpEquations.Avalonia
             blink.Stop();
             drawing?.Dispose();
             drawing = null;
-            laidOut = null;
-            layoutCache.Clear();
+            View.Reset();
         }
 
         /// <inheritdoc/>
@@ -575,8 +542,6 @@ namespace SharpEquations.Avalonia
             if (e.Handled)
                 return;
 
-            var shift = (e.KeyModifiers & KeyModifiers.Shift) != 0;
-
             // Shift+F10 opens the context menu, as the Menu key does (which Avalonia turns into ContextRequested)
             if (e.Key == Key.F10 && e.KeyModifiers == KeyModifiers.Shift)
             {
@@ -584,29 +549,13 @@ namespace SharpEquations.Avalonia
                 return;
             }
 
-            if (popup.IsOpen && QuickBar.Mode == MathQuickBarMode.Completions && e.KeyModifiers == KeyModifiers.None)
+            var mathKey = ToMathKey(e.Key);
+            var modifiers = ToMathKeyModifiers(e.KeyModifiers);
+            if (popup.IsOpen && mathKey is { } quickBarKey && View.ProcessQuickBarKey(quickBarKey, modifiers))
             {
-                switch (e.Key)
-                {
-                    case Key.Down:
-                        QuickBar.SelectedIndex++;
-                        e.Handled = true;
-                        return;
-                    case Key.Up:
-                        QuickBar.SelectedIndex--;
-                        e.Handled = true;
-                        return;
-                    case Key.Tab or Key.Enter:
-                        e.Handled = QuickBar.AcceptCompletion();
-                        if (e.Handled)
-                            return;
-                        break;
-                    case Key.Escape:
-                        dismissedPrefix = Editor.CommandPrefix;
-                        UpdateQuickBar();
-                        e.Handled = true;
-                        return;
-                }
+                UpdateQuickBar();
+                e.Handled = true;
+                return;
             }
 
             var hotkeys = Application.Current?.PlatformSettings?.HotkeyConfiguration;
@@ -629,47 +578,30 @@ namespace SharpEquations.Avalonia
             else if (Matches(hotkeys?.SelectAll, Key.A))
                 Editor.SelectAll();
             else
-            {
-                switch (e.Key)
-                {
-                    case Key.Left:
-                        Editor.MoveLeft(shift);
-                        break;
-                    case Key.Right:
-                        Editor.MoveRight(shift);
-                        break;
-                    case Key.Up:
-                        Editor.MoveUp(shift, Layout);
-                        break;
-                    case Key.Down:
-                        Editor.MoveDown(shift, Layout);
-                        break;
-                    case Key.Home:
-                        Editor.MoveHome(shift);
-                        break;
-                    case Key.End:
-                        Editor.MoveEnd(shift);
-                        break;
-                    case Key.Back when !IsReadOnly:
-                        Editor.Backspace();
-                        break;
-                    case Key.Delete when !IsReadOnly:
-                        Editor.Delete();
-                        break;
-                    case Key.Tab when (e.KeyModifiers & ~KeyModifiers.Shift) == 0 && Editor.MoveToNextCell(shift):
-                        break;
-                    case Key.Enter when !IsReadOnly && shift:
-                        Editor.InsertLineBreak();
-                        break;
-                    case Key.Enter when !IsReadOnly:
-                        Editor.BuildUpAll();
-                        break;
-                    default:
-                        e.Handled = false;
-                        break;
-                }
-            }
+                e.Handled = mathKey is { } editorKey && Editor.ProcessKey(editorKey, modifiers, Layout, IsReadOnly);
         }
+
+        private static MathKey? ToMathKey(Key key) => key switch
+        {
+            Key.Left => MathKey.Left,
+            Key.Right => MathKey.Right,
+            Key.Up => MathKey.Up,
+            Key.Down => MathKey.Down,
+            Key.Home => MathKey.Home,
+            Key.End => MathKey.End,
+            Key.Back => MathKey.Backspace,
+            Key.Delete => MathKey.Delete,
+            Key.Tab => MathKey.Tab,
+            Key.Enter => MathKey.Enter,
+            Key.Escape => MathKey.Escape,
+            _ => null,
+        };
+
+        private static MathKeyModifiers ToMathKeyModifiers(KeyModifiers modifiers) =>
+            ((modifiers & KeyModifiers.Shift) != 0 ? MathKeyModifiers.Shift : MathKeyModifiers.None)
+            | ((modifiers & KeyModifiers.Control) != 0 ? MathKeyModifiers.Control : MathKeyModifiers.None)
+            | ((modifiers & KeyModifiers.Alt) != 0 ? MathKeyModifiers.Alt : MathKeyModifiers.None)
+            | ((modifiers & KeyModifiers.Meta) != 0 ? MathKeyModifiers.Meta : MathKeyModifiers.None);
 
         /// <inheritdoc/>
         protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -678,9 +610,8 @@ namespace SharpEquations.Avalonia
             if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
                 return;
             Focus();
-            if (HitTest(e.GetPosition(this)) is { } position)
-                Editor.SetCaret(position, (e.KeyModifiers & KeyModifiers.Shift) != 0);
-            selecting = true;
+            var point = e.GetPosition(this);
+            View.PointerPressed(point.X, point.Y, (e.KeyModifiers & KeyModifiers.Shift) != 0);
             e.Pointer.Capture(this);
             e.Handled = true;
         }
@@ -689,105 +620,44 @@ namespace SharpEquations.Avalonia
         protected override void OnPointerMoved(PointerEventArgs e)
         {
             base.OnPointerMoved(e);
-            if (selecting && HitTest(e.GetPosition(this)) is { } position)
-                Editor.SetCaret(position, true);
+            var point = e.GetPosition(this);
+            View.PointerMoved(point.X, point.Y);
         }
 
         /// <inheritdoc/>
         protected override void OnPointerReleased(PointerReleasedEventArgs e)
         {
             base.OnPointerReleased(e);
-            if (selecting)
-            {
-                selecting = false;
+            if (View.PointerReleased())
                 e.Pointer.Capture(null);
-            }
         }
 
-        private MathPosition? HitTest(Point point)
+        private void OnViewChanged(object? sender, MathEditorViewChangedEventArgs e)
         {
-            if (drawing == null)
-                return null;
-            var origin = ContentOrigin();
-            return drawing.Layout.HitTest(point.X - origin.X, point.Y - origin.Y);
-        }
-
-        private void OnEditorChanged(object? sender, EventArgs e)
-        {
-            caretVisible = true;
-            if (laidOut is not { } done || !ReferenceEquals(done.Root, Editor.Root))
+            if ((e.Changes & MathEditorViewChanges.Measure) != 0)
                 InvalidateMeasure();
-            else if (!SameSelection(drawnSelection, Editor.Selection))
+            else if ((e.Changes & MathEditorViewChanges.Render) != 0)
                 InvalidateVisual();
-            caretLayer.InvalidateVisual();
-            inputClient.RaiseCursorChanged();
-            Dispatcher.UIThread.Post(UpdateQuickBar, DispatcherPriority.Background);
+            if ((e.Changes & MathEditorViewChanges.Caret) != 0)
+            {
+                caretLayer.InvalidateVisual();
+                inputClient.RaiseCursorChanged();
+            }
+            if ((e.Changes & MathEditorViewChanges.QuickBar) != 0)
+                Dispatcher.UIThread.Post(UpdateQuickBar, DispatcherPriority.Background);
         }
-
-        private static bool SameSelection(MathSelection? a, MathSelection? b) =>
-            a == null ? b == null : b != null && a.StartPosition == b.StartPosition && a.EndPosition == b.EndPosition;
 
         /// <summary>Opens the floating bar at the caret with what fits the place of the caret, or closes it.</summary>
         private void UpdateQuickBar()
         {
-            var mode = MathQuickBarMode.Hidden;
-            IReadOnlyList<EquationCommand> completions = Array.Empty<EquationCommand>();
-            if (IsQuickBarEnabled && IsFocused && !IsReadOnly && !Editor.IsLinear && drawing != null)
-            {
-                var prefix = Editor.CommandPrefix;
-                if (prefix != dismissedPrefix)
-                    dismissedPrefix = null;
-                if (prefix != null && prefix.Length > 1 && dismissedPrefix == null && Editor.GetCompletions(8) is { Count: > 0 } found)
-                {
-                    mode = MathQuickBarMode.Completions;
-                    completions = found;
-                }
-                else if (prefix == null && Editor.Selection != null)
-                {
-                    mode = MathQuickBarMode.Selection;
-                }
-                else if (prefix == null && Editor.IsInTable)
-                {
-                    mode = MathQuickBarMode.Table;
-                }
-                else if (prefix == null && IsInEmptySlot())
-                {
-                    mode = MathQuickBarMode.Symbols;
-                }
-            }
-
-            if (mode == MathQuickBarMode.Hidden)
+            QuickBar.Refresh(View.UpdateQuickBar());
+            if (View.QuickBarAnchor is not { } anchor)
             {
                 popup.IsOpen = false;
-                QuickBar.Show(mode, completions);
                 return;
             }
-
-            QuickBar.Show(mode, completions);
-            var layout = drawing!.Layout;
-            var rects = Editor.Selection is { } selection ? layout.GetSelectionRects(selection) : Array.Empty<MathRect>();
-            var anchor = rects.Count > 0 && rects[0].Width > 0 ? rects[0] : layout.GetCaretRect(Editor.Caret) ?? default;
-            var origin = ContentOrigin();
-            // under the whole equation, where the caret is, so that the bar covers nothing of it
-            popup.PlacementRect = new Rect(anchor.X + origin.X, origin.Y, Math.Max(1, anchor.Width), Math.Max(layout.Height, anchor.Y + anchor.Height) + Padding.Bottom);
+            popup.PlacementRect = new Rect(anchor.X, anchor.Y, anchor.Width, anchor.Height);
             popup.IsOpen = true;
-        }
-
-        private bool IsInEmptySlot()
-        {
-            var caret = Editor.Caret;
-            return caret.Path.Count > 1 && Editor.Root is { } root && Node(root, caret.Path) is { IsRow: true, Children.Count: 0 };
-
-            static MathNode? Node(MathNode node, IReadOnlyList<int> path)
-            {
-                foreach (var i in path)
-                {
-                    if (i >= node.Children.Count)
-                        return null;
-                    node = node.Children[i];
-                }
-                return node;
-            }
         }
 
         private void OnEditorContentChanged(object? sender, EventArgs e)
@@ -841,10 +711,7 @@ namespace SharpEquations.Avalonia
             {
                 get
                 {
-                    if (owner.Layout?.GetCaretRect(owner.Editor.Caret) is not { } caret)
-                        return default;
-                    var origin = owner.ContentOrigin();
-                    return new Rect(caret.X + origin.X, caret.Y + origin.Y, 1, caret.Height);
+                    return owner.View.GetCaretRect() is { } caret ? new Rect(caret.X, caret.Y, caret.Width, caret.Height) : default;
                 }
             }
 
