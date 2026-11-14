@@ -93,11 +93,23 @@ var editor = new SharpEquations.Uno.MathEditBox { FontSize = 28, InputFormat = E
 editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(EquationFormat.MathML));
 ```
 
+### WPF
+
+`SharpEquations.Wpf` has them for WPF (.NET 10 and .NET Framework 4.8.1): drawn in `OnRender`, the glyphs of
+Libertinus Math (embedded) as geometries from their outlines, or of another math font read from its file
+(`MathFonts.FromFile(@"C:\Windows\Fonts\cambria.ttc")` for Cambria Math). The clipboard has the text and the MathML
+that Word reads. `samples/SharpEquations.Wpf.Demo` is a window with it.
+
+```csharp
+var editor = new SharpEquations.Wpf.MathEditBox { FontSize = 28 };
+editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(EquationFormat.MathML));
+```
+
 `MathView` shows an equation without editing it. Both lay out MathML after MathML Core with the OpenType MATH table of
 a math font: Cambria Math on Windows, and Libertinus Math (SIL Open Font License), embedded, elsewhere. The editor is
 three projects, so that the core keeps no dependency: `SharpEquations.Editing` (the editing model, no user interface),
-`SharpEquations.Rendering` (the layout and the view of an editor, no user interface) and `SharpEquations.Avalonia` or
-`SharpEquations.Uno` (the controls, adapters of that view to their toolkit). The design is in
+`SharpEquations.Rendering` (the layout and the view of an editor, no user interface) and `SharpEquations.Avalonia`,
+`SharpEquations.Uno` or `SharpEquations.Wpf` (the controls, adapters of that view to their toolkit). The design is in
 [docs/EDITOR.md](docs/EDITOR.md); `samples/SharpEquations.Avalonia.Demo` is a window with the editor and its MathML,
 UnicodeMath and LaTeX, and `samples/SharpEquations.Avalonia.Browser.Demo` the same demo in the browser, on WebAssembly
 (published to GitHub Pages from `main`; to run it locally: `dotnet workload install wasm-tools`, then

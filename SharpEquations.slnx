@@ -12,6 +12,7 @@
     <Project Path="samples/SharpEquations.MathTools.Core/SharpEquations.MathTools.Core.csproj" />
     <Project Path="samples/SharpEquations.MathTools.Graphing/SharpEquations.MathTools.Graphing.csproj" />
     <Project Path="samples/SharpEquations.Uno.Demo/SharpEquations.Uno.Demo.csproj" />
+    <Project Path="samples/SharpEquations.Wpf.Demo/SharpEquations.Wpf.Demo.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="AGENTS.md" />
@@ -28,6 +29,7 @@
     <Project Path="src/SharpEquations.RegexPolyfill/SharpEquations.RegexPolyfill.csproj" />
     <Project Path="src/SharpEquations.Rendering/SharpEquations.Rendering.csproj" />
     <Project Path="src/SharpEquations.Uno/SharpEquations.Uno.csproj" />
+    <Project Path="src/SharpEquations.Wpf/SharpEquations.Wpf.csproj" />
     <Project Path="src/SharpEquations.XsltGenerator/SharpEquations.XsltGenerator.csproj" />
     <Project Path="src/SharpEquations/SharpEquations.csproj" />
   </Folder>
@@ -39,5 +41,6 @@
     <Project Path="tests/SharpEquations.MathTools.Tests/SharpEquations.MathTools.Tests.csproj" />
     <Project Path="tests/SharpEquations.Tests/SharpEquations.Tests.csproj" />
     <Project Path="tests/SharpEquations.Uno.Tests/SharpEquations.Uno.Tests.csproj" />
+    <Project Path="tests/SharpEquations.Wpf.Tests/SharpEquations.Wpf.Tests.csproj" />
   </Folder>
 </Solution>
