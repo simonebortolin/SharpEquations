@@ -233,7 +233,10 @@ namespace SharpEquations.Editing
                 deferredAt = null;
                 InsertRune(rune);
                 if (!IsLinear)
+                {
+                    ReopenScriptBase(rune);
                     built |= TypedAtCaret(rune, resumes);
+                }
             }
             typingAt = built ? null : Caret;
             OnChanged(true);
@@ -953,6 +956,39 @@ namespace SharpEquations.Editing
                 Root = MathTree.Replace(Root, caret.Path, node.WithChildren(children));
                 Caret = Anchor = new MathPosition(MathTree.Append(caret.Path, caret.Offset), 1);
             }
+        }
+
+        /// <summary>
+        /// A script typed just after a structure that has only the other script (<c>_</c> after <c>∑^2</c> or
+        /// <c>x^2</c> built up by a space, <c>^</c> after <c>∫_0</c>) goes to the same base, as if both had been typed
+        /// together: the structure goes back to its linear text, in the run of the script, which builds up again with it.
+        /// </summary>
+        private void ReopenScriptBase(Rune rune)
+        {
+            var caret = Caret;
+            if (rune.Value is not ('_' or '^') || caret.Offset != 1 || caret.Path.Count == 0
+                || MathTree.Get(Root, caret.Path) is not { IsRun: true } run)
+                return;
+            var j = caret.Path[caret.Path.Count - 1];
+            var rowPath = MathTree.Parent(caret.Path);
+            var row = MathTree.Get(Root, rowPath);
+            if (j == 0)
+                return;
+            var lacksScript = row.Children[j - 1].Name switch
+            {
+                "msup" or "mover" => rune.Value == '_',
+                "msub" or "munder" => rune.Value == '^',
+                _ => false,
+            };
+            if (!lacksScript || BuildUp.ToEquation(new[] { row.Children[j - 1] }, IsDisplay) is not { } equation)
+                return;
+
+            var linear = BuildUp.ToLinear(equation, InputFormat);
+            var children = row.Children.ToList();
+            children[j] = MathNode.Run(linear + run.Text);
+            children.RemoveAt(j - 1);
+            Root = MathTree.Replace(Root, rowPath, row.WithChildren(children));
+            Caret = Anchor = new MathPosition(MathTree.Append(rowPath, j - 1), CodePointText.Length(linear) + 1);
         }
 
         /// <summary>
