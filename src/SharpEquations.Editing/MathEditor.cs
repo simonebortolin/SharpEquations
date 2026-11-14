@@ -980,7 +980,12 @@ namespace SharpEquations.Editing
                 "msub" or "munder" => rune.Value == '^',
                 _ => false,
             };
-            if (!lacksScript || BuildUp.ToEquation(new[] { row.Children[j - 1] }, IsDisplay) is not { } equation)
+            // the limit over or under an n-ary operator goes back to the text it was typed as (∑^2, not ∑┴2)
+            var structure = row.Children[j - 1];
+            if (structure.Name is "mover" or "munder" && structure.Children[0] is { } nary
+                && (nary.Name == "mo" || nary.IsRow && nary.Children.Count == 1 && nary.Children[0].Name == "mo"))
+                structure = MathNode.Element(structure.Name == "mover" ? "msup" : "msub", structure.Children, structure.Attributes);
+            if (!lacksScript || BuildUp.ToEquation(new[] { structure }, IsDisplay) is not { } equation)
                 return;
 
             var linear = BuildUp.ToLinear(equation, InputFormat);
