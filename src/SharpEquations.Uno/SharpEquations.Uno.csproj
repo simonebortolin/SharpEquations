@@ -23,6 +23,7 @@
   <ItemGroup>
     <EmbeddedResource Include="..\SharpEquations.Avalonia\Assets\Fonts\LibertinusMath-Regular.otf" Link="Assets\LibertinusMath-Regular.otf" LogicalName="SharpEquations.Uno.LibertinusMath-Regular.otf" />
     <None Include="..\SharpEquations.Avalonia\Assets\Fonts\OFL.txt" Pack="true" PackagePath="LibertinusMath-OFL.txt" Link="Assets\OFL.txt" />
+    <InternalsVisibleTo Include="SharpEquations.Uno.Tests" />
     <AdditionalFiles Include="PublicAPI.Shipped.txt" />
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
     <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />

@@ -311,6 +311,14 @@ namespace SharpEquations.Uno
         /// <summary>The symbols the floating bar offers in an empty slot.</summary>
         public IList<string> QuickSymbols { get; } = new List<string> { "α", "β", "θ", "π", "∞", "±", "×", "≤", "≥", "≠", "≈", "→", "∈", "∂", "∑", "∫" };
 
+        internal Canvas EquationLayer => equationLayer;
+
+        internal Canvas CaretLayer => caretLayer;
+
+        internal StackPanel QuickBarPanel => quickBar;
+
+        internal TextBox Input => input;
+
         /// <summary>Whether the floating bar is open.</summary>
         public bool IsQuickBarOpen => popup.IsOpen;
 
@@ -532,10 +540,16 @@ namespace SharpEquations.Uno
             var point = e.GetCurrentPoint(this);
             if (!point.Properties.IsLeftButtonPressed)
                 return;
-            FocusEditor(FocusState.Pointer);
-            View.PointerPressed(point.Position.X, point.Position.Y, (e.KeyModifiers & VirtualKeyModifiers.Shift) != 0);
+            PressAt(point.Position.X, point.Position.Y, (e.KeyModifiers & VirtualKeyModifiers.Shift) != 0);
             CapturePointer(e.Pointer);
             e.Handled = true;
+        }
+
+        /// <summary>The main button pressed at a point of the control: it takes the focus and the caret goes there.</summary>
+        internal void PressAt(double x, double y, bool extend)
+        {
+            FocusEditor(FocusState.Pointer);
+            View.PointerPressed(x, y, extend);
         }
 
         private void OnPointerMoved(object sender, PointerRoutedEventArgs e)
@@ -555,6 +569,9 @@ namespace SharpEquations.Uno
             if (!composing && !clearingInput)
                 TakeInput();
         }
+
+        /// <summary>Text typed in the input box, as a keyboard or an input method types it.</summary>
+        internal void Type(string text) => input.Text += text;
 
         /// <summary>Gives the editor what was typed in the input box, and empties it.</summary>
         private void TakeInput()
@@ -606,57 +623,54 @@ namespace SharpEquations.Uno
             _ => null,
         };
 
-        private void OnInputKeyDown(object sender, KeyRoutedEventArgs e)
+        private void OnInputKeyDown(object sender, KeyRoutedEventArgs e) => e.Handled = HandleKey(e.Key, Modifiers());
+
+        /// <summary>Acts on a key pressed with modifiers: the context menu, the floating bar, the shortcuts, then the editor.</summary>
+        /// <returns>Whether the key was used.</returns>
+        internal bool HandleKey(VirtualKey key, MathKeyModifiers modifiers)
         {
-            var modifiers = Modifiers();
             // Command on macOS, Control elsewhere
             var command = OperatingSystem.IsMacOS() || OperatingSystem.IsIOS()
                 ? (modifiers & MathKeyModifiers.Meta) != 0
                 : (modifiers & MathKeyModifiers.Control) != 0;
             var shift = (modifiers & MathKeyModifiers.Shift) != 0;
 
-            if (e.Key == VirtualKey.Application || e.Key == VirtualKey.F10 && modifiers == MathKeyModifiers.Shift)
-            {
-                e.Handled = ShowContextMenu();
-                return;
-            }
+            if (key == VirtualKey.Application || key == VirtualKey.F10 && modifiers == MathKeyModifiers.Shift)
+                return ShowContextMenu();
 
-            var mathKey = ToMathKey(e.Key);
+            var mathKey = ToMathKey(key);
             if (popup.IsOpen && mathKey is { } quickBarKey && View.ProcessQuickBarKey(quickBarKey, modifiers))
             {
                 UpdateQuickBar();
-                e.Handled = true;
-                return;
+                return true;
             }
 
-            e.Handled = true;
-            switch (e.Key)
+            switch (key)
             {
                 case VirtualKey.L when command && shift:
                     ViewMode = ViewMode == MathViewMode.Linear ? MathViewMode.Professional : MathViewMode.Linear;
-                    break;
+                    return true;
                 case VirtualKey.C when command:
                     _ = CopyAsync();
-                    break;
+                    return true;
                 case VirtualKey.X when command:
                     _ = CutAsync();
-                    break;
+                    return true;
                 case VirtualKey.V when command:
                     _ = PasteAsync();
-                    break;
+                    return true;
                 case VirtualKey.Z when command && shift && !IsReadOnly:
                 case VirtualKey.Y when command && !IsReadOnly:
                     Editor.Redo();
-                    break;
+                    return true;
                 case VirtualKey.Z when command && !IsReadOnly:
                     Editor.Undo();
-                    break;
+                    return true;
                 case VirtualKey.A when command:
                     Editor.SelectAll();
-                    break;
+                    return true;
                 default:
-                    e.Handled = mathKey is { } editorKey && Editor.ProcessKey(editorKey, modifiers, Layout, IsReadOnly);
-                    break;
+                    return mathKey is { } editorKey && Editor.ProcessKey(editorKey, modifiers, Layout, IsReadOnly);
             }
         }
 

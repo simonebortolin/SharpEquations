@@ -28,6 +28,7 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | `benchmarks/SharpEquations.Benchmarks/` | BenchmarkDotNet benchmarks of reading, writing and converting the corpora |
 | `tests/SharpEquations.Tests/` | TUnit tests, in folders by subject (PublicApi, MathML, Omml, Mtef, UnicodeMath, LaTeX, Property, Regression) |
 | `tests/SharpEquations.Avalonia.Tests/` | TUnit tests of the editor (Editing, Rendering, and the controls in a headless Avalonia session with Skia), and of the views of the math tools |
+| `tests/SharpEquations.Uno.Tests/` | TUnit tests of the controls of `SharpEquations.Uno` in a real Uno app on the desktop (`Program` starts the app, then runs TUnit; the tests work on its thread through `Ui.Run`); it needs a display: `xvfb-run` on Linux |
 | `tests/SharpEquations.MathTools.Tests/` | TUnit tests of `SharpEquations.MathTools.Core` and `.Graphing` (net10.0), with the reference tests of the computer algebra and the units (`tests/data/mathtools/`: cases compared by their value, the ones not reached yet `pending` with the reason; a change makes no passing case fail) |
 | `tests/data/` | Test data and its provenance (`tests/data/README.md`) |
 
@@ -121,7 +122,12 @@ net10.0 with no package, as the core).
   `OpenTypeMathFont.GetOutline` (the outlines of `GlyphOutlines`, CFF or TrueType); the font is Libertinus Math,
   embedded as a resource and read with `OpenTypeMathFont` (no font API of a platform); what is typed goes through a
   transparent `TextBox` at the caret, the keys through its `PreviewKeyDown`. `samples/SharpEquations.Uno.Demo` runs it
-  on the desktop, also under Xvfb (`xdotool` to type).
+  on the desktop, also under Xvfb (`xdotool` to type). Uno has no headless session: `tests/SharpEquations.Uno.Tests` is
+  an Uno app whose `Main` starts Uno and, once the window is up, runs TUnit on another thread (`TUnit0034` is off for
+  it); the tests type, press keys and click through the internal `Type`, `HandleKey` and `PressAt`, which the handlers
+  of the real events call, and check the shapes drawn and the pixels (`RenderTargetBitmap`). Run them with
+  `xvfb-run -a dotnet run --project tests/SharpEquations.Uno.Tests -f net10.0-desktop` on Linux; without a display the
+  app stops at once ("No platform host could be selected"). The CI runs them on Linux.
 - The core's `EquationCommands` (public) lists the control words of UnicodeMath and the commands of LaTeX with their
   symbols, for the completion of the editor; `PublicApi/EquationCommandsTests` checks that the parsers read them.
 
@@ -131,6 +137,8 @@ net10.0 with no package, as the core).
 dotnet build SharpEquations.slnx
 dotnet test --solution SharpEquations.slnx
 ```
+
+On Linux, the tests of Uno need a display: `xvfb-run -a dotnet test --solution SharpEquations.slnx`.
 
 The tests run on net10.0 against the net10.0 build, and against the netstandard2.0 build on net8.0 (Linux, macOS) or
 net481 (Windows, where the test project targets net10.0 and net481). The 738 examples of

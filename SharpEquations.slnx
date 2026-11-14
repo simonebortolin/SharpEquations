@@ -38,5 +38,6 @@
     <Project Path="tests/SharpEquations.Avalonia.Tests/SharpEquations.Avalonia.Tests.csproj" />
     <Project Path="tests/SharpEquations.MathTools.Tests/SharpEquations.MathTools.Tests.csproj" />
     <Project Path="tests/SharpEquations.Tests/SharpEquations.Tests.csproj" />
+    <Project Path="tests/SharpEquations.Uno.Tests/SharpEquations.Uno.Tests.csproj" />
   </Folder>
 </Solution>
