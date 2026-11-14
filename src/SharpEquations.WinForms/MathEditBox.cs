@@ -53,15 +53,7 @@ namespace SharpEquations.WinForms
         /// <summary>An empty editor.</summary>
         public MathEditBox()
         {
-            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.Opaque | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
-            SetStyle(ControlStyles.StandardDoubleClick, false);
-            TabStop = true;
-            Cursor = Cursors.IBeam;
-            BackColor = SystemColors.Window;
-            ForeColor = SystemColors.WindowText;
-            Padding = new Padding(6, 4, 6, 4);
-            base.AutoSize = true;
-
+            // the model and the view first: setting the padding and the colours below lays out and draws again
             Editor = new MathEditor { IsDisplay = true };
             Editor.ContentChanged += OnEditorContentChanged;
             View = new MathEditorView(Editor);
@@ -74,6 +66,15 @@ namespace SharpEquations.WinForms
                 View.BlinkCaret();
                 InvalidateCaret();
             };
+
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.Opaque | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
+            SetStyle(ControlStyles.StandardDoubleClick, false);
+            TabStop = true;
+            Cursor = Cursors.IBeam;
+            BackColor = SystemColors.Window;
+            ForeColor = SystemColors.WindowText;
+            Padding = new Padding(6, 4, 6, 4);
+            base.AutoSize = true;
             Size = new Size(200, 40);
         }
 
