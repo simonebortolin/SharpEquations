@@ -7,6 +7,7 @@ namespace SharpEquations.Wpf
     using System.Windows.Automation.Peers;
     using System.Windows.Controls;
     using System.Windows.Controls.Primitives;
+    using System.Windows.Documents;
     using System.Windows.Input;
     using System.Windows.Media;
     using System.Windows.Threading;
@@ -130,6 +131,11 @@ namespace SharpEquations.Wpf
                     BorderBrush = Frozen(new SolidColorBrush(Color.FromArgb(0x60, 0x80, 0x80, 0x80))),
                 },
             };
+
+            // the bar is the user interface, not the equation: the font of the system, not the size of the editor's, which
+            // the popup would inherit from it
+            quickBar.SetValue(TextElement.FontSizeProperty, SystemFonts.MessageFontSize);
+            quickBar.SetValue(TextElement.FontFamilyProperty, SystemFonts.MessageFontFamily);
 
             blink = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher) { Interval = MathEditorView.CaretBlinkInterval };
             blink.Tick += (_, _) =>
