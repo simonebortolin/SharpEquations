@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The equation editor and viewer for Windows Forms: MathEditBox, in the manner of the RichEditBox of WinUI in math
+       mode, and MathView, drawn with SkiaSharp (no GDI+ drawing: Skia draws into a bitmap that is copied to the window)
+       with the glyphs of Libertinus Math (SIL Open Font License, embedded) as paths from their outlines. It builds on
+       every system (EnableWindowsTargeting), and runs on Windows. -->
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-windows;net481</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>SharpEquations.WinForms</AssemblyName>
+    <RootNamespace>SharpEquations.WinForms</RootNamespace>
+    <PackageId>SharpEquations.WinForms</PackageId>
+    <Description>A real-time equation editor (MathEditBox) and viewer (MathView) for Windows Forms, drawn with SkiaSharp: UnicodeMath or LaTeX typed and built up as in Word, the equation read and written as MathML through SharpEquations.</Description>
+    <PackageTags>equation math mathml editor winforms windows-forms skia unicodemath latex richeditbox</PackageTags>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\SharpEquations.Avalonia\Assets\Fonts\LibertinusMath-Regular.otf" Link="Assets\LibertinusMath-Regular.otf" LogicalName="SharpEquations.WinForms.LibertinusMath-Regular.otf" />
+    <None Include="..\SharpEquations.Avalonia\Assets\Fonts\OFL.txt" Pack="true" PackagePath="LibertinusMath-OFL.txt" Link="Assets\OFL.txt" />
+    <InternalsVisibleTo Include="SharpEquations.WinForms.Tests" />
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
+    <None Include="..\..\NOTICE" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <!-- build time only: the public API is listed in PublicAPI.Shipped.txt and PublicAPI.Unshipped.txt -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpEquations.Rendering\SharpEquations.Rendering.csproj" />
+  </ItemGroup>
+
+</Project>

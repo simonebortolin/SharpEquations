@@ -85,8 +85,10 @@ the version of `SharpEquations`.
 `SharpEquations.Uno` has the same `MathEditBox` and `MathView` for Uno Platform, built only of the elements every
 renderer of Uno has: the glyphs of Libertinus Math (embedded) are drawn as paths from their outlines, the structures as
 shapes, and what is typed goes through a transparent `TextBox`, so that input methods and the keyboards of touch screens
-work. `samples/SharpEquations.Uno.Demo` is a window with it on the desktop
-(`dotnet run --project samples/SharpEquations.Uno.Demo`).
+work. The same package targets WinUI 3 of the Windows App SDK (`net10.0-windows10.0.19041`), so a WinUI app on Windows
+uses it as it is. `samples/SharpEquations.Uno.Demo` is a window with it on the desktop
+(`dotnet run --project samples/SharpEquations.Uno.Demo`), and on Windows with WinUI too
+(`dotnet run --project samples/SharpEquations.Uno.Demo -f net10.0-windows10.0.19041`).
 
 ```csharp
 var editor = new SharpEquations.Uno.MathEditBox { FontSize = 28, InputFormat = EquationFormat.LaTeX };
@@ -105,11 +107,23 @@ var editor = new SharpEquations.Wpf.MathEditBox { FontSize = 28 };
 editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(EquationFormat.MathML));
 ```
 
+### Windows Forms
+
+`SharpEquations.WinForms` has them for Windows Forms (.NET 10 and .NET Framework 4.8.1), drawn with SkiaSharp rather
+than GDI+: the glyphs of Libertinus Math (embedded) as paths from their outlines, or of another math font read from its
+file (`MathFonts.FromFile`). The height of the editor follows the equation, as that of a `TextBox` follows its font.
+`samples/SharpEquations.WinForms.Demo` is a form with it.
+
+```csharp
+var editor = new SharpEquations.WinForms.MathEditBox { FontSize = 28, Width = 600 };
+editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(EquationFormat.MathML));
+```
+
 `MathView` shows an equation without editing it. Both lay out MathML after MathML Core with the OpenType MATH table of
 a math font: Cambria Math on Windows, and Libertinus Math (SIL Open Font License), embedded, elsewhere. The editor is
 three projects, so that the core keeps no dependency: `SharpEquations.Editing` (the editing model, no user interface),
 `SharpEquations.Rendering` (the layout and the view of an editor, no user interface) and `SharpEquations.Avalonia`,
-`SharpEquations.Uno` or `SharpEquations.Wpf` (the controls, adapters of that view to their toolkit). The design is in
+`SharpEquations.Uno`, `SharpEquations.Wpf` or `SharpEquations.WinForms` (the controls, adapters of that view to their toolkit). The design is in
 [docs/EDITOR.md](docs/EDITOR.md); `samples/SharpEquations.Avalonia.Demo` is a window with the editor and its MathML,
 UnicodeMath and LaTeX, and `samples/SharpEquations.Avalonia.Browser.Demo` the same demo in the browser, on WebAssembly
 (published to GitHub Pages from `main`; to run it locally: `dotnet workload install wasm-tools`, then

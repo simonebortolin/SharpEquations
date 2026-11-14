@@ -48,6 +48,31 @@ namespace SharpEquations.Avalonia.Tests.Rendering
             await Assert.That(failures).IsEmpty();
         }
 
+        /// <summary>
+        /// The limits of an integral in display, a large operator, go to its top and its bottom (TeX, rule 13), not to
+        /// the place of the scripts of a letter: the lower limit is not halfway down the integral.
+        /// </summary>
+        [Test]
+        public async Task LimitsOfALargeIntegralAtItsEnds()
+        {
+            var (integral, letter, height) = await Headless.Run(() =>
+            {
+                double Spread(string unicodeMath, out double operatorHeight)
+                {
+                    var layout = MathLayoutEngine.Layout(Equation.Parse(unicodeMath, EquationFormat.UnicodeMath, new EquationOptions { Display = true }), MathFonts.Default, Options);
+                    var size = layout.Glyphs.Max(g => g.Size);
+                    var scripts = layout.Glyphs.Where(g => g.Size < size).ToList();
+                    operatorHeight = layout.Height;
+                    return scripts.Max(g => g.Y) - scripts.Min(g => g.Y);
+                }
+
+                var i = Spread("∫_0^1", out var h);
+                return (i, Spread("x_0^1", out _), h);
+            });
+            await Assert.That(integral).IsGreaterThan(letter * 1.5);
+            await Assert.That(integral).IsGreaterThan(height * 0.5);
+        }
+
         [Test]
         public async Task FractionIsTallerThanItsParts()
         {

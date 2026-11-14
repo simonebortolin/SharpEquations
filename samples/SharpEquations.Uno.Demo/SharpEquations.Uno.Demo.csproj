@@ -3,7 +3,7 @@
   <!-- The editor of SharpEquations.Uno in a window: on the desktop here (Skia), and wherever Uno runs with the other
        target frameworks of an Uno app (WebAssembly, Android, iOS, Windows App SDK). -->
   <PropertyGroup>
-    <TargetFrameworks>net10.0-desktop</TargetFrameworks>
+    <TargetFrameworks>net10.0-desktop;net10.0-windows10.0.19041</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <UnoSingleProject>true</UnoSingleProject>
     <RootNamespace>SharpEquations.Uno.Demo</RootNamespace>
@@ -17,6 +17,14 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <!-- the app head of Uno writes no assembly version -->
     <NoWarn>$(NoWarn);CA1016</NoWarn>
+  </PropertyGroup>
+
+  <!-- WinUI 3 of the Windows App SDK, built on Windows only: an app without a package, with the Windows App SDK in it,
+       and its own Main (Platforms/Windows), since the App has no XAML -->
+  <PropertyGroup Condition=" '$([MSBuild]::GetTargetPlatformIdentifier($(TargetFramework)))' == 'windows' ">
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

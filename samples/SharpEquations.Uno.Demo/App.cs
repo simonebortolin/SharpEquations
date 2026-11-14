@@ -7,8 +7,27 @@ namespace SharpEquations.Uno.Demo
 
     /// <summary>A window with the editor, the equation as MathML, UnicodeMath and LaTeX, and a view of it.</summary>
     public sealed class App : Application
+#if WINDOWS
+        , Microsoft.UI.Xaml.Markup.IXamlMetadataProvider
+#endif
     {
+#if WINDOWS
+        // WinUI 3 finds the types of XamlControlsResources through the metadata provider of the app, which the XAML
+        // compiler writes for an App.xaml: this app has none, so it hands the one of the controls to WinUI itself
+        private readonly Microsoft.UI.Xaml.XamlTypeInfo.XamlControlsXamlMetaDataProvider provider = new();
+#endif
         private Window? window;
+
+#if WINDOWS
+        /// <inheritdoc/>
+        public Microsoft.UI.Xaml.Markup.IXamlType GetXamlType(System.Type type) => provider.GetXamlType(type);
+
+        /// <inheritdoc/>
+        public Microsoft.UI.Xaml.Markup.IXamlType GetXamlType(string fullName) => provider.GetXamlType(fullName);
+
+        /// <inheritdoc/>
+        public Microsoft.UI.Xaml.Markup.XmlnsDefinition[] GetXmlnsDefinitions() => provider.GetXmlnsDefinitions();
+#endif
 
         protected override void OnLaunched(LaunchActivatedEventArgs args)
         {

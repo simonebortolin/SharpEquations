@@ -1157,7 +1157,8 @@ namespace SharpEquations.Rendering.Layout
                     if (sub != null)
                         subShift = Math.Max(subShift, sub.Height - C(MathConstant.SubscriptTopMax, style));
                 }
-                if (!baseBox.IsToken)
+                // a large operator is a box of its own, made larger and centred on the axis, not a character (TeX, rule 13)
+                if (!baseBox.IsToken || baseBox.IsLargeOp)
                     subShift = Math.Max(subShift, baseBox.Depth + C(MathConstant.SubscriptBaselineDropMin, style));
             }
             if (hasSup)
@@ -1168,7 +1169,7 @@ namespace SharpEquations.Rendering.Layout
                     if (sup != null)
                         supShift = Math.Max(supShift, sup.Depth + C(MathConstant.SuperscriptBottomMin, style));
                 }
-                if (!baseBox.IsToken)
+                if (!baseBox.IsToken || baseBox.IsLargeOp)
                     supShift = Math.Max(supShift, baseBox.Height - C(MathConstant.SuperscriptBaselineDropMax, style));
             }
             if (hasSub && hasSup)

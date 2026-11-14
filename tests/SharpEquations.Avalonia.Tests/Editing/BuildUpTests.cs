@@ -46,6 +46,34 @@ namespace SharpEquations.Avalonia.Tests.Editing
             await Assert.That(editor.ToEquation()).IsEqualTo(Equation.Parse(expected, EquationFormat.UnicodeMath));
         }
 
+        /// <summary>
+        /// The other script typed after a script built up by a space goes to the same base, as if both were typed
+        /// together: the lower limit of an n-ary operator whose upper limit is built, not a script of the whole.
+        /// </summary>
+        [Test]
+        [Arguments("∑^2 _2 ", "∑_2^2")]
+        [Arguments("∑_1 ^n ", "∑_1^n")]
+        [Arguments("∫^1 _0 ", "∫_0^1")]
+        [Arguments("\\int^1 _0 ", "∫_0^1")]
+        [Arguments("\\sum ^2 _2 ", "∑_2^2")]
+        [Arguments("x^2 _3 ", "x_3^2")]
+        [Arguments("x_3 ^2 ", "x_3^2")]
+        public async Task OtherScriptAfterABuiltScript(string typed, string expected)
+        {
+            var editor = Type(typed);
+            await Assert.That(editor.Root.Children[0].Children.Any(c => c.IsRun)).IsFalse().Because(Built(editor));
+            await Assert.That(editor.ToEquation()).IsEqualTo(Equation.Parse(expected, EquationFormat.UnicodeMath));
+        }
+
+        [Test]
+        [Arguments("\\sum^2 _2 ", "\\sum_2^2")]
+        [Arguments("\\int_0 ^1 ", "\\int_0^1")]
+        public async Task OtherScriptAfterABuiltScriptInLaTeX(string typed, string expected)
+        {
+            var editor = Type(typed, EquationFormat.LaTeX);
+            await Assert.That(editor.ToEquation()).IsEqualTo(Equation.Parse(expected, EquationFormat.LaTeX));
+        }
+
         [Test]
         public async Task ArgumentStillToComeDoesNotBuildUp()
         {
