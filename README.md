@@ -85,8 +85,10 @@ the version of `SharpEquations`.
 `SharpEquations.Uno` has the same `MathEditBox` and `MathView` for Uno Platform, built only of the elements every
 renderer of Uno has: the glyphs of Libertinus Math (embedded) are drawn as paths from their outlines, the structures as
 shapes, and what is typed goes through a transparent `TextBox`, so that input methods and the keyboards of touch screens
-work. `samples/SharpEquations.Uno.Demo` is a window with it on the desktop
-(`dotnet run --project samples/SharpEquations.Uno.Demo`).
+work. The same package targets WinUI 3 of the Windows App SDK (`net10.0-windows10.0.19041`), so a WinUI app on Windows
+uses it as it is. `samples/SharpEquations.Uno.Demo` is a window with it on the desktop
+(`dotnet run --project samples/SharpEquations.Uno.Demo`), and on Windows with WinUI too
+(`dotnet run --project samples/SharpEquations.Uno.Demo -f net10.0-windows10.0.19041`).
 
 ```csharp
 var editor = new SharpEquations.Uno.MathEditBox { FontSize = 28, InputFormat = EquationFormat.LaTeX };

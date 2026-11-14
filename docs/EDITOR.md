@@ -270,7 +270,13 @@ public class MathView : Control                             // read-only: Equati
 `MathEditBox` and `MathView` with the API of those of Avalonia, as far as WinUI allows (dependency properties;
 `Foreground`, `Background`, `BorderBrush`, `BorderThickness`, `Padding` and `FontSize` of `Control`; a `MenuFlyout`
 for the context menu; a `Popup` for the floating bar). They run wherever Uno runs, since they are built only of what
-every renderer of Uno has, and the build fails on an API Uno does not implement (Uno0001):
+every renderer of Uno has, and the build fails on an API Uno does not implement (Uno0001). Since they use only the API
+of WinUI, the same code builds for WinUI 3 of the Windows App SDK (`net10.0-windows10.0.19041`, against
+`Microsoft.WinUI`): the package has both, and the target of WinUI builds on every system (Uno.Sdk would leave it out
+off Windows; `UnoDisableRemoveUnsupportedTargetFrameworks` keeps it, since a library needs none of the tools of Windows
+that an app does). The class that the XAML generator of Uno adds to a library (`GlobalStaticResources`) exists on the
+targets of Uno only, so its public API is in `PublicAPI/Uno/`. The demo runs on WinUI too, without a package and with
+the Windows App SDK in it (its own `Main` in `Platforms/Windows`, since the app has no XAML); it builds on Windows only.
 
 - **Drawing**: `MathCanvas` turns the `IMathCanvas` of the view into the children of a `Canvas`: rectangles, lines and
   ellipses as shapes, each glyph as a `Path` from its outline (`OpenTypeMathFont.GetOutline`: the charstrings of CFF,

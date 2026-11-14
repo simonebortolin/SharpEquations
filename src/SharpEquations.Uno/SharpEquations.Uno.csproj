@@ -1,12 +1,17 @@
 <Project Sdk="Uno.Sdk">
 
-  <!-- The equation editor and viewer for Uno Platform (and WinUI): MathEditBox and MathView, built of the elements every
+  <!-- The equation editor and viewer for Uno Platform and WinUI: MathEditBox and MathView, built of the elements every
        renderer of Uno has (shapes, paths, a TextBox for the input), with the glyphs of Libertinus Math (SIL Open Font
-       License, embedded) drawn as paths from their outlines. -->
+       License, embedded) drawn as paths from their outlines. The same code builds for Uno (net10.0) and for WinUI 3 of
+       the Windows App SDK (net10.0-windows10.0.19041), which Uno.Sdk builds on Windows only. -->
   <PropertyGroup>
-    <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net10.0-windows10.0.19041</TargetFrameworks>
     <OutputType>Library</OutputType>
     <UnoSingleProject>false</UnoSingleProject>
+    <!-- the target of WinUI builds on every system (a library needs none of the tools of Windows that an app does), so
+         that the package packed on Linux has it -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <UnoDisableRemoveUnsupportedTargetFrameworks>true</UnoDisableRemoveUnsupportedTargetFrameworks>
     <AssemblyName>SharpEquations.Uno</AssemblyName>
     <RootNamespace>SharpEquations.Uno</RootNamespace>
     <PackageId>SharpEquations.Uno</PackageId>
@@ -26,6 +31,8 @@
     <InternalsVisibleTo Include="SharpEquations.Uno.Tests" />
     <AdditionalFiles Include="PublicAPI.Shipped.txt" />
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <!-- the class that the XAML generator of Uno adds to a library, on the targets of Uno only (not on WinUI) -->
+    <AdditionalFiles Include="PublicAPI\Uno\PublicAPI.Shipped.txt;PublicAPI\Uno\PublicAPI.Unshipped.txt" Condition=" '$([MSBuild]::GetTargetPlatformIdentifier($(TargetFramework)))' != 'windows' " />
     <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
     <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
     <None Include="..\..\NOTICE" Pack="true" PackagePath="" Visible="false" />

@@ -17,11 +17,11 @@ generated parser, on netstandard2.0): keep it so, and keep containers and other 
 | `src/SharpEquations.Editing/` | The equation editor's model, no user interface: `MathNode` tree, caret, selection, undo, build up and build down |
 | `src/SharpEquations.Rendering/` | The layout of MathML Core over the OpenType MATH table, no user interface: `MathLayoutEngine`, `MathLayout`; the view of an editor without a toolkit (`MathEditorView`, drawn on an `IMathCanvas`), which the controls adapt |
 | `src/SharpEquations.Avalonia/` | The controls for Avalonia: `MathEditBox` (the editor), `MathView`; embeds Libertinus Math |
-| `src/SharpEquations.Uno/` | The same controls for Uno Platform (`Uno.Sdk` of `global.json`), of the elements every renderer of Uno has: glyphs as paths from their outlines, shapes, a transparent `TextBox` for the input |
+| `src/SharpEquations.Uno/` | The same controls for Uno Platform (`Uno.Sdk` of `global.json`) and for WinUI 3 (`net10.0-windows10.0.19041`, the same code against the Windows App SDK), of the elements every renderer of Uno has: glyphs as paths from their outlines, shapes, a transparent `TextBox` for the input |
 | `samples/SharpEquations.Avalonia.Demo/` | A window with the editor (`DemoView`, shared with the web demo) |
 | `src/SharpEquations.Wpf/` | The same controls for WPF (net10.0-windows, net481), drawn in `OnRender`: glyphs as geometries from their outlines; it builds on every system (`EnableWindowsTargeting`) |
 | `src/SharpEquations.WinForms/` | The same controls for Windows Forms (net10.0-windows, net481), drawn with SkiaSharp into a bitmap that the window shows (no GDI+ drawing): glyphs as paths from their outlines; it builds on every system |
-| `samples/SharpEquations.Uno.Demo/` | A window with the editor of `SharpEquations.Uno`, on the desktop (Skia) |
+| `samples/SharpEquations.Uno.Demo/` | A window with the editor of `SharpEquations.Uno`, on the desktop (Skia), and on WinUI 3 (Windows only) |
 | `samples/SharpEquations.Wpf.Demo/` | A window with the editor of `SharpEquations.Wpf` (Windows) |
 | `samples/SharpEquations.WinForms.Demo/` | A form with the editor of `SharpEquations.WinForms` (Windows) |
 | `samples/SharpEquations.Avalonia.Browser.Demo/` | The same demo on WebAssembly (needs the `wasm-tools` workload, so not in the solution; `.github/workflows/demo.yml` publishes it to GitHub Pages) |
@@ -134,6 +134,9 @@ net10.0 with no package, as the core).
   of the real events call, and check the shapes drawn and the pixels (`RenderTargetBitmap`). Run them with
   `xvfb-run -a dotnet run --project tests/SharpEquations.Uno.Tests -f net10.0-desktop` on Linux; without a display the
   app stops at once ("No platform host could be selected"). The CI runs them on Linux.
+  The library targets WinUI 3 as well: the target of the Windows App SDK builds on every system
+  (`UnoDisableRemoveUnsupportedTargetFrameworks`), its public API is that of Uno without `GlobalStaticResources`
+  (`PublicAPI/Uno/`, the targets of Uno only); the demo builds for it on Windows only (`mt.exe`, `makepri.exe`).
 - `Wpf`: `MathEditBox` (a `Control` without a template) and `MathView` draw in `OnRender` through `MathCanvas` over
   the `DrawingContext`, each glyph a frozen `StreamGeometry` of its outline cached for each font; the font is
   Libertinus Math embedded, as for Uno, or a file (`MathFonts.FromFile`, a collection such as `cambria.ttc` too). The
@@ -141,8 +144,7 @@ net10.0 with no package, as the core).
   clipboard methods are synchronous (`Copy`, `Cut`, `Paste`, `CopyAs`), as those of `TextBox`.
   `tests/SharpEquations.Wpf.Tests` shows the controls in a window of an STA thread of its own (`Ui.Run`), through the
   internal `Type`, `HandleKey` and `PressAt`; they run on Windows only, and the CI runs them there.
-- `WinForms`: `MathEditBox` and `MathView` draw with SkiaSharp (the version of Avalonia, given in the project with
-  `VersionOverride` and not pinned for the repository, since Uno takes a newer one) through `MathCanvas` over an
+- `WinForms`: `MathEditBox` and `MathView` draw with SkiaSharp through `MathCanvas` over an
   `SKCanvas`, each glyph an `SKPath` of its outline cached for each font, into the pixels of `MathSurface`, which
   `OnPaint` copies to the window: no GDI+ drawing. The selection and the equation are recorded in an `SKPicture`,
   drawn again under the caret as it blinks. Their coordinates are device-independent pixels, scaled by `DeviceDpi`.
@@ -151,6 +153,10 @@ net10.0 with no package, as the core).
   `TextBox`. `tests/SharpEquations.WinForms.Tests` runs on Windows only, and the CI runs it there.
 - The core's `EquationCommands` (public) lists the control words of UnicodeMath and the commands of LaTeX with their
   symbols, for the completion of the editor; `PublicApi/EquationCommandsTests` checks that the parsers read them.
+
+- SkiaSharp is version 4 everywhere, with its HarfBuzzSharp: `Directory.Packages.props` pins the whole family (Avalonia
+  12 brings SkiaSharp 3; with transitive pinning it runs on 4) and sets `SkiaSharpVersion` and `HarfBuzzSharpVersion`,
+  which Uno.Sdk uses for the native libraries it adds to an app by itself. A new version changes all of them together.
 
 ## Building and Testing
 

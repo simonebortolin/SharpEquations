@@ -128,7 +128,7 @@ namespace SharpEquations.WinForms
         {
             if (outline.Count == 0)
                 return null;
-            var path = new SKPath { FillType = SKPathFillType.Winding };
+            using var builder = new SKPathBuilder { FillType = SKPathFillType.Winding };
             var open = false;
             foreach (var command in outline)
             {
@@ -136,24 +136,24 @@ namespace SharpEquations.WinForms
                 {
                     case MathPathCommandKind.MoveTo:
                         if (open)
-                            path.Close();
-                        path.MoveTo((float)command.X, (float)command.Y);
+                            builder.Close();
+                        builder.MoveTo((float)command.X, (float)command.Y);
                         open = true;
                         break;
                     case MathPathCommandKind.LineTo:
-                        path.LineTo((float)command.X, (float)command.Y);
+                        builder.LineTo((float)command.X, (float)command.Y);
                         break;
                     case MathPathCommandKind.QuadraticTo:
-                        path.QuadTo((float)command.X1, (float)command.Y1, (float)command.X, (float)command.Y);
+                        builder.QuadTo((float)command.X1, (float)command.Y1, (float)command.X, (float)command.Y);
                         break;
                     case MathPathCommandKind.CubicTo:
-                        path.CubicTo((float)command.X1, (float)command.Y1, (float)command.X2, (float)command.Y2, (float)command.X, (float)command.Y);
+                        builder.CubicTo((float)command.X1, (float)command.Y1, (float)command.X2, (float)command.Y2, (float)command.X, (float)command.Y);
                         break;
                 }
             }
             if (open)
-                path.Close();
-            return path;
+                builder.Close();
+            return builder.Detach();
         }
 
         private static SKColor? ParseColor(string text)

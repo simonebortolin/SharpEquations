@@ -2,6 +2,9 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <!-- the native libraries that Uno.Sdk adds by itself to an app, outside the versions below: the same SkiaSharp 4 -->
+    <SkiaSharpVersion>4.156.0</SkiaSharpVersion>
+    <HarfBuzzSharpVersion>14.4.0.100</HarfBuzzSharpVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Avalonia" Version="12.1.4" />
@@ -12,6 +15,21 @@
     <PackageVersion Include="Avalonia.Skia" Version="12.1.4" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.4" />
     <PackageVersion Include="Silk.NET.OpenGL" Version="2.23.0" />
+    <!-- SkiaSharp 4 and its HarfBuzzSharp everywhere (pinned for the packages that bring an older one: Avalonia 12 brings
+         SkiaSharp 3), for the fixes of their native libraries -->
+    <PackageVersion Include="SkiaSharp" Version="4.156.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.156.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="4.156.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.156.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="4.156.0" />
+    <PackageVersion Include="SkiaSharp.Resources" Version="4.156.0" />
+    <PackageVersion Include="SkiaSharp.SceneGraph" Version="4.156.0" />
+    <PackageVersion Include="SkiaSharp.Skottie" Version="4.156.0" />
+    <PackageVersion Include="HarfBuzzSharp" Version="14.4.0.100" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.4.0.100" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.4.0.100" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="14.4.0.100" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.4.0.100" />
     <PackageVersion Include="AngouriMath" Version="2.6.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="All" />

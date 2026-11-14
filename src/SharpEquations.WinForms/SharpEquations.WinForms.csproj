@@ -29,8 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- the SkiaSharp of Avalonia, not pinned for the whole repository: Uno takes a newer one -->
-    <PackageReference Include="SkiaSharp" VersionOverride="3.119.4" />
+    <PackageReference Include="SkiaSharp" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
     <!-- build time only: the public API is listed in PublicAPI.Shipped.txt and PublicAPI.Unshipped.txt -->
     <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />

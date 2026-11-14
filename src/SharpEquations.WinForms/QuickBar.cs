@@ -23,6 +23,7 @@ namespace SharpEquations.WinForms
         private static readonly SKColor HighlightColor = new SKColor(0x33, 0x99, 0xFF, 0x40);
         private static readonly SKColor HoverColor = new SKColor(0x80, 0x80, 0x80, 0x30);
         private static readonly SKTypeface UiTypeface = SKTypeface.FromFamilyName("Segoe UI") ?? SKTypeface.Default;
+        private static readonly SKFont UiFont = new SKFont(UiTypeface);
         private readonly MathSurface surface = new MathSurface();
         private readonly ToolTip toolTip = new ToolTip();
         private readonly List<(MathQuickBarItem Item, RectangleF Bounds)> items = new List<(MathQuickBarItem, RectangleF)>();
@@ -227,7 +228,7 @@ namespace SharpEquations.WinForms
             foreach (var (run, typeface) in Runs(text))
             {
                 font.Typeface = typeface;
-                canvas.DrawText(run, x, y, font, paint);
+                canvas.DrawText(run, x, y, SKTextAlign.Left, font, paint);
                 x += font.MeasureText(run);
             }
             font.Typeface = UiTypeface;
@@ -241,7 +242,7 @@ namespace SharpEquations.WinForms
             for (var i = 0; i < text.Length; i += char.IsSurrogatePair(text, i) ? 2 : 1)
             {
                 var codePoint = char.ConvertToUtf32(text, i);
-                var typeface = UiTypeface.ContainsGlyph(codePoint) ? UiTypeface : SKFontManager.Default.MatchCharacter(codePoint) ?? UiTypeface;
+                var typeface = UiFont.GetGlyph(codePoint) != 0 ? UiTypeface : SKFontManager.Default.MatchCharacter(codePoint) ?? UiTypeface;
                 if (current == null)
                 {
                     current = typeface;

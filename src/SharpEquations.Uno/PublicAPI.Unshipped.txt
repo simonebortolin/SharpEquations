@@ -2,8 +2,6 @@
 SharpEquations.Uno.EquationChangedEventArgs
 SharpEquations.Uno.EquationChangedEventArgs.Equation.get -> SharpEquations.Equation?
 SharpEquations.Uno.EquationChangedEventArgs.EquationChangedEventArgs(SharpEquations.Equation? equation) -> void
-SharpEquations.Uno.GlobalStaticResources
-SharpEquations.Uno.GlobalStaticResources.GlobalStaticResources() -> void
 SharpEquations.Uno.MathContextMenuEventArgs
 SharpEquations.Uno.MathContextMenuEventArgs.Cancel.get -> bool
 SharpEquations.Uno.MathContextMenuEventArgs.Cancel.set -> void
@@ -69,9 +67,6 @@ SharpEquations.Uno.MathViewMode.Professional = 0 -> SharpEquations.Uno.MathViewM
 override SharpEquations.Uno.MathEditBox.ArrangeOverride(Windows.Foundation.Size finalSize) -> Windows.Foundation.Size
 override SharpEquations.Uno.MathEditBox.MeasureOverride(Windows.Foundation.Size availableSize) -> Windows.Foundation.Size
 override SharpEquations.Uno.MathView.MeasureOverride(Windows.Foundation.Size availableSize) -> Windows.Foundation.Size
-static SharpEquations.Uno.GlobalStaticResources.Initialize() -> void
-static SharpEquations.Uno.GlobalStaticResources.RegisterDefaultStyles() -> void
-static SharpEquations.Uno.GlobalStaticResources.RegisterResourceDictionariesBySource() -> void
 static SharpEquations.Uno.MathFonts.Default.get -> SharpEquations.Rendering.OpenTypeMathFont!
 static SharpEquations.Uno.MathFonts.FromFile(byte[]! data) -> SharpEquations.Rendering.OpenTypeMathFont!
 static SharpEquations.Uno.MathFonts.LibertinusMath.get -> SharpEquations.Rendering.OpenTypeMathFont!
