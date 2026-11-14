@@ -131,6 +131,9 @@ namespace SharpEquations.Rendering
         private (MathNode Root, IMathFont Font, double FontSize, double? LineWidth)? laidOut;
         private MathSelection? drawnSelection;
         private bool selecting;
+
+        // the selection made with the pointer that the floating bar shows its structures for, until the pointer goes away
+        private MathSelection? pointerSelection;
         private bool isFocused;
 
         /// <summary>The view of an editor.</summary>
@@ -305,24 +308,60 @@ namespace SharpEquations.Rendering
         /// </summary>
         public void PointerPressed(double x, double y, bool extend)
         {
+            pointerSelection = null;
+            selecting = true;
             if (HitTest(x, y) is { } position)
                 Editor.SetCaret(position, extend);
-            selecting = true;
         }
 
-        /// <summary>The pointer moved to a point: while the button is held, the selection extends to it.</summary>
+        /// <summary>
+        /// The pointer moved to a point: while the button is held, the selection extends to it; otherwise, far from the
+        /// selection, the floating bar of its structures closes, as the mini toolbar of Word fades away.
+        /// </summary>
         public void PointerMoved(double x, double y)
         {
-            if (selecting && HitTest(x, y) is { } position)
-                Editor.SetCaret(position, true);
+            if (selecting)
+            {
+                if (HitTest(x, y) is { } position)
+                    Editor.SetCaret(position, true);
+                return;
+            }
+
+            if (IsSelectionBarOpen && !NearSelectionBar(x, y, QuickBarReach))
+                DismissSelectionBar();
         }
 
-        /// <summary>The button released; returns whether it was selecting, and the control releases the pointer.</summary>
+        /// <summary>
+        /// The button released; returns whether it was selecting, and the control releases the pointer. A selection made
+        /// with the pointer opens the floating bar of its structures.
+        /// </summary>
         public bool PointerReleased()
         {
             var was = selecting;
             selecting = false;
+            if (was && Editor.Selection is { } selection)
+            {
+                pointerSelection = selection;
+                Changed?.Invoke(this, new MathEditorViewChangedEventArgs(MathEditorViewChanges.QuickBar));
+            }
             return was;
+        }
+
+        /// <summary>
+        /// The pointer left the control at a point (the last it moved to): the floating bar of the structures of the
+        /// selection closes, unless the pointer is going to it, at the edge of the control next to it.
+        /// </summary>
+        public void PointerExited(double x, double y)
+        {
+            if (!selecting && IsSelectionBarOpen && !NearSelectionBar(x, y, 0))
+                DismissSelectionBar();
+        }
+
+        /// <summary>The pointer left the floating bar: the bar of the structures of the selection closes, as the pointer goes away from it.</summary>
+        public void QuickBarPointerExited()
+        {
+            if (IsSelectionBarOpen)
+                DismissSelectionBar();
         }
 
         /// <summary>
@@ -350,6 +389,14 @@ namespace SharpEquations.Rendering
             QuickBarAnchor = null;
             if (QuickBar.Mode == MathQuickBarMode.Hidden || Layout is not { } layout)
                 return changed;
+
+            // the structures of the selection only for a selection made with the pointer, as the mini toolbar of Word:
+            // not for Shift+arrows or Ctrl+A, and not once the pointer went away
+            if (QuickBar.Mode == MathQuickBarMode.Selection && !SameSelection(pointerSelection, Editor.Selection))
+            {
+                pointerSelection = null;
+                return changed;
+            }
             var rects = Editor.Selection is { } selection ? layout.GetSelectionRects(selection) : Array.Empty<MathRect>();
             var anchor = rects.Count > 0 && rects[0].Width > 0 ? rects[0] : layout.GetCaretRect(Editor.Caret) ?? default;
             QuickBarAnchor = new MathRect(anchor.X + ContentX, ContentY, Math.Max(1, anchor.Width), Math.Max(layout.Height, anchor.Y + anchor.Height) + Padding.Bottom);
@@ -547,6 +594,30 @@ namespace SharpEquations.Rendering
             else if (!SameSelection(drawnSelection, Editor.Selection))
                 changes |= MathEditorViewChanges.Render;
             Changed?.Invoke(this, new MathEditorViewChangedEventArgs(changes));
+        }
+
+        /// <summary>How far from the selection, in device-independent pixels, the pointer goes before the floating bar of its structures closes.</summary>
+        private double QuickBarReach => Math.Max(48, FontSize * 2);
+
+        private bool IsSelectionBarOpen => QuickBar.Mode == MathQuickBarMode.Selection && QuickBarAnchor != null;
+
+        /// <summary>
+        /// Whether a point is within a distance of the place of the floating bar: the selection, the bar under it (or
+        /// over it, where the control puts it there for want of room), which is wider than the selection.
+        /// </summary>
+        private bool NearSelectionBar(double x, double y, double distance)
+        {
+            if (QuickBarAnchor is not { } anchor)
+                return false;
+            var reach = QuickBarReach;
+            return x >= anchor.X - reach - distance && x <= anchor.Right + reach * 8 + distance
+                && y >= anchor.Y - reach - distance && y <= anchor.Bottom + reach + distance;
+        }
+
+        private void DismissSelectionBar()
+        {
+            pointerSelection = null;
+            Changed?.Invoke(this, new MathEditorViewChangedEventArgs(MathEditorViewChanges.QuickBar));
         }
 
         private static bool SameSelection(MathSelection? a, MathSelection? b) =>

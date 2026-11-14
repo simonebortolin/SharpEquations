@@ -189,6 +189,12 @@ namespace SharpEquations.Uno
             PointerPressed += OnPointerPressed;
             PointerMoved += OnPointerMoved;
             PointerReleased += OnPointerReleased;
+            PointerExited += (_, e) =>
+            {
+                var point = e.GetCurrentPoint(this).Position;
+                View.PointerExited(point.X, point.Y);
+            };
+            quickBar.PointerExited += (_, _) => View.QuickBarPointerExited();
             RightTapped += (_, e) =>
             {
                 var at = e.GetPosition(this);

@@ -302,3 +302,5 @@ static SharpEquations.Rendering.OpenType.MathTable.Parse(byte[]! data) -> SharpE
 static SharpEquations.Rendering.OpenType.ScriptStyles.Parse(byte[]? gsub) -> SharpEquations.Rendering.OpenType.ScriptStyles?
 virtual SharpEquations.Rendering.OpenTypeMathFont.GetFallback(int codePoint) -> SharpEquations.Rendering.IMathFont?
 SharpEquations.Rendering.OpenType.FontFile.GlyphCount.get -> int
+SharpEquations.Rendering.MathEditorView.PointerExited(double x, double y) -> void
+SharpEquations.Rendering.MathEditorView.QuickBarPointerExited() -> void
