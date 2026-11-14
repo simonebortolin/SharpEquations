@@ -304,6 +304,30 @@ Avalonia, for net10.0-windows and net481 (Editing and Rendering are netstandard2
 - **Clipboard**: the text in `CopyTextFormat` and the MathML of Word (`MathML`, UTF-8), read back first on a paste.
 - **Accessibility**: `MathEditBoxAutomationPeer`, the value pattern with the equation in UnicodeMath.
 
+## The controls for Windows Forms (`SharpEquations.WinForms`)
+
+`MathEditBox` and `MathView` (each a `Control`) with the API of those of WPF, as far as Windows Forms allows (colours
+as `Color` properties, the font size in device-independent pixels, by default that of `Font`), for net10.0-windows and
+net481; the project builds on every system (`EnableWindowsTargeting`) and runs on Windows:
+
+- **Drawing**: with SkiaSharp, not GDI+. `MathCanvas` over an `SKCanvas` draws the shapes as they are and each glyph
+  as an `SKPath` of its outline, made once for each glyph of a font in the units of its design and scaled where it is
+  drawn. `MathSurface` keeps the pixels of the control (BGRA, premultiplied), which `OnPaint` copies to the window as a
+  bitmap over the same memory. The selection and the equation are recorded once in an `SKPicture`, so that the caret
+  blinks over it without laying out or drawing the equation again. The view works in device-independent pixels, scaled
+  by `DeviceDpi` (per monitor).
+- **Size**: with `AutoSize` (the default) the height of the editor follows the equation and its width is the one it is
+  given, as for a `TextBox`; a `MathView` takes the size of its equation.
+- **Font**: Libertinus Math, embedded and read by `OpenTypeMathFont`, or another math font by its file
+  (`MathFonts.FromFile`).
+- **Input**: `OnKeyPress` (the surrogate pairs joined; the control characters left to the keys), `OnKeyDown` with the
+  keys mapped to `MathKey`; the arrows are input keys, and Tab, Enter and Escape go to the editor first, to the form
+  when the editor does not use them. The context menu on `WM_CONTEXTMENU` (a right click, the Menu key, Shift+F10), a
+  `ContextMenuStrip` built by `CreateContextMenu`. The floating bar is a form of its own that never takes the focus
+  (`WS_EX_NOACTIVATE`, `MA_NOACTIVATE`), its items drawn with Skia in Segoe UI, with a fallback font for the symbols.
+- **Clipboard**: the text in `CopyTextFormat` and the MathML of Word (`MathML`, UTF-8), read back first on a paste.
+- **Accessibility**: `MathEditBoxAccessibleObject`, editable text whose value is the equation in UnicodeMath.
+
 ## Plan
 
 | Phase | Content | State |

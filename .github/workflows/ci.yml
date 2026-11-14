@@ -29,11 +29,13 @@ env:
     src/SharpEquations.Avalonia/SharpEquations.Avalonia.csproj
     src/SharpEquations.Uno/SharpEquations.Uno.csproj
     src/SharpEquations.Wpf/SharpEquations.Wpf.csproj
+    src/SharpEquations.WinForms/SharpEquations.WinForms.csproj
   TEST_PROJECT: tests/SharpEquations.Tests/SharpEquations.Tests.csproj
   EDITOR_TEST_PROJECT: tests/SharpEquations.Avalonia.Tests/SharpEquations.Avalonia.Tests.csproj
   MATH_TOOLS_TEST_PROJECT: tests/SharpEquations.MathTools.Tests/SharpEquations.MathTools.Tests.csproj
   UNO_TEST_PROJECT: tests/SharpEquations.Uno.Tests/SharpEquations.Uno.Tests.csproj
   WPF_TEST_PROJECT: tests/SharpEquations.Wpf.Tests/SharpEquations.Wpf.Tests.csproj
+  WINFORMS_TEST_PROJECT: tests/SharpEquations.WinForms.Tests/SharpEquations.WinForms.Tests.csproj
   FEED_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
 
 # Stages: Resolve Version -> Test (Linux, Windows, macOS) -> Pack NuGet
@@ -201,6 +203,15 @@ jobs:
         run: |
           dotnet run --project "$WPF_TEST_PROJECT" -c Release -f net10.0-windows --no-build -- \
             --report-trx --report-trx-filename "${{ matrix.rid }}.wpf.net10.0.trx" \
+            --results-directory "$GITHUB_WORKSPACE/TestResults"
+
+      # the controls of Windows Forms in a form, on Windows only (they build everywhere, with EnableWindowsTargeting)
+      - name: Run Windows Forms tests
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          dotnet run --project "$WINFORMS_TEST_PROJECT" -c Release -f net10.0-windows --no-build -- \
+            --report-trx --report-trx-filename "${{ matrix.rid }}.winforms.net10.0.trx" \
             --results-directory "$GITHUB_WORKSPACE/TestResults"
 
       - name: Upload test results
