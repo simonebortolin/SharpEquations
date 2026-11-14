@@ -8,11 +8,14 @@
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
     <RootNamespace>SharpEquations.Avalonia.MathTools</RootNamespace>
+    <!-- the graphs in space hand their vertices to OpenGL (Silk.NET) through pointers -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Silk.NET.OpenGL" />
   </ItemGroup>
 
   <ItemGroup>

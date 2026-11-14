@@ -11,6 +11,7 @@ namespace SharpEquations.Avalonia.Tests.MathTools
     using SharpEquations;
     using SharpEquations.Avalonia.MathTools;
     using SharpEquations.MathTools;
+    using SharpEquations.MathTools.Graphing;
 
     /// <summary>The window of the math tools opens, and its pages work (a picture of each with SHARPEQUATIONS_SCREENSHOTS).</summary>
     [NotInParallel("headless")]
@@ -265,6 +266,87 @@ namespace SharpEquations.Avalonia.Tests.MathTools
             await Assert.That(tab).IsEqualTo(4);
         }
 
+        /// <summary>Surfaces and curves are drawn together in space, with a slider for each parameter; an equation without a graph in space is told.</summary>
+        [Test]
+        public async Task GraphsInSpaceDraw()
+        {
+            var (count, kinds, slider, value, failed, error, renderer, meshes, turned) = await Headless.Run(() =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                view.Tabs.SelectedIndex = 5;
+                var page = view.Space;
+                var display = new EquationOptions { Display = true };
+                page.Clear();
+                page.AddEquation(Equation.Parse("z=a sin x cos y", EquationFormat.UnicodeMath, display));
+                page.AddEquation(Equation.Parse("x=cos t, y=sin t, z=t/5", EquationFormat.UnicodeMath, display));
+                var slider = page.Sliders.Single();
+                slider.Value.Value = 2;
+                var value = page.Space.Surfaces[0].Plot["a"];
+                var failed = page.AddEquation(Equation.Parse("y=x^2", EquationFormat.UnicodeMath, display));
+                window.Height = 1300;
+                Save(window, "math-tools-space");
+                var camera = page.Space.Camera;
+                page.Space.Camera = camera.Rotate(1, 0);
+                var turned = page.Space.Camera != camera;
+                page.Space.Reset();
+                var result = (page.Space.Surfaces.Count, page.Space.Surfaces.Select(s => s.Plot.Kind).ToList(), slider.Key.Parameter, value, failed, page.Error,
+                    page.Space.Renderer, (page.Space.Scene.Surfaces.Count, page.Space.Scene.Curves.Count), turned && page.Space.Camera == OrbitCamera.Default);
+                window.Close();
+                return result;
+            });
+            await Assert.That(count).IsEqualTo(2);
+            await Assert.That(kinds).IsEquivalentTo(new[] { SurfaceKind.Surface, SurfaceKind.Curve });
+            await Assert.That(slider).IsEqualTo("a");
+            await Assert.That(value).IsEqualTo(2);
+            await Assert.That(failed).IsFalse();
+            await Assert.That(error).IsNotNull();
+            await Assert.That(renderer).IsEqualTo("Software (Skia)");
+            await Assert.That(meshes).IsEqualTo((1, 1));
+            await Assert.That(turned).IsTrue();
+        }
+
+        [Test]
+        public async Task GraphsInSpaceShareParametersAndWait()
+        {
+            var (pending, drawn, separate, shared, added, width, expected) = await Headless.Run(() =>
+            {
+                var window = new MainWindow();
+                window.Show();
+                var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
+                view.Tabs.SelectedIndex = 5;
+                var page = view.Space;
+                var display = new EquationOptions { Display = true };
+                page.Clear();
+                page.AddEquation(Equation.Parse("z=a x y", EquationFormat.UnicodeMath, display));
+                page.AddEquation(Equation.Parse("z=a sin x", EquationFormat.UnicodeMath, display));
+                var a = page.Sliders.Where(s => s.Key.Parameter == "a").ToList();
+                a[0].Value.Value = 2;
+                var pending = page.Space.IsRedrawPending;
+                page.Space.Redraw();
+                var drawn = !page.Space.IsRedrawPending;
+                var separate = page.Space.Surfaces[1].Plot["a"];
+                page.SharedParameters.IsChecked = true;
+                var shared = page.Space.Surfaces[1].Plot["a"];
+                a[0].Value.Value = 3;
+                page.AddEquation(Equation.Parse("z=a+x", EquationFormat.UnicodeMath, display));
+                var added = page.Space.Surfaces.Select(s => s.Plot["a"]).ToList();
+                window.UpdateLayout();
+                using var image = page.Space.Snapshot(2);
+                var result = (pending, drawn, separate, shared, added, image.PixelSize.Width, (int)Math.Ceiling(page.Space.Bounds.Width * 2));
+                window.Close();
+                return result;
+            });
+            await Assert.That(pending).IsTrue();
+            await Assert.That(drawn).IsTrue();
+            await Assert.That(separate).IsEqualTo(1);
+            await Assert.That(shared).IsEqualTo(2);
+            await Assert.That(added).IsEquivalentTo(new double[] { 3, 3, 3 });
+            await Assert.That(width).IsEqualTo(expected);
+            await Assert.That(width).IsGreaterThan(1);
+        }
+
         /// <summary>A formula of the library draws its graph, with its parameters (Greek letters too) at their starting values.</summary>
         [Test]
         public async Task FormulaDrawsItsGraph()
@@ -307,7 +389,7 @@ namespace SharpEquations.Avalonia.Tests.MathTools
                 var window = new MainWindow(settings);
                 window.Show();
                 var view = window.GetVisualDescendants().OfType<MathToolsView>().Single();
-                view.Tabs.SelectedIndex = 5;
+                view.Tabs.SelectedIndex = 6;
                 var page = view.Worksheet;
                 var display = new EquationOptions { Display = true };
                 page.Editor.Equation = Equation.Parse("b≔3", EquationFormat.UnicodeMath, display);
