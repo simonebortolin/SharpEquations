@@ -233,10 +233,10 @@ namespace SharpEquations.Wpf.Tests
                 var editor = new MenuEditBox { FontSize = 28, Equation = U("a+b") };
                 await Ui.Show(editor);
                 var menu = editor.Menu();
-                var all = menu.Items.OfType<Control>().Select(i => i.Tag as string).Where(t => t != null).ToList();
+                var all = menu.Items.OfType<Control>().Select(i => i.Tag as string).OfType<string>().ToList();
                 var undo = menu.Items.OfType<MenuItem>().First(i => (string)i.Tag == "undo").InputGestureText;
                 editor.IsReadOnly = true;
-                var readOnly = editor.Menu().Items.OfType<Control>().Select(i => i.Tag as string).Where(t => t != null).ToList();
+                var readOnly = editor.Menu().Items.OfType<Control>().Select(i => i.Tag as string).OfType<string>().ToList();
                 editor.MathContextMenuOpening += (_, e) => e.Cancel = true;
                 return (all, readOnly, undo, !editor.ShowContextMenu());
             });
