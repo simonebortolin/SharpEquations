@@ -63,6 +63,39 @@ namespace SharpEquations.WinForms.Tests
             await Assert.That(empty).IsLessThan(dark / 4);
         }
 
+        /// <summary>
+        /// Text not built up yet is drawn as it is typed, also when the layout of the parent measures the editor again
+        /// before its view hears of the edit (a label that shows the equation, as in the demo).
+        /// </summary>
+        [Test]
+        public async Task TypedTextIsDrawnBeforeItBuildsUp()
+        {
+            var (before, after) = await Ui.Run(async () =>
+            {
+                var editor = new MathEditBox { FontSize = 28, Width = 560 };
+                var label = new Label { AutoSize = true };
+                editor.EquationChanged += (_, e) => label.Text = e.Equation?.ToString(EquationFormat.UnicodeMath) ?? string.Empty;
+                var panel = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, Width = 600, Height = 300 };
+                panel.Controls.Add(editor);
+                panel.Controls.Add(label);
+                await Ui.Show(panel);
+                editor.Focus();
+                foreach (var ch in "x^2 ")
+                    editor.Type(ch.ToString());
+                await Ui.Settle();
+                editor.Refresh();
+                var ink = DarkPixels(editor.Surface.Pixels);
+                foreach (var ch in "aaaa")
+                {
+                    editor.Type(ch.ToString());
+                    await Ui.Settle();
+                }
+                editor.Refresh();
+                return (ink, DarkPixels(editor.Surface.Pixels));
+            });
+            await Assert.That(after).IsGreaterThan(before + 100);
+        }
+
         [Test]
         public async Task HeightFollowsTheEquation()
         {

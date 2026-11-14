@@ -31,6 +31,7 @@ namespace SharpEquations.WinForms
         private Form? quickBarOwner;
         private MathAutoCorrect autoCorrect;
         private SKPicture? content;
+        private MathLayout? recorded;
         private ContextMenuStrip? openMenu;
         private char pendingHighSurrogate;
         private bool updatingEquation;
@@ -552,7 +553,14 @@ namespace SharpEquations.WinForms
                     var half = (float)thickness / 2;
                     canvas.DrawRect(half, half, Math.Max(0, ClientSize.Width / scale - (float)thickness), Math.Max(0, ClientSize.Height / scale - (float)thickness), pen);
                 }
-                canvas.DrawPicture(content ??= RecordContent());
+                // the layout can change without a change of the view (a measure of the parent's layout): draw what is laid out
+                if (content == null || !ReferenceEquals(recorded, View.Layout))
+                {
+                    content?.Dispose();
+                    content = RecordContent();
+                    recorded = View.Layout;
+                }
+                canvas.DrawPicture(content);
                 using var caret = new MathCanvas(canvas, new MathColors(Foreground, caret: caretColor.IsEmpty ? Foreground : MathCanvas.ToSkia(caretColor)));
                 View.RenderCaret(caret);
             }
@@ -830,7 +838,10 @@ namespace SharpEquations.WinForms
             View.FontSize = FontSize;
             View.Padding = new MathThickness(Padding.Left / scale, Padding.Top / scale, Padding.Right / scale, Padding.Bottom / scale);
             View.BorderThickness = borderWidth;
-            return View.Measure(width > 0 ? width / (double)scale : double.PositiveInfinity);
+            var size = View.Measure(width > 0 ? width / (double)scale : double.PositiveInfinity);
+            if (!ReferenceEquals(recorded, View.Layout))
+                Invalidate();
+            return size;
         }
 
         /// <summary>Lays out the equation again, and gives the control the height it takes.</summary>
