@@ -74,6 +74,31 @@ namespace SharpEquations.Avalonia.Tests.Editing
             await Assert.That(editor.ToEquation()).IsEqualTo(Equation.Parse(expected, EquationFormat.LaTeX));
         }
 
+        /// <summary>
+        /// An n-ary operator built up with its limits before its operand is typed takes the limits the operator has with
+        /// an operand: under and over a sum in display, at the right of an integral, as the whole text built up again.
+        /// </summary>
+        [Test]
+        [Arguments("\\sum_(i=1)^n i^2 ")]
+        [Arguments("∑_(i=1)^n i^2 ")]
+        [Arguments("∏_k a_k ")]
+        [Arguments("∑^2 x ")]
+        [Arguments("a+∑_k k ")]
+        [Arguments("∫_0^1 x dx ")]
+        [Arguments("∯_S f ")]
+        public async Task NaryLimitsAsWhenBuiltUpWhole(string typed)
+        {
+            static string Limits(MathEditor editor) => editor.ToMathML().Descendants()
+                .First(e => e.Name.LocalName is "msub" or "msup" or "msubsup" or "munder" or "mover" or "munderover").Name.LocalName;
+
+            var editor = new MathEditor { IsDisplay = true };
+            editor.Insert(typed);
+            var built = Limits(editor);
+            editor.BuildDown();
+            editor.BuildUpAll();
+            await Assert.That(built).IsEqualTo(Limits(editor));
+        }
+
         [Test]
         public async Task ArgumentStillToComeDoesNotBuildUp()
         {

@@ -232,6 +232,8 @@ namespace SharpEquations.Editing
                 return null;
 
             var elements = equation.ToMathML().Elements().ToList();
+            if (!line && format == EquationFormat.UnicodeMath)
+                elements = NaryWithItsLimits(elements, source, display);
             if (line)
             {
                 if (elements.Count != 1 || elements[0].Elements().ToList() is not { Count: 1 } rows || rows[0].Elements().ToList() is not { Count: 1 } cells)
@@ -249,6 +251,32 @@ namespace SharpEquations.Editing
                 nodes.Add(node);
             }
             return used.All(u => u) ? nodes : null;
+        }
+
+        /// <summary>
+        /// An n-ary operator built up with its limits before its operand is typed (<c>∑_(i=1)^n</c>): UnicodeMath reads it
+        /// as an operator with scripts, while the same operator with an operand takes the limits of its kind (under and
+        /// over a sum in display, at the right of an integral). The text is read again with an empty operand, and the
+        /// operator takes the limits it has there, as when the whole equation is built up.
+        /// </summary>
+        private static List<XElement> NaryWithItsLimits(List<XElement> elements, string source, bool display)
+        {
+            if (elements.Count == 0 || elements[elements.Count - 1] is not { } last
+                || last.Name.LocalName is not ("msub" or "msup" or "msubsup") || last.Elements().FirstOrDefault()?.Name.LocalName != "mo")
+                return elements;
+            if (!Equation.TryParse(source + "▒〖〗", EquationFormat.UnicodeMath, new EquationOptions { Display = display }, out var withOperand) || withOperand == null)
+                return elements;
+
+            // the operator and its empty operand, alone or in a row of their own
+            var others = withOperand.ToMathML().Elements().ToList();
+            if (others.Count > 0 && others[others.Count - 1] is { } row && row.Name.LocalName == "mrow" && row.Elements().Count() == 2)
+                others = others.Take(others.Count - 1).Concat(row.Elements()).ToList();
+            if (others.Count != elements.Count + 1 || others[others.Count - 2] is not { } nary
+                || nary.Name.LocalName is not ("munder" or "mover" or "munderover"))
+                return elements;
+            var result = elements.Take(elements.Count - 1).ToList();
+            result.Add(nary);
+            return result;
         }
 
         /// <summary>

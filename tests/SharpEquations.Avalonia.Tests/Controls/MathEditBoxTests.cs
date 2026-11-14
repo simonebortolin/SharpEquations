@@ -45,11 +45,14 @@ namespace SharpEquations.Avalonia.Tests.Controls
             await Assert.That(events).IsGreaterThan(0);
         }
 
-        /// <summary>The limits of a sum and of an integral, each ended by a space, one key at a time as a keyboard types them.</summary>
+        /// <summary>
+        /// The limits of a sum and of an integral, each ended by a space, one key at a time as a keyboard types them: under
+        /// and over the sum in display, at the right of the integral.
+        /// </summary>
         [Test]
-        [Arguments("∑^2 _2 ", "∑_2^2")]
-        [Arguments("\\int^1 _0 ", "∫_0^1")]
-        [Arguments("x^2+b+\\int^1 _1 ", "x^2+b+∫_1^1")]
+        [Arguments("∑^2 _2 ", "\\sum_2^2")]
+        [Arguments("\\int^1 _0 ", "\\int_0^1")]
+        [Arguments("x^2+b+\\int^1 _1 ", "x^2+b+\\int_1^1")]
         public async Task LimitsOfAnNaryOperator(string typed, string expected)
         {
             var equation = await Headless.Run(() => WithEditor((window, editor) =>
@@ -58,7 +61,8 @@ namespace SharpEquations.Avalonia.Tests.Controls
                     window.KeyTextInput(rune.ToString());
                 return editor.Equation;
             }));
-            await Assert.That(equation).IsEqualTo(Display(expected));
+            // the expected equation in LaTeX, which reads the limits of a sum alone under and over it, as with an operand
+            await Assert.That(equation).IsEqualTo(Equation.Parse(expected, EquationFormat.LaTeX, new EquationOptions { Display = true }));
         }
 
         [Test]
