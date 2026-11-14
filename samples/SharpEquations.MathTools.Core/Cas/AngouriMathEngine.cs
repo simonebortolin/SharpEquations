@@ -178,7 +178,7 @@ namespace SharpEquations.MathTools
         // the exact value, and the decimal one when it differs: 1/3 ≈ 0.333333, √2 ≈ 1.41421
         private static CasResult Value(Entity expression)
         {
-            if (expression is Entity.Equalsf || expression.Vars.Any())
+            if (expression is Entity.Equalsf || expression.Vars.Count > 0)
                 return Result(CasAction.Evaluate, Tidy(expression.Simplify()));
 
             var exact = Tidy(expression.Simplify());

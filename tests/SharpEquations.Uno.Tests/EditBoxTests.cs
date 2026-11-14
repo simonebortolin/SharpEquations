@@ -218,10 +218,10 @@ namespace SharpEquations.Uno.Tests
                 var editor = new MenuEditBox { FontSize = 28, Equation = U("a+b") };
                 await Ui.Show(editor);
                 var menu = editor.Menu();
-                var all = menu.Items.Select(i => i.Tag as string).Where(t => t != null).ToList();
+                var all = menu.Items.Select(i => i.Tag as string).OfType<string>().ToList();
                 var undo = menu.Items.OfType<MenuFlyoutItem>().First(i => (string)i.Tag == "undo").KeyboardAcceleratorTextOverride;
                 editor.IsReadOnly = true;
-                var readOnly = editor.Menu().Items.Select(i => i.Tag as string).Where(t => t != null).ToList();
+                var readOnly = editor.Menu().Items.Select(i => i.Tag as string).OfType<string>().ToList();
                 return (all, readOnly, undo);
             });
             await Assert.That(tags).Contains("undo");
