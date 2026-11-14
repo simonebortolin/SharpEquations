@@ -77,6 +77,7 @@ namespace SharpEquations.MathTools
         /// <summary>Does an action to an expression of AngouriMath.</summary>
         public static CasResult Run(CasAction action, Entity expression, string? variable)
         {
+            expression = Series.Close(expression);
             var letters = Variables(expression);
             var x = MathS.Var(variable ?? (letters.Count > 0 ? letters[0] : "x"));
             switch (action)

@@ -354,8 +354,7 @@
   "input": "∑_(k=1)^∞ 1/k^2",
   "expected": [
    "π^2/6"
-  ],
-  "pending": "AngouriMath does not sum the series"
+  ]
  },
  {
   "action": "Evaluate",
