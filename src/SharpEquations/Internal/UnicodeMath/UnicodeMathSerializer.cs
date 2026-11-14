@@ -513,8 +513,9 @@ namespace SharpEquations.Internal.UnicodeMath
                 ret = "〖" + ret.TrimEnd(' ') + "〗";
             if (op == "^" && Name(Last(node)) == "msub" || op == "_" && Name(Last(node)) == "msup")
                 return ret + op + "(" + retd + ")";
-            // a script with a limit (𝑎_(𝑏┬𝑐)) and the denominator of a fraction that is a fraction are parenthesized
-            if ((op == "^" || op == "_") && Name(Last(node)) is "munder" or "mover" or "munderover" && HasLimit(retd) ||
+            // a script with a limit (𝑎_(𝑏┬𝑐)) or that is a fraction (𝑥^(2/3), which 𝑥^2/3 is not), and the denominator of a
+            // fraction that is a fraction are parenthesized
+            if ((op == "^" || op == "_") && (Name(Last(node)) is "munder" or "mover" or "munderover" && HasLimit(retd) || Name(Last(node)) == "mfrac") ||
                 Name(node) == "mfrac" && (Name(Last(node)) == "mfrac" || Name(Last(node)) == "mo" && Text(Last(node)).Length > 0 && !char.IsLetter(Text(Last(node)), 0)))
                 retd = "(" + retd.Trim(' ') + ")";
             // an operator alone over a fraction bar ((+̸)/2) is in parentheses, which the fraction drops
