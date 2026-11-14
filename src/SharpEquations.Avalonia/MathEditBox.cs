@@ -143,6 +143,12 @@ namespace SharpEquations.Avalonia
                 IsLightDismissEnabled = false,
                 Focusable = false,
             };
+            QuickBar.PointerExited += (_, _) => View.QuickBarPointerExited();
+            PointerExited += (_, e) =>
+            {
+                var point = e.GetPosition(this);
+                View.PointerExited(point.X, point.Y);
+            };
             LogicalChildren.Add(popup);
             VisualChildren.Add(popup);
             caretLayer = new CaretLayer(this);

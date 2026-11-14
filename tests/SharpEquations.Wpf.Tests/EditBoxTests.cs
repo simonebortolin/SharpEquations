@@ -194,7 +194,14 @@ namespace SharpEquations.Wpf.Tests
             var (open, buttons, equation) = await Ui.Run(async () =>
             {
                 var editor = await Show("a+b");
-                editor.Editor.SelectAll();
+                // a selection made with the pointer, from the start to the end: the bar of its structures opens
+                editor.Editor.MoveHome();
+                var from = editor.View.GetCaretRect()!.Value;
+                editor.Editor.MoveEnd();
+                var to = editor.View.GetCaretRect()!.Value;
+                editor.PressAt(from.X, from.Y + from.Height / 2, false);
+                editor.View.PointerMoved(to.X, to.Y + to.Height / 2);
+                editor.View.PointerReleased();
                 await Ui.Settle();
                 var wasOpen = editor.IsQuickBarOpen;
                 var count = editor.QuickBarPanel.Children.Count;

@@ -80,7 +80,11 @@ The behaviour is the one of the equations of Word and of `RichEditBox` in math m
   (fraction, root, scripts, brackets, bar, box, build down), the commands of the table of the caret, and quick symbols
   (`QuickSymbols`) in an empty slot. Its buttons do not take the focus. What it shows and the completion chosen are
   `MathQuickBarState` of Editing (`MathEditor.GetQuickBarMode`, `DismissCompletions`), so that a control of another
-  toolkit only places and draws it.
+  toolkit only places and draws it. The structures of the selection come as the mini toolbar of Word: only for a
+  selection made with the pointer (not Shift+arrows nor Ctrl+A), when the button is released, and they close when the
+  pointer goes away from the selection, leaves the control elsewhere than towards the bar, or leaves the bar
+  (`MathEditorView.PointerMoved`, `PointerExited`, `QuickBarPointerExited`), so that the bar does not stay over what
+  is under the editor. Where there is no room under the equation on the screen, the bar opens over it.
 - **Structures from code**: `InsertStructure("mfrac")`, `InsertFences`, `InsertMatrix(2, 2, "(", ")")`,
   `InsertTemplate(node)`, with the selection in the first slot and the caret in the first empty one, as the buttons of
   the equation tools of Word; Tab and Shift+Tab move through the cells of a table.

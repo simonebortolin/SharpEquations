@@ -39,6 +39,90 @@ namespace SharpEquations.Avalonia.Tests.Rendering
             await Assert.That(Libertinus.Value.GetFallback('x')).IsNull();
         }
 
+        /// <summary>Selects the whole equation with the pointer, from its start to its end, as a drag does.</summary>
+        private static void DragOverAll(MathEditorView view)
+        {
+            view.Editor.MoveHome();
+            var from = view.GetCaretRect()!.Value;
+            view.Editor.MoveEnd();
+            var to = view.GetCaretRect()!.Value;
+            view.PointerPressed(from.X, from.Y + from.Height / 2, false);
+            view.PointerMoved(to.X, to.Y + to.Height / 2);
+            view.PointerReleased();
+        }
+
+        private static MathEditorView Focused(string unicodeMath)
+        {
+            var view = View(unicodeMath);
+            view.IsFocused = true;
+            return view;
+        }
+
+        /// <summary>The bar of the structures of a selection opens for a selection made with the pointer, as the mini toolbar of Word.</summary>
+        [Test]
+        public async Task SelectionBarForAPointerSelection()
+        {
+            var view = Focused("a+b");
+            DragOverAll(view);
+            view.UpdateQuickBar();
+            await Assert.That(view.QuickBar.Mode).IsEqualTo(MathQuickBarMode.Selection);
+            await Assert.That(view.QuickBarAnchor).IsNotNull();
+        }
+
+        /// <summary>A selection made with the keyboard (Shift+arrows, Ctrl+A) opens no bar: it would cover what is under the editor.</summary>
+        [Test]
+        public async Task NoSelectionBarForAKeyboardSelection()
+        {
+            var view = Focused("a+b");
+            view.Editor.SelectAll();
+            view.UpdateQuickBar();
+            var afterSelectAll = view.QuickBarAnchor;
+            DragOverAll(view);
+            view.UpdateQuickBar();
+            view.Editor.ProcessKey(MathKey.Left, MathKeyModifiers.Shift, view.Layout, false);
+            view.UpdateQuickBar();
+            await Assert.That(view.QuickBar.Mode).IsEqualTo(MathQuickBarMode.Selection);
+            await Assert.That(afterSelectAll).IsNull();
+            await Assert.That(view.QuickBarAnchor).IsNull();
+        }
+
+        /// <summary>The bar of the structures closes when the pointer goes away from the selection, or leaves the bar.</summary>
+        [Test]
+        public async Task SelectionBarClosesWhenThePointerGoesAway()
+        {
+            var near = Focused("a+b");
+            DragOverAll(near);
+            near.UpdateQuickBar();
+            var anchor = near.QuickBarAnchor!.Value;
+            near.PointerMoved(anchor.X, anchor.Bottom + 10);
+            near.UpdateQuickBar();
+            var stays = near.QuickBarAnchor != null;
+            near.PointerMoved(anchor.X, anchor.Bottom + 500);
+            near.UpdateQuickBar();
+            var far = near.QuickBarAnchor;
+
+            var exited = Focused("a+b");
+            DragOverAll(exited);
+            exited.UpdateQuickBar();
+            exited.PointerExited(exited.QuickBarAnchor!.Value.X, exited.QuickBarAnchor!.Value.Bottom);
+            exited.UpdateQuickBar();
+            var towardsTheBar = exited.QuickBarAnchor != null;
+            exited.QuickBarPointerExited();
+            exited.UpdateQuickBar();
+
+            var away = Focused("a+b");
+            DragOverAll(away);
+            away.UpdateQuickBar();
+            away.PointerExited(-500, 0);
+            away.UpdateQuickBar();
+
+            await Assert.That(stays).IsTrue();
+            await Assert.That(far).IsNull();
+            await Assert.That(towardsTheBar).IsTrue();
+            await Assert.That(exited.QuickBarAnchor).IsNull();
+            await Assert.That(away.QuickBarAnchor).IsNull();
+        }
+
         [Test]
         public async Task MeasureAndPlaceInTheMiddle()
         {

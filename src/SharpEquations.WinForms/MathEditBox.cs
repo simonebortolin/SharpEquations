@@ -77,6 +77,11 @@ namespace SharpEquations.WinForms
             Padding = new Padding(6, 4, 6, 4);
             base.AutoSize = true;
             Size = new Size(200, 40);
+            MouseLeave += (_, _) =>
+            {
+                var point = PointToClient(MousePosition);
+                View.PointerExited(point.X / DpiScale, point.Y / DpiScale);
+            };
         }
 
         /// <summary>
@@ -999,14 +1004,24 @@ namespace SharpEquations.WinForms
                 quickBar?.Hide();
                 return;
             }
-            var bar = quickBar ??= new QuickBar();
+            if (quickBar == null)
+            {
+                quickBar = new QuickBar();
+                quickBar.MouseLeave += (_, _) => View.QuickBarPointerExited();
+            }
+            var bar = quickBar;
             SetQuickBarOwner(form);
             var completions = View.QuickBar.Mode == MathQuickBarMode.Completions;
             if (refill || bar.Count == 0)
                 bar.Fill(View.QuickBar.GetItems(QuickSymbols), completions, completions ? 130 : View.QuickBar.Mode == MathQuickBarMode.Symbols ? 26 : 36);
             bar.Highlight(completions ? View.QuickBar.SelectedIndex : -1);
             var scale = DpiScale;
-            bar.Location = PointToScreen(new Point((int)(anchor.X * scale), (int)Math.Ceiling(anchor.Bottom * scale)));
+            var below = PointToScreen(new Point((int)(anchor.X * scale), (int)Math.Ceiling(anchor.Bottom * scale)));
+            // over the equation where there is no room for it under it on the screen, as the popups of WPF and Avalonia
+            var screen = Screen.FromControl(this).WorkingArea;
+            bar.Location = below.Y + bar.Height > screen.Bottom
+                ? PointToScreen(new Point((int)(anchor.X * scale), (int)Math.Floor(anchor.Y * scale) - bar.Height))
+                : below;
             if (!bar.Visible)
                 bar.Show(form);
         }

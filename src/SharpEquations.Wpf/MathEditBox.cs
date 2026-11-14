@@ -134,6 +134,12 @@ namespace SharpEquations.Wpf
 
             // the bar is the user interface, not the equation: the font of the system, not the size of the editor's, which
             // the popup would inherit from it
+            quickBar.MouseLeave += (_, _) => View.QuickBarPointerExited();
+            MouseLeave += (_, e) =>
+            {
+                var point = e.GetPosition(this);
+                View.PointerExited(point.X, point.Y);
+            };
             quickBar.SetValue(TextElement.FontSizeProperty, SystemFonts.MessageFontSize);
             quickBar.SetValue(TextElement.FontFamilyProperty, SystemFonts.MessageFontFamily);
 
