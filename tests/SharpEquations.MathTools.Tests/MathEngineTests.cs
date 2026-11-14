@@ -22,7 +22,6 @@ namespace SharpEquations.MathTools.Tests
         // what the engine itself does not do
         private static readonly Dictionary<string, string> Limits = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["Simplify 2 sin x cos x"] = "The engine does not write products of sines and cosines as sines of multiple angles.",
         };
 
         [Test]
@@ -98,6 +97,18 @@ namespace SharpEquations.MathTools.Tests
         {
             await Assert.That(MathEngineText.ReadLinear("b⦗⦗c⦘^⦗-1⦘⦘")[0]).IsTypeOf<Entity.Divf>();
             await Assert.That(MathEngineText.ReadLinear("x⦗⦗y⦘^⦗-2⦘⦘")[0]).IsTypeOf<Entity.Divf>();
+        }
+
+        [Test]
+        [Arguments("2*sin(x)*cos(x)", "sin(2*x)")]
+        [Arguments("cos(x)^2-sin(x)^2", "cos(2*x)")]
+        [Arguments("1-2*sin(x)^2", "cos(2*x)")]
+        [Arguments("sin(x)^2+x", "sin(x)^2+x")]
+        [Arguments("x+1", "x+1")]
+        public async Task ContractsSinesAndCosines(string input, string expected)
+        {
+            var contracted = MathEngineText.Contracted(MathS.FromString(input, useCache: false));
+            await Assert.That(contracted == MathS.FromString(expected, useCache: false)).IsTrue();
         }
 
         [Test]

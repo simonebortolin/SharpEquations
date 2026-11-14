@@ -275,6 +275,8 @@ namespace SharpEquations.MathTools.MathEngine
                     created.Add(result);
                 }
                 var answer = Result(action, result);
+                if (action == CasAction.Simplify)
+                    answer = Contracted(answer);
                 indeterminate = answer.Text.Contains("Indeterminate", StringComparison.Ordinal);
                 return answer;
             }
@@ -306,6 +308,26 @@ namespace SharpEquations.MathTools.MathEngine
         {
             var spare = MathS.Var("swapped" + a + b);
             return e.Substitute(MathS.Var(a), spare).Substitute(MathS.Var(b), MathS.Var(a)).Substitute(spare, MathS.Var(b));
+        }
+
+        // the engine has no command that writes sin x cos x as a sine of 2x
+        private static CasResult Contracted(CasResult answer)
+        {
+            IReadOnlyList<Entity> read;
+            try
+            {
+                read = MathEngineText.ReadLinear(answer.Text);
+            }
+            catch (FormatException)
+            {
+                return answer;
+            }
+
+            if (read.Count != 1 || MathEngineText.Contracted(read[0]) is not { } contracted || ReferenceEquals(contracted, read[0]))
+                return answer;
+            return AngouriMathEngine.ToEquation(contracted) is { } math
+                ? new CasResult(answer.Action, math, contracted.ToString()) { Values = new[] { math } }
+                : answer;
         }
 
         // the values of a result: from its linear text, read by AngouriMath, else from its MathML

@@ -9,6 +9,7 @@ namespace SharpEquations.MathTools.MathEngine
     using System.Text.RegularExpressions;
     using System.Xml.Linq;
     using AngouriMath;
+    using MathNet.Symbolics;
     using SharpEquations.MathTools;
 
     /// <summary>
@@ -276,6 +277,26 @@ namespace SharpEquations.MathTools.MathEngine
                     return inner.SelectMany(Unwrapped);
             }
             return new[] { piece };
+        }
+
+        /// <summary>
+        /// The expression with its products and powers of sines and cosines written as sines and cosines of multiple
+        /// angles (<c>2 sin x cos x</c> is <c>sin(2x)</c>), by MathNet.Symbolics, when that is simpler; else the same (also when
+        /// either library cannot read the other).
+        /// </summary>
+        public static Entity Contracted(Entity value)
+        {
+            if (!value.Nodes.Any(n => n is Entity.Sinf or Entity.Cosf))
+                return value;
+            try
+            {
+                var contracted = MathS.FromString(Infix.Format(Trigonometric.Contract(Infix.ParseOrThrow(Linear(value)))), useCache: false);
+                return contracted.Complexity < value.Complexity ? contracted : value;
+            }
+            catch (Exception)
+            {
+                return value;
+            }
         }
 
         /// <summary>The text with two letters swapped, where they are not part of a longer name.</summary>

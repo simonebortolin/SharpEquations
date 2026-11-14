@@ -11,6 +11,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- the products of sines and cosines written as sines and cosines of multiple angles, which the engine does not do -->
+    <PackageReference Include="MathNet.Symbolics" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\SharpEquations.MathTools.Core\SharpEquations.MathTools.Core.csproj" />
   </ItemGroup>
 
