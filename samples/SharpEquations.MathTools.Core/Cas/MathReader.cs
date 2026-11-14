@@ -67,6 +67,25 @@ namespace SharpEquations.MathTools
 
         private static bool IsOperator(XElement e, params string[] texts) => Name(e) == "mo" && texts.Contains(e.Value.Trim());
 
+        /// <summary>The letter a name of the computer algebra system stands for: μ for mu, the name itself when it is a Latin letter.</summary>
+        public static string Symbol(string name) => name switch
+        {
+            "alpha" => "α",
+            "beta" => "β",
+            "gamma" => "γ",
+            "delta" => "δ",
+            "theta" => "θ",
+            "lambda" => "λ",
+            "mu" => "μ",
+            "sigma" => "σ",
+            "phi" => "φ",
+            "omega" => "ω",
+            _ => name,
+        };
+
+        /// <summary>The name of the computer algebra system of a letter: mu for μ.</summary>
+        public static string Name(string letter) => Reader.Identifier(letter);
+
         private sealed class Reader
         {
             private static readonly Dictionary<string, Func<Entity, Entity>> Functions = new Dictionary<string, Func<Entity, Entity>>(StringComparer.Ordinal)

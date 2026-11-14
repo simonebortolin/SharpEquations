@@ -47,6 +47,12 @@ namespace SharpEquations.MathTools
         /// there is none, or when they are not a finite set), the expression of the other actions.
         /// </summary>
         public IReadOnlyList<Equation> Values { get; init; } = Array.Empty<Equation>();
+
+        /// <summary>The solutions as decimal numbers (<c>a+bi</c> for complex ones), when they are not plain numbers already; null otherwise.</summary>
+        public Equation? Approximate { get; init; }
+
+        /// <summary>The text of <see cref="Approximate"/>.</summary>
+        public string? ApproximateText { get; init; }
     }
 
     /// <summary>

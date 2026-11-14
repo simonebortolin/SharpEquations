@@ -51,6 +51,7 @@ namespace SharpEquations.MathTools
         private const double Inch = 0.0254;
         private const double Pound = 0.45359237;
         private const double Gallon = 3.785411784e-3;
+        private const double StandardGravity = 9.80665;
 
         public static IReadOnlyList<Quantity> All { get; } = new[]
         {
@@ -67,7 +68,8 @@ namespace SharpEquations.MathTools
                 new Unit("cubic metre", "m³", 1), new Unit("litre", "L", 1e-3), new Unit("millilitre", "mL", 1e-6), new Unit("cubic centimetre", "cm³", 1e-6),
                 new Unit("US gallon", "gal", Gallon), new Unit("US quart", "qt", Gallon / 4), new Unit("US pint", "pt", Gallon / 8),
                 new Unit("US cup", "cup", Gallon / 16), new Unit("US fluid ounce", "fl oz", Gallon / 128), new Unit("imperial gallon", "imp gal", 4.54609e-3),
-                new Unit("cubic foot", "ft³", 1728 * Inch * Inch * Inch), new Unit("cubic inch", "in³", Inch * Inch * Inch)),
+                new Unit("cubic foot", "ft³", 1728 * Inch * Inch * Inch), new Unit("cubic inch", "in³", Inch * Inch * Inch),
+                new Unit("US tablespoon", "tbsp", Gallon / 256), new Unit("US teaspoon", "tsp", Gallon / 768)),
             new Quantity("Mass",
                 new Unit("kilogram", "kg", 1), new Unit("gram", "g", 1e-3), new Unit("milligram", "mg", 1e-6), new Unit("tonne", "t", 1e3),
                 new Unit("pound", "lb", Pound), new Unit("ounce", "oz", Pound / 16), new Unit("stone", "st", 14 * Pound),
@@ -85,9 +87,18 @@ namespace SharpEquations.MathTools
                 new Unit("joule", "J", 1), new Unit("kilojoule", "kJ", 1e3), new Unit("calorie", "cal", 4.184), new Unit("kilocalorie", "kcal", 4184),
                 new Unit("watt-hour", "Wh", 3600), new Unit("kilowatt-hour", "kWh", 3.6e6), new Unit("electronvolt", "eV", 1.602176634e-19),
                 new Unit("British thermal unit", "BTU", 1055.05585262)),
+            // NIST SP 811, B.8: the kilogram-force is standard gravity (9.80665 m/s²) on a kilogram, the pound-force on a pound
+            new Quantity("Force",
+                new Unit("newton", "N", 1), new Unit("kilonewton", "kN", 1e3), new Unit("dyne", "dyn", 1e-5), new Unit("kilogram-force", "kgf", StandardGravity),
+                new Unit("pound-force", "lbf", Pound * StandardGravity), new Unit("poundal", "pdl", Pound * 12 * Inch)),
+            // NIST SP 811, B.8: the horsepower is 550 ft·lbf/s, the metric one 75 kgf·m/s, the BTU the international table one
+            new Quantity("Power",
+                new Unit("watt", "W", 1), new Unit("kilowatt", "kW", 1e3), new Unit("megawatt", "MW", 1e6), new Unit("milliwatt", "mW", 1e-3),
+                new Unit("horsepower", "hp", 550 * 12 * Inch * Pound * StandardGravity), new Unit("metric horsepower", "PS", 75 * StandardGravity),
+                new Unit("BTU per hour", "BTU/h", 1055.05585262 / 3600), new Unit("foot-pound-force per second", "ft·lbf/s", 12 * Inch * Pound * StandardGravity)),
             new Quantity("Pressure",
                 new Unit("pascal", "Pa", 1), new Unit("kilopascal", "kPa", 1e3), new Unit("bar", "bar", 1e5), new Unit("atmosphere", "atm", 101325),
-                new Unit("millimetre of mercury", "mmHg", 133.322387415), new Unit("pound per square inch", "psi", Pound * 9.80665 / (Inch * Inch))),
+                new Unit("millimetre of mercury", "mmHg", 133.322387415), new Unit("pound per square inch", "psi", Pound * StandardGravity / (Inch * Inch))),
             new Quantity("Angle",
                 new Unit("radian", "rad", 1), new Unit("degree", "°", Math.PI / 180), new Unit("gradian", "grad", Math.PI / 200),
                 new Unit("arcminute", "′", Math.PI / 10800), new Unit("arcsecond", "″", Math.PI / 648000), new Unit("turn", "tr", 2 * Math.PI)),

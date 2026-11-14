@@ -12,7 +12,7 @@ namespace SharpEquations.Avalonia.MathTools
 
     /// <summary>
     /// The math tools, a page each: the scientific keypad around the equation editor, the library of formulas, the
-    /// unit converter, the solver of triangles, the graphs and the worksheet. The desktop window and the WebAssembly page show the same view, each
+    /// unit converter, the solver of triangles, the graphs, the graphs in space and the worksheet. The desktop window and the WebAssembly page show the same view, each
     /// with the services of its platform: where the settings are kept (the page shown, the equation of the calculator,
     /// the unit of angles, the theme), and the computer algebra system.
     /// </summary>
@@ -38,6 +38,7 @@ namespace SharpEquations.Avalonia.MathTools
             Converter = new UnitsPage();
             TriangleSolver = new TrianglePage();
             Graphs = new GraphsPage(Engine);
+            Space = new Graphs3DPage(Engine);
             Worksheet = new WorksheetPage(Engine, this.settings);
             Tabs = new TabControl { Margin = new Thickness(20, 12, 20, 0) };
             FormulaLibrary = new FormulasPage(equation =>
@@ -45,6 +46,10 @@ namespace SharpEquations.Avalonia.MathTools
                 Calculator.Editor.Equation = equation;
                 Tabs.SelectedIndex = 0;
                 Calculator.Editor.Focus();
+            }, preset =>
+            {
+                Graphs.AddPreset(preset, Engine.Angles);
+                Tabs.SelectedIndex = GraphsTab;
             });
             Tabs.ItemsSource = new[]
             {
@@ -53,6 +58,7 @@ namespace SharpEquations.Avalonia.MathTools
                 Tab("Units", Converter),
                 Tab("Triangles", TriangleSolver),
                 Tab("Graphs", Graphs),
+                Tab("3D", Space),
                 Tab("Worksheet", Worksheet),
             };
             Calculator.Solver.GraphRequested += (_, equation) => ShowGraph(equation);
@@ -88,6 +94,9 @@ namespace SharpEquations.Avalonia.MathTools
 
         /// <summary>The page of the graphs.</summary>
         public GraphsPage Graphs { get; }
+
+        /// <summary>The page of the graphs in space.</summary>
+        public Graphs3DPage Space { get; }
 
         /// <summary>The tabs of the pages.</summary>
         public TabControl Tabs { get; }
