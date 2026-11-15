@@ -1,1 +1,4 @@
 #nullable enable
+SharpEquations.Uno.MathEditBox.EquationNumber.get -> string?
+SharpEquations.Uno.MathEditBox.EquationNumber.set -> void
+SharpEquations.Uno.MathEditBox.GetSelectedText(SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null) -> string?

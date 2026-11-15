@@ -1,13 +1,13 @@
-# Equation editor for Avalonia
+# Equation editor
 
-`MathEditBox` is a real-time equation editor for Avalonia in the manner of the `RichEditBox` of WinUI in
+`MathEditBox` is a real-time equation editor (for Avalonia first, then for Uno Platform and WinUI 3, WPF and Windows
+Forms, each an adapter of one view) in the manner of the `RichEditBox` of WinUI in
 `RichEditMathMode.MathOnly`: the user types UnicodeMath or LaTeX, the equation builds up into its two-dimensional form
 as it is typed, and the content is read and written as MathML (`GetMath`/`SetMath`, as in WinUI) or as an `Equation`.
 SharpEquations is the core under it: it reads what is typed, gives the MathML, and writes the linear form back when a
 part of the equation is built down. The editor edits one equation (math only), not math zones in a text document.
-
-Phases 1 to 6 of the plan below are done; the three projects are published as NuGet packages with
-the version of the core.
+The projects are published as NuGet packages with the version of the core
+(`SharpEquations.Editing`, `.Rendering`, and the controls: `.Avalonia`, `.Uno`, `.Wpf`, `.WinForms`).
 
 ## What the user sees
 
@@ -352,9 +352,9 @@ net481; the project builds on every system (`EnableWindowsTargeting`) and runs o
 
 ## Open points
 
-- **Public API of the core**: `EquationCommand` and `EquationCommands` are new public API of `SharpEquations` (in
-  `PublicAPI.Unshipped.txt`), which a minor version brings.
-- **Packages**: the CI packs the three projects with the core, with its version, and publishes them with it; their
+- **Public API of the core**: `EquationCommand` and `EquationCommands` are public API of `SharpEquations` since
+  version 1.1.0.
+- **Packages**: the CI packs the six projects with the core, with its version, and publishes them with it; their
   public API is tracked in `PublicAPI.Shipped.txt`/`PublicAPI.Unshipped.txt`, as that of the core.
 - **Reference images**: the rendering is tested by the geometry of the layout, not by pictures; the tests write
   pictures of a set of equations when `SHARPEQUATIONS_SCREENSHOTS` names a directory, for a look.

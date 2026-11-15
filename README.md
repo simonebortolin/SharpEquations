@@ -25,8 +25,9 @@ format) and LaTeX, in .NET, with MathML as the common representation.
 | UnicodeMath | ✓ | ✓ |
 | LaTeX (standard, or as Word writes it) | ✓ | ✓ |
 
-SharpEquations targets .NET Standard 2.0 and .NET 10, and depends on nothing but the .NET base library (and
-System.Memory on .NET Standard 2.0).
+The converter targets .NET Standard 2.0 and .NET 10, and depends on nothing but the .NET base library (and
+System.Memory on .NET Standard 2.0). An equation editor built on it comes for Avalonia, Uno Platform and WinUI 3, WPF
+and Windows Forms: see [Equation editor](#equation-editor).
 
 ## Usage
 
@@ -49,19 +50,38 @@ stream of its OLE object (`Equation.Parse(bytes, EquationFormat.Mtef)`); reading
 Equations compare by their normalized MathML: an equation written in its own format (UnicodeMath, OMML) reads back to
 the same equation, and one written in another format loses only what that format cannot hold.
 
-## Equation editor for Avalonia
+## Packages
 
-`SharpEquations.Avalonia` is a real-time equation editor in the manner of the `RichEditBox` of WinUI in math mode and of
-the equations of Word: UnicodeMath or LaTeX typed at the caret builds up into the equation when a space or an operator
-ends an argument (`a/b␣` becomes a fraction, `\alpha␣` α), the caret moves through the slots of the structures, and the
-equation is read and written as MathML or as an `Equation`.
+| Package | What it is | Targets |
+|---|---|---|
+| `SharpEquations` | The converter | .NET Standard 2.0, .NET 10 |
+| `SharpEquations.Avalonia` | The equation editor and the view for Avalonia | .NET 8, .NET 10 |
+| `SharpEquations.Uno` | The same for Uno Platform and for WinUI 3 | .NET 10, .NET 10 for Windows (Windows App SDK) |
+| `SharpEquations.Wpf` | The same for WPF | .NET 10 for Windows, .NET Framework 4.8.1 |
+| `SharpEquations.WinForms` | The same for Windows Forms | .NET 10 for Windows, .NET Framework 4.8.1 |
+| `SharpEquations.Editing` | The editing model, no user interface | .NET Standard 2.0, .NET 10 |
+| `SharpEquations.Rendering` | The layout and the view of an editor, no user interface | .NET Standard 2.0, .NET 10 |
 
-```xml
-<sharp:MathEditBox xmlns:sharp="using:SharpEquations.Avalonia" FontSize="28" InputFormat="UnicodeMath" Equation="{Binding Equation}" />
+```bash
+dotnet add package SharpEquations            # the converter alone
+dotnet add package SharpEquations.Avalonia   # or .Uno, .Wpf, .WinForms: the editor, with what it needs
 ```
 
+All have one version. The package of a toolkit brings `SharpEquations.Rendering`, `SharpEquations.Editing` and
+`SharpEquations` with it; the last two are there for an editor on another toolkit. The converter, `Editing`,
+`Rendering`, `Avalonia` and `Uno` are trimmable and compatible with Native AOT (no reflection, no code generated at run
+time), and their analyzers keep them so: the WebAssembly demos are compiled ahead of time.
+
+## Equation editor
+
+`MathEditBox` is a real-time equation editor in the manner of the `RichEditBox` of WinUI in math mode and of the
+equations of Word: UnicodeMath or LaTeX typed at the caret builds up into the equation when a space or an operator
+ends an argument (`a/b␣` becomes a fraction, `\alpha␣` α), the caret moves through the slots of the structures, and the
+equation is read and written as MathML or as an `Equation`. `MathView` shows an equation without editing it. Both are
+the same controls in Avalonia, Uno Platform and WinUI 3, WPF and Windows Forms, with the same members.
+
 ```csharp
-var editor = new MathEditBox { InputFormat = EquationFormat.LaTeX };
+var editor = new MathEditBox { FontSize = 28, InputFormat = EquationFormat.LaTeX };
 editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(EquationFormat.MathML));
 string mathML = editor.GetMath();        // as RichEditTextDocument.GetMath
 editor.SetMath(mathML);                  // as RichEditTextDocument.SetMath
@@ -74,66 +94,88 @@ editor.Editor.InsertTableRow();          // and columns, in the matrix of the ca
 ```
 
 Typing `\` and the start of a command opens a floating bar at the caret with its completions
-(`EquationCommands.Complete("al", EquationFormat.UnicodeMath)` gives them from the core); the bar also offers structures
-for the selection, the commands of a table and quick symbols.
+(`EquationCommands.Complete("al", EquationFormat.UnicodeMath)` gives them from the core). The bar also offers
+structures for a selection made with the pointer, as the mini toolbar of Word does, the commands of a table and quick
+symbols.
 
-The packages are `SharpEquations.Avalonia` (the controls), `SharpEquations.Rendering` and `SharpEquations.Editing`, with
-the version of `SharpEquations`.
+### Avalonia
 
-### Uno Platform
+`SharpEquations.Avalonia`, in AXAML:
 
-`SharpEquations.Uno` has the same `MathEditBox` and `MathView` for Uno Platform, built only of the elements every
-renderer of Uno has: the glyphs of Libertinus Math (embedded) are drawn as paths from their outlines, the structures as
-shapes, and what is typed goes through a transparent `TextBox`, so that input methods and the keyboards of touch screens
-work. The same package targets WinUI 3 of the Windows App SDK (`net10.0-windows10.0.19041`), so a WinUI app on Windows
-uses it as it is. `samples/SharpEquations.Uno.Demo` is a window with it on the desktop
-(`dotnet run --project samples/SharpEquations.Uno.Demo`), and on Windows with WinUI too
-(`dotnet run --project samples/SharpEquations.Uno.Demo -f net10.0-windows10.0.19041`).
+```xml
+<StackPanel xmlns:math="using:SharpEquations.Avalonia">
+    <math:MathEditBox x:Name="Editor" FontSize="28" InputFormat="UnicodeMath" Equation="{Binding Equation}" />
+    <math:MathView FontSize="22" IsDisplay="True" Equation="{Binding #Editor.Equation}" />
+</StackPanel>
+```
 
-```csharp
-var editor = new SharpEquations.Uno.MathEditBox { FontSize = 28, InputFormat = EquationFormat.LaTeX };
-editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(EquationFormat.MathML));
+The math font is Cambria Math on Windows, where it is a font of the system, and Libertinus Math (SIL Open Font License),
+embedded, elsewhere; `MathFonts.Get` gives another one.
+
+### Uno Platform and WinUI 3
+
+`SharpEquations.Uno` is built only of the elements every renderer of Uno has: the glyphs of Libertinus Math (embedded)
+are drawn as paths from their outlines, the structures as shapes, and what is typed goes through a transparent
+`TextBox`, so that input methods and the keyboards of touch screens work. The same package targets WinUI 3 of the
+Windows App SDK (`net10.0-windows10.0.19041`), so a WinUI app on Windows uses it as it is. In XAML:
+
+```xml
+<StackPanel xmlns:math="using:SharpEquations.Uno">
+    <math:MathEditBox x:Name="Editor" FontSize="28" EquationChanged="OnEquationChanged" />
+    <math:MathView FontSize="22" IsDisplay="True" Equation="{Binding Equation, ElementName=Editor}" />
+</StackPanel>
 ```
 
 ### WPF
 
-`SharpEquations.Wpf` has them for WPF (.NET 10 and .NET Framework 4.8.1): drawn in `OnRender`, the glyphs of
-Libertinus Math (embedded) as geometries from their outlines, or of another math font read from its file
-(`MathFonts.FromFile(@"C:\Windows\Fonts\cambria.ttc")` for Cambria Math). The clipboard has the text and the MathML
-that Word reads. `samples/SharpEquations.Wpf.Demo` is a window with it.
+`SharpEquations.Wpf` draws in `OnRender`, the glyphs of Libertinus Math (embedded) as geometries from their outlines, or
+of another math font read from its file (`MathFonts.FromFile(@"C:\Windows\Fonts\cambria.ttc")` for Cambria Math). The
+clipboard has the text and the MathML that Word reads. In XAML:
 
-```csharp
-var editor = new SharpEquations.Wpf.MathEditBox { FontSize = 28 };
-editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(EquationFormat.MathML));
+```xml
+<StackPanel xmlns:math="clr-namespace:SharpEquations.Wpf;assembly=SharpEquations.Wpf">
+    <math:MathEditBox x:Name="Editor" FontSize="28" EquationChanged="OnEquationChanged" />
+    <math:MathView FontSize="22" IsDisplay="True" Equation="{Binding Equation, ElementName=Editor}" />
+</StackPanel>
 ```
 
 ### Windows Forms
 
-`SharpEquations.WinForms` has them for Windows Forms (.NET 10 and .NET Framework 4.8.1), drawn with SkiaSharp rather
-than GDI+: the glyphs of Libertinus Math (embedded) as paths from their outlines, or of another math font read from its
-file (`MathFonts.FromFile`). The height of the editor follows the equation, as that of a `TextBox` follows its font.
-`samples/SharpEquations.WinForms.Demo` is a form with it.
+`SharpEquations.WinForms` draws with SkiaSharp rather than GDI+: the glyphs of Libertinus Math (embedded) as paths from
+their outlines, or of another math font read from its file (`MathFonts.FromFile`). The height of the editor follows the
+equation, as that of a `TextBox` follows its font.
 
 ```csharp
 var editor = new SharpEquations.WinForms.MathEditBox { FontSize = 28, Width = 600 };
-editor.EquationChanged += (_, e) => Console.WriteLine(e.Equation?.ToString(EquationFormat.MathML));
+var view = new SharpEquations.WinForms.MathView { FontSize = 22, IsDisplay = true };
+editor.EquationChanged += (_, e) => view.Equation = e.Equation;
 ```
 
-`MathView` shows an equation without editing it. Both lay out MathML after MathML Core with the OpenType MATH table of
-a math font: Cambria Math on Windows, and Libertinus Math (SIL Open Font License), embedded, elsewhere. The editor is
-three projects, so that the core keeps no dependency: `SharpEquations.Editing` (the editing model, no user interface),
-`SharpEquations.Rendering` (the layout and the view of an editor, no user interface) and `SharpEquations.Avalonia`,
-`SharpEquations.Uno`, `SharpEquations.Wpf` or `SharpEquations.WinForms` (the controls, adapters of that view to their toolkit). The design is in
-[docs/EDITOR.md](docs/EDITOR.md); `samples/SharpEquations.Avalonia.Demo` is a window with the editor and its MathML,
-UnicodeMath and LaTeX, and `samples/SharpEquations.Avalonia.Browser.Demo` the same demo in the browser, on WebAssembly
-(published to GitHub Pages from `main`; to run it locally: `dotnet workload install wasm-tools`, then
-`dotnet run --project samples/SharpEquations.Avalonia.Browser.Demo`). `samples/SharpEquations.Avalonia.MathTools.Demo` is a
-second app around the editor, a set of math tools (a scientific keypad that types into the editor and computes what is
-typed with [AngouriMath](https://github.com/asc-community/AngouriMath), a library of formulas, a unit converter, a
-solver of triangles), with
-`samples/SharpEquations.Avalonia.Browser.MathTools.Demo` in the browser (published under `math/` of the same site); what
+### How it is made
+
+The controls lay out MathML after MathML Core with the OpenType MATH table of a math font. The editor is three layers,
+so that the core keeps no dependency: `SharpEquations.Editing` (the editing model), `SharpEquations.Rendering` (the
+layout, and the view of an editor without a toolkit) and the controls, which are adapters of that view to their
+toolkit. The design is in [docs/EDITOR.md](docs/EDITOR.md).
+
+## Demos
+
+| Sample | What it shows | Run |
+|---|---|---|
+| `samples/SharpEquations.Avalonia.Demo` | The editor with its MathML, UnicodeMath and LaTeX | `dotnet run --project samples/SharpEquations.Avalonia.Demo` |
+| `samples/SharpEquations.Avalonia.Browser.Demo` | The same in the browser, on WebAssembly (published to GitHub Pages from `main`) | `dotnet workload install wasm-tools`, then `dotnet run --project samples/SharpEquations.Avalonia.Browser.Demo` |
+| `samples/SharpEquations.Uno.Demo` | A page in XAML with the editor and a view, on the desktop | `dotnet run --project samples/SharpEquations.Uno.Demo` |
+| the same, on WinUI 3 (Windows) | | `dotnet run --project samples/SharpEquations.Uno.Demo -f net10.0-windows10.0.19041` |
+| `samples/SharpEquations.Wpf.Demo` | A window in XAML with the editor and a view (Windows) | `dotnet run --project samples/SharpEquations.Wpf.Demo` |
+| `samples/SharpEquations.WinForms.Demo` | A form with the editor and a view (Windows) | `dotnet run --project samples/SharpEquations.WinForms.Demo` |
+| `samples/SharpEquations.Avalonia.MathTools.Demo` | Math tools around the editor | `dotnet run --project samples/SharpEquations.Avalonia.MathTools.Demo` |
+| `samples/SharpEquations.Avalonia.Browser.MathTools.Demo` | The math tools in the browser (published under `math/` of the same site) | as the web demo |
+
+The math tools are a second app, in MVVM with views in AXAML: a scientific keypad that types into the editor and
+computes what is typed with [AngouriMath](https://github.com/asc-community/AngouriMath), a library of formulas, a unit
+converter, a solver of triangles, graphs in the plane and in space, and a worksheet that keeps what was computed. What
 they compute is in `samples/SharpEquations.MathTools.Core` and `samples/SharpEquations.MathTools.Graphing`, which have
-no user interface.
+no user interface. They are samples, not packages.
 
 ## Architecture
 
@@ -153,8 +195,9 @@ its README).
 ## Releases
 
 CI (`.github/workflows/ci.yml`) tests every push and pull request on Linux (.NET 10 and .NET 8), Windows (.NET 10 and
-.NET Framework 4.8.1) and macOS (.NET 10), and packs the NuGet packages (the converter and the three of the editor, with one version). The release version is `VersionPrefix` in `BuildVersion.props`: bump it, and merging to
-`main` tags `vX.Y.Z`, creates the GitHub release with the package attached, and publishes it to GitHub Packages and to
+.NET Framework 4.8.1) and macOS (.NET 10), and packs the NuGet packages (the converter and the six of the editor, with one version). The release version is
+`VersionPrefix` in `BuildVersion.props`: bump it, and merging to `main` tags `vX.Y.Z`, creates the GitHub release with
+the packages attached, and publishes them to GitHub Packages and to
 nuget.org (with [Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing): the repository
 variable `NUGET_USER` names the nuget.org account; without it nuget.org is skipped). A push that keeps the version on
 purpose says `[no-new-version]` in its commit message. Every pull request gets a `pr-<N>-…` pre-release, with the

@@ -314,6 +314,13 @@ namespace SharpEquations.Uno
             set => SetValue(CopyTextFormatProperty, value);
         }
 
+        /// <summary>The number of the equation, shown at the right of its line; null without one (<see cref="MathEditor.EquationNumber"/>).</summary>
+        public string? EquationNumber
+        {
+            get => Editor.EquationNumber;
+            set => Editor.SetEquationNumber(value);
+        }
+
         /// <summary>The symbols the floating bar offers in an empty slot.</summary>
         public IList<string> QuickSymbols { get; } = new List<string> { "α", "β", "θ", "π", "∞", "±", "×", "≤", "≥", "≠", "≈", "→", "∈", "∂", "∑", "∫" };
 
@@ -343,6 +350,12 @@ namespace SharpEquations.Uno
 
         /// <summary>Builds up all that is typed and not built up yet.</summary>
         public void BuildUp() => Editor.BuildUpAll();
+
+        /// <summary>
+        /// The selection in a format, or null when nothing is selected: UnicodeMath, LaTeX (as Word writes it unless the
+        /// options say otherwise), MathML or OMML.
+        /// </summary>
+        public string? GetSelectedText(EquationFormat format, EquationOptions? options = null) => Editor.GetSelectedText(format, options);
 
         /// <summary>Builds down the selection, or the whole equation, into linear text.</summary>
         public void BuildDown() => Editor.BuildDown();
