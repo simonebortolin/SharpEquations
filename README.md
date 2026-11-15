@@ -78,8 +78,7 @@ time), and their analyzers keep them so: the WebAssembly demos are compiled ahea
 equations of Word: UnicodeMath or LaTeX typed at the caret builds up into the equation when a space or an operator
 ends an argument (`a/b␣` becomes a fraction, `\alpha␣` α), the caret moves through the slots of the structures, and the
 equation is read and written as MathML or as an `Equation`. `MathView` shows an equation without editing it. Both are
-the same controls in Avalonia, Uno Platform and WinUI 3, WPF and Windows Forms, with the same members (those of Uno
-have no `EquationNumber` and no `GetSelectedText` yet).
+the same controls in Avalonia, Uno Platform and WinUI 3, WPF and Windows Forms, with the same members.
 
 ```csharp
 var editor = new MathEditBox { FontSize = 28, InputFormat = EquationFormat.LaTeX };

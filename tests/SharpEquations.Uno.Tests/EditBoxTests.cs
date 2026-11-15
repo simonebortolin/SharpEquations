@@ -252,6 +252,32 @@ namespace SharpEquations.Uno.Tests
             await Assert.That(equation).IsEqualTo(Equation.Parse("√x", EquationFormat.UnicodeMath));
         }
 
+        /// <summary>The number of the equation and the selection in a format, as the controls of the other toolkits have them.</summary>
+        [Test]
+        public async Task NumberAndSelectedText()
+        {
+            var (number, mathML, nothing, selected, cleared) = await Ui.Run(async () =>
+            {
+                var editor = await Show(focus: false);
+                editor.Equation = Equation.Parse("x+a/b", EquationFormat.UnicodeMath);
+                await Ui.Settle();
+                var none = editor.GetSelectedText(EquationFormat.LaTeX);
+                editor.Editor.SelectAll();
+                var latex = editor.GetSelectedText(EquationFormat.LaTeX, new EquationOptions { LaTeXFlavor = LaTeXFlavor.Standard });
+                editor.EquationNumber = "(1)";
+                await Ui.Settle();
+                var numbered = editor.EquationNumber;
+                var math = editor.GetMath();
+                editor.EquationNumber = null;
+                return (numbered, math, none, latex, editor.EquationNumber);
+            });
+            await Assert.That(nothing).IsNull();
+            await Assert.That(selected).IsEqualTo("x+\\frac{a}{b}");
+            await Assert.That(number).IsEqualTo("(1)");
+            await Assert.That(mathML).Contains("(1)");
+            await Assert.That(cleared).IsNull();
+        }
+
         /// <summary>The editor with its context menu at hand.</summary>
         private sealed class MenuEditBox : MathEditBox
         {
