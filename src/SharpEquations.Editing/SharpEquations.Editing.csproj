@@ -12,6 +12,9 @@
     <PackageTags>equation math mathml editor unicodemath latex</PackageTags>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- trimming and Native AOT (the WebAssembly demos are compiled so): the analyzers keep the code free of
+         reflection that a trimmed app would lose -->
+    <IsAotCompatible Condition=" $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0')) ">true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
