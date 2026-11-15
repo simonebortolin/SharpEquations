@@ -31,6 +31,7 @@
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="14.4.0.100" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.4.0.100" />
     <PackageVersion Include="AngouriMath" Version="2.6.0" />
+    <PackageVersion Include="MathNet.Symbolics" Version="0.25.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="All" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />

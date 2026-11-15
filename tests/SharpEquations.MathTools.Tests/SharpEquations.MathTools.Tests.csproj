@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\samples\SharpEquations.MathTools.Core\SharpEquations.MathTools.Core.csproj" />
     <ProjectReference Include="..\..\samples\SharpEquations.MathTools.Graphing\SharpEquations.MathTools.Graphing.csproj" />
+    <ProjectReference Include="..\..\samples\SharpEquations.MathTools.MathEngine\SharpEquations.MathTools.MathEngine.csproj" />
   </ItemGroup>
 
 </Project>

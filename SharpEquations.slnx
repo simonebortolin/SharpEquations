@@ -11,6 +11,7 @@
     <Project Path="samples/SharpEquations.Avalonia.MathTools.Demo/SharpEquations.Avalonia.MathTools.Demo.csproj" />
     <Project Path="samples/SharpEquations.MathTools.Core/SharpEquations.MathTools.Core.csproj" />
     <Project Path="samples/SharpEquations.MathTools.Graphing/SharpEquations.MathTools.Graphing.csproj" />
+    <Project Path="samples/SharpEquations.MathTools.MathEngine/SharpEquations.MathTools.MathEngine.csproj" />
     <Project Path="samples/SharpEquations.Uno.Demo/SharpEquations.Uno.Demo.csproj" />
     <Project Path="samples/SharpEquations.WinForms.Demo/SharpEquations.WinForms.Demo.csproj" />
     <Project Path="samples/SharpEquations.Wpf.Demo/SharpEquations.Wpf.Demo.csproj" />

@@ -77,6 +77,7 @@ namespace SharpEquations.MathTools
         /// <summary>Does an action to an expression of AngouriMath.</summary>
         public static CasResult Run(CasAction action, Entity expression, string? variable)
         {
+            expression = Series.Close(expression);
             var letters = Variables(expression);
             var x = MathS.Var(variable ?? (letters.Count > 0 ? letters[0] : "x"));
             switch (action)
@@ -259,6 +260,9 @@ namespace SharpEquations.MathTools
             }
             return equations;
         }
+
+        /// <summary>An expression of AngouriMath as an equation (through its LaTeX), or null when it cannot be written.</summary>
+        public static Equation? ToEquation(Entity value) => Parse(Latex(value));
 
         private static Equation? Parse(string latex) =>
             Equation.TryParse(latex, EquationFormat.LaTeX, new EquationOptions { Display = true }, out var parsed)
