@@ -2,6 +2,7 @@
 override SharpEquations.Equation.Equals(object? obj) -> bool
 override SharpEquations.Equation.GetHashCode() -> int
 override SharpEquations.Equation.ToString() -> string!
+override SharpEquations.EquationCommand.ToString() -> string!
 override SharpEquations.EquationOptions.Equals(object? obj) -> bool
 override SharpEquations.EquationOptions.GetHashCode() -> int
 override SharpEquations.EquationOptions.ToString() -> string!
@@ -13,6 +14,12 @@ SharpEquations.Equation.ToOmml() -> System.Xml.Linq.XElement!
 SharpEquations.Equation.ToString(SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null) -> string!
 SharpEquations.Equation.ToString(string? format, System.IFormatProvider? formatProvider) -> string!
 SharpEquations.Equation.WithDisplay(bool display) -> SharpEquations.Equation!
+SharpEquations.EquationCommand
+SharpEquations.EquationCommand.Arguments.get -> int
+SharpEquations.EquationCommand.Name.get -> string!
+SharpEquations.EquationCommand.Symbol.get -> string!
+SharpEquations.EquationCommand.Text.get -> string!
+SharpEquations.EquationCommands
 SharpEquations.EquationConverter
 SharpEquations.EquationFormat
 SharpEquations.EquationFormat.LaTeX = 4 -> SharpEquations.EquationFormat
@@ -38,6 +45,9 @@ SharpEquations.LaTeXFlavor
 SharpEquations.LaTeXFlavor.Standard = 0 -> SharpEquations.LaTeXFlavor
 SharpEquations.LaTeXFlavor.Word = 1 -> SharpEquations.LaTeXFlavor
 SharpEquations.MathMLNamespaces
+static readonly SharpEquations.MathMLNamespaces.MathML -> System.Xml.Linq.XNamespace!
+static readonly SharpEquations.MathMLNamespaces.Omml -> System.Xml.Linq.XNamespace!
+static readonly SharpEquations.MathMLNamespaces.WordprocessingML -> System.Xml.Linq.XNamespace!
 static SharpEquations.Equation.operator !=(SharpEquations.Equation? left, SharpEquations.Equation? right) -> bool
 static SharpEquations.Equation.operator ==(SharpEquations.Equation? left, SharpEquations.Equation? right) -> bool
 static SharpEquations.Equation.Parse(string! source, SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> SharpEquations.Equation!
@@ -45,6 +55,8 @@ static SharpEquations.Equation.Parse(System.ReadOnlySpan<byte> source, SharpEqua
 static SharpEquations.Equation.Parse(System.Xml.Linq.XElement! source, SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null) -> SharpEquations.Equation!
 static SharpEquations.Equation.TryParse(string? source, SharpEquations.EquationFormat format, out SharpEquations.Equation? equation) -> bool
 static SharpEquations.Equation.TryParse(string? source, SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options, out SharpEquations.Equation? equation) -> bool
+static SharpEquations.EquationCommands.Complete(string! prefix, SharpEquations.EquationFormat format, int max = 20) -> System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>!
+static SharpEquations.EquationCommands.Get(SharpEquations.EquationFormat format) -> System.Collections.Generic.IReadOnlyList<SharpEquations.EquationCommand!>!
 static SharpEquations.EquationConverter.CanRead(SharpEquations.EquationFormat format) -> bool
 static SharpEquations.EquationConverter.CanWrite(SharpEquations.EquationFormat format) -> bool
 static SharpEquations.EquationConverter.Convert(string! source, SharpEquations.EquationFormat sourceFormat, SharpEquations.EquationFormat destinationFormat, SharpEquations.EquationOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> string!
@@ -54,6 +66,3 @@ static SharpEquations.EquationConverter.TryConvert(string? source, SharpEquation
 static SharpEquations.EquationOptions.Default.get -> SharpEquations.EquationOptions!
 static SharpEquations.EquationOptions.operator !=(SharpEquations.EquationOptions? left, SharpEquations.EquationOptions? right) -> bool
 static SharpEquations.EquationOptions.operator ==(SharpEquations.EquationOptions? left, SharpEquations.EquationOptions? right) -> bool
-static readonly SharpEquations.MathMLNamespaces.MathML -> System.Xml.Linq.XNamespace!
-static readonly SharpEquations.MathMLNamespaces.Omml -> System.Xml.Linq.XNamespace!
-static readonly SharpEquations.MathMLNamespaces.WordprocessingML -> System.Xml.Linq.XNamespace!

@@ -11,6 +11,9 @@
     <!-- the graphs in space hand their vertices to OpenGL (Silk.NET) through pointers -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- trimming and Native AOT (the WebAssembly demos are compiled so): the analyzers keep the code free of
+         reflection that a trimmed app would lose -->
+    <IsAotCompatible Condition=" $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0')) ">true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
