@@ -1,0 +1,125 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:SharpEquations.Avalonia.MathTools"
+             xmlns:math="using:SharpEquations.Avalonia"
+             xmlns:core="using:SharpEquations.MathTools"
+             x:Class="SharpEquations.Avalonia.MathTools.AlgebraPanel"
+             x:DataType="local:AlgebraViewModel">
+    <StackPanel Spacing="14">
+        <!-- the value of what is typed -->
+        <Border Classes="code" Padding="18,12" MinHeight="60">
+            <Border.ContextMenu>
+                <ContextMenu Opening="OnAnswerMenuOpening" />
+            </Border.ContextMenu>
+            <StackPanel Spacing="4">
+                <math:MathView FontSize="26"
+                               HorizontalAlignment="Left"
+                               Equation="{Binding AnswerMath}"
+                               IsVisible="{Binding AnswerMath, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="muted"
+                           Text="{Binding AnswerNote}"
+                           IsVisible="{Binding AnswerNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+        </Border>
+
+        <WrapPanel Classes="row">
+            <Button Classes="tool" Content="Solve" ToolTip.Tip="The solutions of the equation, or where the expression is 0"
+                    Command="{Binding RunCommand}" CommandParameter="{x:Static core:CasAction.Solve}" />
+            <Button Classes="tool" Content="Simplify" ToolTip.Tip="The expression in a simpler form"
+                    Command="{Binding RunCommand}" CommandParameter="{x:Static core:CasAction.Simplify}" />
+            <Button Classes="tool" Content="Expand" ToolTip.Tip="Products and powers multiplied out"
+                    Command="{Binding RunCommand}" CommandParameter="{x:Static core:CasAction.Expand}" />
+            <Button Classes="tool" Content="Factor" ToolTip.Tip="The expression as a product"
+                    Command="{Binding RunCommand}" CommandParameter="{x:Static core:CasAction.Factor}" />
+            <Button Classes="tool" Content="d/dx" ToolTip.Tip="The derivative by the letter chosen"
+                    Command="{Binding RunCommand}" CommandParameter="{x:Static core:CasAction.Differentiate}" />
+            <Button Classes="tool" Content="∫ dx" ToolTip.Tip="An antiderivative by the letter chosen"
+                    Command="{Binding RunCommand}" CommandParameter="{x:Static core:CasAction.Integrate}" />
+            <Button Classes="tool" Content="Define" ToolTip.Tip="Gives the letter before ≔ its value, for what is computed next: a≔5 (type a:=5)"
+                    Command="{Binding RunCommand}" CommandParameter="{x:Static core:CasAction.Define}" />
+            <Button Classes="tool" Content="Graph" ToolTip.Tip="Draws the equation on the page of the graphs" Command="{Binding GraphCommand}" />
+            <TextBlock Classes="muted" Text="by" />
+            <ComboBox MinWidth="70" ItemsSource="{Binding Letters}" SelectedItem="{Binding Letter}" />
+            <ComboBox MinWidth="110"
+                      ItemsSource="{Binding AngleUnits}"
+                      SelectedIndex="{Binding AngleIndex}"
+                      ToolTip.Tip="The unit of the angles of sin, cos, tan and their inverses" />
+        </WrapPanel>
+
+        <!-- the letters defined -->
+        <DockPanel IsVisible="{Binding HasDefinitions}">
+            <Button DockPanel.Dock="Right" Classes="mini" Content="Forget" ToolTip.Tip="Forgets the letters defined" Command="{Binding ForgetCommand}" />
+            <TextBlock DockPanel.Dock="Left" Classes="muted" Text="Defined:" VerticalAlignment="Center" />
+            <ItemsControl ItemsSource="{Binding Definitions}" Margin="10,0,0,0" VerticalAlignment="Center">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel ItemSpacing="14" LineSpacing="6" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="local:AlgebraDefinition">
+                        <Panel>
+                            <math:MathView FontSize="17" Equation="{Binding Math}" IsVisible="{Binding Math, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock Classes="muted" FontSize="13" Text="{Binding Text}" IsVisible="{Binding Math, Converter={x:Static ObjectConverters.IsNull}}" />
+                        </Panel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DockPanel>
+
+        <!-- the results of the actions, the last first -->
+        <ItemsControl ItemsSource="{Binding Items}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Spacing="12" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="local:AlgebraItem">
+                    <Panel>
+                        <TextBlock Classes="muted" FontSize="13" Text="{Binding Message}" IsVisible="{Binding !IsResult}" />
+                        <Border Classes="code" Padding="16,10" IsVisible="{Binding IsResult}">
+                            <Border.ContextMenu>
+                                <ContextMenu Opening="OnResultMenuOpening" />
+                            </Border.ContextMenu>
+                            <StackPanel Spacing="8">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right"
+                                            Classes="mini"
+                                            Content="To the editor"
+                                            IsEnabled="{Binding Math, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                            Click="OnUseClick" />
+                                    <Button DockPanel.Dock="Right"
+                                            Classes="mini"
+                                            Margin="0,0,6,0"
+                                            Content="Copy"
+                                            ToolTip.Tip="Copy the result, as text and as MathML (right-click for more)"
+                                            Click="OnCopyClick" />
+                                    <TextBlock Classes="small" Text="{Binding Label}" />
+                                </DockPanel>
+                                <StackPanel Spacing="6">
+                                    <math:MathView FontSize="22"
+                                                   HorizontalAlignment="Left"
+                                                   Equation="{Binding Math}"
+                                                   IsVisible="{Binding Math, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <SelectableTextBlock FontSize="14"
+                                                         TextWrapping="Wrap"
+                                                         Text="{Binding Text}"
+                                                         IsVisible="{Binding Text, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <math:MathView FontSize="18"
+                                                   HorizontalAlignment="Left"
+                                                   Equation="{Binding Approximate}"
+                                                   IsVisible="{Binding Approximate, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <SelectableTextBlock FontSize="14"
+                                                         TextWrapping="Wrap"
+                                                         Text="{Binding ApproximateText}"
+                                                         IsVisible="{Binding ApproximateText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Panel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

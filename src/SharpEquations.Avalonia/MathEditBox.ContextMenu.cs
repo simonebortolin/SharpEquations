@@ -8,6 +8,7 @@ namespace SharpEquations.Avalonia
     using global::Avalonia.Controls.Primitives.PopupPositioning;
     using global::Avalonia.Input;
     using global::Avalonia.Input.Platform;
+    using SharpEquations.Rendering;
 
     /// <summary>The arguments of <see cref="MathEditBox.ContextMenuOpening"/>.</summary>
     public sealed class MathContextMenuEventArgs : EventArgs
@@ -59,8 +60,7 @@ namespace SharpEquations.Avalonia
             if (!IsContextMenuEnabled)
                 return false;
             Focus();
-            if (point is { } p && !IsInSelection(p) && HitTest(p) is { } position)
-                Editor.SetCaret(position);
+            var at = View.PrepareContextMenu(point?.X, point?.Y);
 
             openMenu?.Close();
             var menu = CreateContextMenu();
@@ -73,15 +73,8 @@ namespace SharpEquations.Avalonia
             menu.Placement = PlacementMode.AnchorAndGravity;
             menu.PlacementAnchor = PopupAnchor.BottomLeft;
             menu.PlacementGravity = PopupGravity.BottomRight;
-            if (point is { } at)
-            {
-                menu.PlacementRect = new Rect(at, new Size(1, 1));
-            }
-            else if (Layout?.GetCaretRect(Editor.Caret) is { } caret)
-            {
-                var origin = ContentOrigin();
-                menu.PlacementRect = new Rect(caret.X + origin.X, caret.Y + origin.Y, 1, caret.Height);
-            }
+            if (at is { } rect)
+                menu.PlacementRect = new Rect(rect.X, rect.Y, rect.Width, rect.Height);
             openMenu = menu;
             menu.Open(this);
             return true;
@@ -95,13 +88,12 @@ namespace SharpEquations.Avalonia
         {
             if (TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
                 return;
-            var text = Editor.GetSelectedText(format) ?? (Editor.IsEmpty ? null : Editor.GetText(format));
-            if (string.IsNullOrEmpty(text))
+            if (View.GetCopyAsText(format) is not { } text)
                 return;
             var item = new DataTransferItem();
-            item.SetText(text!);
+            item.SetText(text);
             if (format == EquationFormat.MathML)
-                item.Set(MathMLClipboardFormat, MathClipboard.Encode(text!));
+                item.Set(MathMLClipboardFormat, MathClipboard.Encode(text));
             var data = new DataTransfer();
             data.Add(item);
             await clipboard.SetDataAsync(data).ConfigureAwait(true);
@@ -118,63 +110,71 @@ namespace SharpEquations.Avalonia
         /// </summary>
         protected virtual ContextMenu CreateContextMenu()
         {
-            var e = Editor;
-            var editable = !IsReadOnly;
-            var hasSelection = e.Selection != null;
-            var items = new List<Control>();
-
-            if (editable)
-            {
-                items.Add(Item("Undo", "undo", () => e.Undo(), e.CanUndo, Gesture(h => h.Undo, Key.Z)));
-                items.Add(Item("Redo", "redo", () => e.Redo(), e.CanRedo, Gesture(h => h.Redo, Key.Y)));
-                items.Add(new Separator());
-                items.Add(Item("Cut", "cut", () => _ = CutAsync(), hasSelection, Gesture(h => h.Cut, Key.X)));
-            }
-            items.Add(Item("Copy", "copy", () => _ = CopyAsync(), hasSelection, Gesture(h => h.Copy, Key.C)));
-            if (editable)
-                items.Add(Item("Paste", "paste", () => _ = PasteAsync(), true, Gesture(h => h.Paste, Key.V)));
-
-            var copyAs = new MenuItem { Header = hasSelection ? "Copy selection as" : "Copy equation as", Tag = "copy-as", IsEnabled = !e.IsEmpty };
-            copyAs.Items.Add(Item("MathML", "copy-as-mathml", () => _ = CopyAsAsync(EquationFormat.MathML)));
-            copyAs.Items.Add(Item("UnicodeMath", "copy-as-unicodemath", () => _ = CopyAsAsync(EquationFormat.UnicodeMath)));
-            copyAs.Items.Add(Item("LaTeX", "copy-as-latex", () => _ = CopyAsAsync(EquationFormat.LaTeX)));
-            copyAs.Items.Add(Item("OMML (Word)", "copy-as-omml", () => _ = CopyAsAsync(EquationFormat.Omml)));
-            items.Add(copyAs);
-            items.Add(Item("Select all", "select-all", () => e.SelectAll(), !e.IsEmpty, Gesture(h => h.SelectAll, Key.A)));
-
-            if (editable)
-            {
-                items.Add(new Separator());
-                items.Add(Item(ViewMode == MathViewMode.Linear ? "Professional" : "Linear", "view",
-                    () => ViewMode = ViewMode == MathViewMode.Linear ? MathViewMode.Professional : MathViewMode.Linear, true, ToggleViewModeGesture));
-                items.Add(Item("Build up", "build-up", () => e.BuildUpAll(), !e.IsEmpty));
-                items.Add(Item("Build down", "build-down", () => e.BuildDown(), !e.IsEmpty && !e.IsLinear));
-                if (!e.IsLinear)
-                {
-                    items.Add(Item("New line", "new-line", () => e.InsertLineBreak(), true, new KeyGesture(Key.Enter, KeyModifiers.Shift)));
-                    items.Add(e.EquationNumber == null
-                        ? Item("Number the equation", "number", () => e.SetEquationNumber("(1)"), !e.IsEmpty)
-                        : Item("Remove the number", "number", () => e.SetEquationNumber(null)));
-                }
-                if (e.IsInTable)
-                {
-                    var table = new MenuItem { Header = "Table", Tag = "table" };
-                    table.Items.Add(Item("Insert row above", "row-above", () => e.InsertTableRow(above: true)));
-                    table.Items.Add(Item("Insert row below", "row-below", () => e.InsertTableRow()));
-                    table.Items.Add(Item("Insert column left", "column-left", () => e.InsertTableColumn(before: true)));
-                    table.Items.Add(Item("Insert column right", "column-right", () => e.InsertTableColumn()));
-                    table.Items.Add(new Separator());
-                    table.Items.Add(Item("Delete row", "delete-row", () => e.DeleteTableRow()));
-                    table.Items.Add(Item("Delete column", "delete-column", () => e.DeleteTableColumn()));
-                    items.Add(table);
-                }
-            }
-
             var menu = new ContextMenu();
-            foreach (var item in items)
-                menu.Items.Add(item);
+            foreach (var item in View.GetContextMenu())
+                menu.Items.Add(Item(item));
             return menu;
         }
+
+        private Control Item(MathMenuItem item)
+        {
+            if (item.IsSeparator)
+                return new Separator();
+            var command = item.Command!;
+            var menuItem = new MenuItem { Header = item.Header, Tag = command, IsEnabled = item.IsEnabled, InputGesture = Gesture(command) };
+            if (item.Items.Count > 0)
+            {
+                foreach (var child in item.Items)
+                    menuItem.Items.Add(Item(child));
+                return menuItem;
+            }
+            menuItem.Click += (_, args) =>
+            {
+                args.Handled = true;
+                Execute(command);
+                Focus();
+            };
+            return menuItem;
+        }
+
+        /// <summary>Does a command of the context menu: those of the clipboard and the view here, the others on the editor (<see cref="MathEditorView.ExecuteCommand"/>).</summary>
+        private void Execute(string command)
+        {
+            switch (command)
+            {
+                case "cut":
+                    _ = CutAsync();
+                    break;
+                case "copy":
+                    _ = CopyAsync();
+                    break;
+                case "paste":
+                    _ = PasteAsync();
+                    break;
+                case "view":
+                    ViewMode = ViewMode == MathViewMode.Linear ? MathViewMode.Professional : MathViewMode.Linear;
+                    break;
+                case var _ when MathEditorView.CopyAsFormat(command) is { } format:
+                    _ = CopyAsAsync(format);
+                    break;
+                default:
+                    View.ExecuteCommand(command);
+                    break;
+            }
+        }
+
+        private KeyGesture? Gesture(string command) => command switch
+        {
+            "undo" => Gesture(h => h.Undo, Key.Z),
+            "redo" => Gesture(h => h.Redo, Key.Y),
+            "cut" => Gesture(h => h.Cut, Key.X),
+            "copy" => Gesture(h => h.Copy, Key.C),
+            "paste" => Gesture(h => h.Paste, Key.V),
+            "select-all" => Gesture(h => h.SelectAll, Key.A),
+            "view" => ToggleViewModeGesture,
+            "new-line" => new KeyGesture(Key.Enter, KeyModifiers.Shift),
+            _ => null,
+        };
 
         private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
         {
@@ -183,34 +183,9 @@ namespace SharpEquations.Avalonia
             e.Handled = ShowContextMenu(e.TryGetPosition(this, out var point) ? point : null);
         }
 
-        private bool IsInSelection(Point point)
-        {
-            if (Editor.Selection is not { } selection || Layout is not { } layout)
-                return false;
-            var origin = ContentOrigin();
-            foreach (var rect in layout.GetSelectionRects(selection))
-            {
-                if (point.X >= rect.X + origin.X && point.X <= rect.Right + origin.X && point.Y >= rect.Y + origin.Y && point.Y <= rect.Bottom + origin.Y)
-                    return true;
-            }
-            return false;
-        }
-
         private static KeyGesture Gesture(Func<PlatformHotkeyConfiguration, List<KeyGesture>> gestures, Key key) =>
             Application.Current?.PlatformSettings?.HotkeyConfiguration is { } hotkeys && gestures(hotkeys) is { Count: > 0 } list
                 ? list[0]
                 : new KeyGesture(key, KeyModifiers.Control);
-
-        private MenuItem Item(string header, string tag, Action action, bool enabled = true, KeyGesture? gesture = null)
-        {
-            var item = new MenuItem { Header = header, Tag = tag, IsEnabled = enabled, InputGesture = gesture };
-            item.Click += (_, args) =>
-            {
-                args.Handled = true;
-                action();
-                Focus();
-            };
-            return item;
-        }
     }
 }

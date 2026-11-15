@@ -1,0 +1,9 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:demo="using:SharpEquations.Avalonia.Demo"
+        x:Class="SharpEquations.Avalonia.Demo.MainWindow"
+        Title="SharpEquations — equation editor"
+        Width="1240"
+        Height="900">
+    <demo:DemoView />
+</Window>

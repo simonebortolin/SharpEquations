@@ -24,6 +24,7 @@ namespace SharpEquations.Editing
         private EquationFormat inputFormat = EquationFormat.UnicodeMath;
         private MathPosition? typingAt;
         private MathPosition? deferredAt;
+        private string? dismissedPrefix;
 
         /// <summary>An editor of the equation, or of an empty equation.</summary>
         public MathEditor(Equation? equation = null)
@@ -232,7 +233,10 @@ namespace SharpEquations.Editing
                 deferredAt = null;
                 InsertRune(rune);
                 if (!IsLinear)
+                {
+                    ReopenScriptBase(rune);
                     built |= TypedAtCaret(rune, resumes);
+                }
             }
             typingAt = built ? null : Caret;
             OnChanged(true);
@@ -483,6 +487,46 @@ namespace SharpEquations.Editing
             OnChanged(true);
         }
 
+        /// <summary>
+        /// What the floating bar at the caret shows: the completions of the command typed before the caret (unless
+        /// <see cref="DismissCompletions"/> closed them), the structures for the selection, the commands of the table of
+        /// the caret, or the quick symbols in an empty slot; nothing in the linear format.
+        /// </summary>
+        /// <param name="maxCompletions">The most completions to give.</param>
+        /// <param name="completions">The completions, in <see cref="MathQuickBarMode.Completions"/>; empty otherwise.</param>
+        public MathQuickBarMode GetQuickBarMode(int maxCompletions, out IReadOnlyList<EquationCommand> completions)
+        {
+            completions = Array.Empty<EquationCommand>();
+            if (IsLinear)
+                return MathQuickBarMode.Hidden;
+
+            var prefix = CommandPrefix;
+            if (prefix != null)
+            {
+                if (prefix.Length > 1 && prefix != dismissedPrefix && GetCompletions(maxCompletions) is { Count: > 0 } found)
+                {
+                    completions = found;
+                    return MathQuickBarMode.Completions;
+                }
+                return MathQuickBarMode.Hidden;
+            }
+
+            if (Selection != null)
+                return MathQuickBarMode.Selection;
+            if (IsInTable)
+                return MathQuickBarMode.Table;
+            return IsInEmptySlot() ? MathQuickBarMode.Symbols : MathQuickBarMode.Hidden;
+        }
+
+        /// <summary>
+        /// Closes the completions of the command typed before the caret (Esc), until the command typed changes:
+        /// <see cref="GetQuickBarMode"/> no longer gives them.
+        /// </summary>
+        public void DismissCompletions() => dismissedPrefix = CommandPrefix;
+
+        private bool IsInEmptySlot() =>
+            Caret.Path.Count > 1 && MathTree.TryGet(Root, Caret.Path, out var node) && node is { IsRow: true, Children.Count: 0 };
+
         /// <summary>Whether the caret is in a cell of a table (a matrix, an equation array): the table commands apply.</summary>
         public bool IsInTable => CellAtCaret() != null;
 
@@ -702,6 +746,55 @@ namespace SharpEquations.Editing
             Move(Canonical(position), extend);
         }
 
+        /// <summary>
+        /// Acts on a key: the arrows, Home and End move the caret (Shift extends the selection; Up and Down to the nearest
+        /// position of the <paramref name="geometry"/>, when given); Backspace and Delete delete; Tab moves to the next
+        /// cell of a table (Shift+Tab to the previous one); Enter builds up the whole equation, Shift+Enter breaks the
+        /// line. Read only, the keys that edit are not used.
+        /// </summary>
+        /// <returns>Whether the key was used.</returns>
+        public bool ProcessKey(MathKey key, MathKeyModifiers modifiers, IMathGeometry? geometry = null, bool readOnly = false)
+        {
+            var shift = (modifiers & MathKeyModifiers.Shift) != 0;
+            switch (key)
+            {
+                case MathKey.Left:
+                    MoveLeft(shift);
+                    return true;
+                case MathKey.Right:
+                    MoveRight(shift);
+                    return true;
+                case MathKey.Up:
+                    MoveUp(shift, geometry);
+                    return true;
+                case MathKey.Down:
+                    MoveDown(shift, geometry);
+                    return true;
+                case MathKey.Home:
+                    MoveHome(shift);
+                    return true;
+                case MathKey.End:
+                    MoveEnd(shift);
+                    return true;
+                case MathKey.Backspace when !readOnly:
+                    Backspace();
+                    return true;
+                case MathKey.Delete when !readOnly:
+                    Delete();
+                    return true;
+                case MathKey.Tab when (modifiers & ~MathKeyModifiers.Shift) == 0 && MoveToNextCell(shift):
+                    return true;
+                case MathKey.Enter when !readOnly && shift:
+                    InsertLineBreak();
+                    return true;
+                case MathKey.Enter when !readOnly:
+                    BuildUpAll();
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         /// <summary>Undoes the last edit.</summary>
         public void Undo()
         {
@@ -863,6 +956,44 @@ namespace SharpEquations.Editing
                 Root = MathTree.Replace(Root, caret.Path, node.WithChildren(children));
                 Caret = Anchor = new MathPosition(MathTree.Append(caret.Path, caret.Offset), 1);
             }
+        }
+
+        /// <summary>
+        /// A script typed just after a structure that has only the other script (<c>_</c> after <c>∑^2</c> or
+        /// <c>x^2</c> built up by a space, <c>^</c> after <c>∫_0</c>) goes to the same base, as if both had been typed
+        /// together: the structure goes back to its linear text, in the run of the script, which builds up again with it.
+        /// </summary>
+        private void ReopenScriptBase(Rune rune)
+        {
+            var caret = Caret;
+            if (rune.Value is not ('_' or '^') || caret.Offset != 1 || caret.Path.Count == 0
+                || MathTree.Get(Root, caret.Path) is not { IsRun: true } run)
+                return;
+            var j = caret.Path[caret.Path.Count - 1];
+            var rowPath = MathTree.Parent(caret.Path);
+            var row = MathTree.Get(Root, rowPath);
+            if (j == 0)
+                return;
+            var lacksScript = row.Children[j - 1].Name switch
+            {
+                "msup" or "mover" => rune.Value == '_',
+                "msub" or "munder" => rune.Value == '^',
+                _ => false,
+            };
+            // the limit over or under an n-ary operator goes back to the text it was typed as (∑^2, not ∑┴2)
+            var structure = row.Children[j - 1];
+            if (structure.Name is "mover" or "munder" && structure.Children[0] is { } nary
+                && (nary.Name == "mo" || nary.IsRow && nary.Children.Count == 1 && nary.Children[0].Name == "mo"))
+                structure = MathNode.Element(structure.Name == "mover" ? "msup" : "msub", structure.Children, structure.Attributes);
+            if (!lacksScript || BuildUp.ToEquation(new[] { structure }, IsDisplay) is not { } equation)
+                return;
+
+            var linear = BuildUp.ToLinear(equation, InputFormat);
+            var children = row.Children.ToList();
+            children[j] = MathNode.Run(linear + run.Text);
+            children.RemoveAt(j - 1);
+            Root = MathTree.Replace(Root, rowPath, row.WithChildren(children));
+            Caret = Anchor = new MathPosition(MathTree.Append(rowPath, j - 1), CodePointText.Length(linear) + 1);
         }
 
         /// <summary>
@@ -1454,6 +1585,8 @@ namespace SharpEquations.Editing
 
         private void OnChanged(bool content)
         {
+            if (dismissedPrefix != null && CommandPrefix != dismissedPrefix)
+                dismissedPrefix = null;
             if (content)
                 ContentChanged?.Invoke(this, EventArgs.Empty);
             Changed?.Invoke(this, EventArgs.Empty);

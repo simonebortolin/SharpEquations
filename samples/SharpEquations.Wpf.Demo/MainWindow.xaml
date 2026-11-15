@@ -1,0 +1,17 @@
+<Window x:Class="SharpEquations.Wpf.Demo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:math="clr-namespace:SharpEquations.Wpf;assembly=SharpEquations.Wpf"
+        Title="SharpEquations for WPF"
+        Width="800"
+        Height="500"
+        Background="White">
+    <StackPanel Margin="24">
+        <TextBlock Text="Type UnicodeMath or LaTeX: a space or an operator builds it up." Opacity="0.7" Margin="0,0,0,8" />
+        <math:MathEditBox x:Name="Editor" FontSize="28" Margin="0,0,0,12" EquationChanged="OnEquationChanged" />
+        <TextBlock x:Name="UnicodeMath" TextWrapping="Wrap" />
+        <TextBlock x:Name="LaTeX" TextWrapping="Wrap" />
+        <TextBlock Text="MathView:" Opacity="0.7" Margin="0,8,0,4" />
+        <math:MathView FontSize="22" IsDisplay="True" HorizontalAlignment="Left" Equation="{Binding Equation, ElementName=Editor}" />
+    </StackPanel>
+</Window>

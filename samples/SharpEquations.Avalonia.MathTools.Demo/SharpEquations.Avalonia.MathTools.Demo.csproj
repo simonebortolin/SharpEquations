@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- A second demo, a set of math tools around the editor: the views (MathToolsView, shared with the WebAssembly
-       page) and the desktop window. -->
+  <!-- A second demo, a set of math tools around the editor, in MVVM: the view models (ViewModels/) and the views in
+       AXAML (Views/: MathToolsView and its pages), shared with the WebAssembly page, and the desktop app and window. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -10,6 +10,7 @@
     <RootNamespace>SharpEquations.Avalonia.MathTools</RootNamespace>
     <!-- the graphs in space hand their vertices to OpenGL (Silk.NET) through pointers -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
   <ItemGroup>

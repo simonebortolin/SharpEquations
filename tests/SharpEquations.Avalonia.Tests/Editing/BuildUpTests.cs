@@ -46,6 +46,59 @@ namespace SharpEquations.Avalonia.Tests.Editing
             await Assert.That(editor.ToEquation()).IsEqualTo(Equation.Parse(expected, EquationFormat.UnicodeMath));
         }
 
+        /// <summary>
+        /// The other script typed after a script built up by a space goes to the same base, as if both were typed
+        /// together: the lower limit of an n-ary operator whose upper limit is built, not a script of the whole.
+        /// </summary>
+        [Test]
+        [Arguments("∑^2 _2 ", "∑_2^2")]
+        [Arguments("∑_1 ^n ", "∑_1^n")]
+        [Arguments("∫^1 _0 ", "∫_0^1")]
+        [Arguments("\\int^1 _0 ", "∫_0^1")]
+        [Arguments("\\sum ^2 _2 ", "∑_2^2")]
+        [Arguments("x^2 _3 ", "x_3^2")]
+        [Arguments("x_3 ^2 ", "x_3^2")]
+        public async Task OtherScriptAfterABuiltScript(string typed, string expected)
+        {
+            var editor = Type(typed);
+            await Assert.That(editor.Root.Children[0].Children.Any(c => c.IsRun)).IsFalse().Because(Built(editor));
+            await Assert.That(editor.ToEquation()).IsEqualTo(Equation.Parse(expected, EquationFormat.UnicodeMath));
+        }
+
+        [Test]
+        [Arguments("\\sum^2 _2 ", "\\sum_2^2")]
+        [Arguments("\\int_0 ^1 ", "\\int_0^1")]
+        public async Task OtherScriptAfterABuiltScriptInLaTeX(string typed, string expected)
+        {
+            var editor = Type(typed, EquationFormat.LaTeX);
+            await Assert.That(editor.ToEquation()).IsEqualTo(Equation.Parse(expected, EquationFormat.LaTeX));
+        }
+
+        /// <summary>
+        /// An n-ary operator built up with its limits before its operand is typed takes the limits the operator has with
+        /// an operand: under and over a sum in display, at the right of an integral, as the whole text built up again.
+        /// </summary>
+        [Test]
+        [Arguments("\\sum_(i=1)^n i^2 ")]
+        [Arguments("∑_(i=1)^n i^2 ")]
+        [Arguments("∏_k a_k ")]
+        [Arguments("∑^2 x ")]
+        [Arguments("a+∑_k k ")]
+        [Arguments("∫_0^1 x dx ")]
+        [Arguments("∯_S f ")]
+        public async Task NaryLimitsAsWhenBuiltUpWhole(string typed)
+        {
+            static string Limits(MathEditor editor) => editor.ToMathML().Descendants()
+                .First(e => e.Name.LocalName is "msub" or "msup" or "msubsup" or "munder" or "mover" or "munderover").Name.LocalName;
+
+            var editor = new MathEditor { IsDisplay = true };
+            editor.Insert(typed);
+            var built = Limits(editor);
+            editor.BuildDown();
+            editor.BuildUpAll();
+            await Assert.That(built).IsEqualTo(Limits(editor));
+        }
+
         [Test]
         public async Task ArgumentStillToComeDoesNotBuildUp()
         {

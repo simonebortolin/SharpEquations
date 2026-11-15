@@ -1,0 +1,6 @@
+#nullable enable
+SharpEquations.Uno.GlobalStaticResources
+SharpEquations.Uno.GlobalStaticResources.GlobalStaticResources() -> void
+static SharpEquations.Uno.GlobalStaticResources.Initialize() -> void
+static SharpEquations.Uno.GlobalStaticResources.RegisterDefaultStyles() -> void
+static SharpEquations.Uno.GlobalStaticResources.RegisterResourceDictionariesBySource() -> void

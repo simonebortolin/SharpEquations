@@ -1,0 +1,137 @@
+#nullable enable
+SharpEquations.WinForms.EquationChangedEventArgs
+SharpEquations.WinForms.EquationChangedEventArgs.Equation.get -> SharpEquations.Equation?
+SharpEquations.WinForms.EquationChangedEventArgs.EquationChangedEventArgs(SharpEquations.Equation? equation) -> void
+SharpEquations.WinForms.MathContextMenuEventArgs
+SharpEquations.WinForms.MathContextMenuEventArgs.Cancel.get -> bool
+SharpEquations.WinForms.MathContextMenuEventArgs.Cancel.set -> void
+SharpEquations.WinForms.MathContextMenuEventArgs.MathContextMenuEventArgs(System.Windows.Forms.ContextMenuStrip! menu) -> void
+SharpEquations.WinForms.MathContextMenuEventArgs.Menu.get -> System.Windows.Forms.ContextMenuStrip!
+SharpEquations.WinForms.MathCopyingEventArgs
+SharpEquations.WinForms.MathCopyingEventArgs.Cancel.get -> bool
+SharpEquations.WinForms.MathCopyingEventArgs.Cancel.set -> void
+SharpEquations.WinForms.MathCopyingEventArgs.Data.get -> System.Windows.Forms.DataObject!
+SharpEquations.WinForms.MathCopyingEventArgs.Equation.get -> SharpEquations.Equation!
+SharpEquations.WinForms.MathCopyingEventArgs.MathCopyingEventArgs(SharpEquations.Equation! equation, System.Windows.Forms.DataObject! data) -> void
+SharpEquations.WinForms.MathEditBox
+SharpEquations.WinForms.MathEditBox.AutoCorrect.get -> SharpEquations.Editing.MathAutoCorrect!
+SharpEquations.WinForms.MathEditBox.AutoCorrect.set -> void
+SharpEquations.WinForms.MathEditBox.BorderColor.get -> System.Drawing.Color
+SharpEquations.WinForms.MathEditBox.BorderColor.set -> void
+SharpEquations.WinForms.MathEditBox.BorderWidth.get -> int
+SharpEquations.WinForms.MathEditBox.BorderWidth.set -> void
+SharpEquations.WinForms.MathEditBox.BuildDown() -> void
+SharpEquations.WinForms.MathEditBox.BuildUp() -> void
+SharpEquations.WinForms.MathEditBox.CaretColor.get -> System.Drawing.Color
+SharpEquations.WinForms.MathEditBox.CaretColor.set -> void
+SharpEquations.WinForms.MathEditBox.Copy() -> void
+SharpEquations.WinForms.MathEditBox.CopyAs(SharpEquations.EquationFormat format) -> void
+SharpEquations.WinForms.MathEditBox.CopyTextFormat.get -> SharpEquations.EquationFormat?
+SharpEquations.WinForms.MathEditBox.CopyTextFormat.set -> void
+SharpEquations.WinForms.MathEditBox.Copying -> System.EventHandler<SharpEquations.WinForms.MathCopyingEventArgs!>?
+SharpEquations.WinForms.MathEditBox.Cut() -> void
+SharpEquations.WinForms.MathEditBox.Editor.get -> SharpEquations.Editing.MathEditor!
+SharpEquations.WinForms.MathEditBox.Equation.get -> SharpEquations.Equation?
+SharpEquations.WinForms.MathEditBox.Equation.set -> void
+SharpEquations.WinForms.MathEditBox.EquationChanged -> System.EventHandler<SharpEquations.WinForms.EquationChangedEventArgs!>?
+SharpEquations.WinForms.MathEditBox.EquationLayout.get -> SharpEquations.Rendering.MathLayout?
+SharpEquations.WinForms.MathEditBox.EquationNumber.get -> string?
+SharpEquations.WinForms.MathEditBox.EquationNumber.set -> void
+SharpEquations.WinForms.MathEditBox.FontSize.get -> double
+SharpEquations.WinForms.MathEditBox.FontSize.set -> void
+SharpEquations.WinForms.MathEditBox.GetMath() -> string!
+SharpEquations.WinForms.MathEditBox.GetSelectedText(SharpEquations.EquationFormat format, SharpEquations.EquationOptions? options = null) -> string?
+SharpEquations.WinForms.MathEditBox.GetText(SharpEquations.EquationFormat format) -> string!
+SharpEquations.WinForms.MathEditBox.InputFormat.get -> SharpEquations.EquationFormat
+SharpEquations.WinForms.MathEditBox.InputFormat.set -> void
+SharpEquations.WinForms.MathEditBox.IsAutoCorrectEnabled.get -> bool
+SharpEquations.WinForms.MathEditBox.IsAutoCorrectEnabled.set -> void
+SharpEquations.WinForms.MathEditBox.IsContextMenuEnabled.get -> bool
+SharpEquations.WinForms.MathEditBox.IsContextMenuEnabled.set -> void
+SharpEquations.WinForms.MathEditBox.IsDisplay.get -> bool
+SharpEquations.WinForms.MathEditBox.IsDisplay.set -> void
+SharpEquations.WinForms.MathEditBox.IsQuickBarEnabled.get -> bool
+SharpEquations.WinForms.MathEditBox.IsQuickBarEnabled.set -> void
+SharpEquations.WinForms.MathEditBox.IsQuickBarOpen.get -> bool
+SharpEquations.WinForms.MathEditBox.IsReadOnly.get -> bool
+SharpEquations.WinForms.MathEditBox.IsReadOnly.set -> void
+SharpEquations.WinForms.MathEditBox.MathContextMenuOpening -> System.EventHandler<SharpEquations.WinForms.MathContextMenuEventArgs!>?
+SharpEquations.WinForms.MathEditBox.MathEditBox() -> void
+SharpEquations.WinForms.MathEditBox.MathFont.get -> SharpEquations.Rendering.OpenTypeMathFont?
+SharpEquations.WinForms.MathEditBox.MathFont.set -> void
+SharpEquations.WinForms.MathEditBox.OpenContextMenu.get -> System.Windows.Forms.ContextMenuStrip?
+SharpEquations.WinForms.MathEditBox.Paste() -> void
+SharpEquations.WinForms.MathEditBox.PlaceholderColor.get -> System.Drawing.Color
+SharpEquations.WinForms.MathEditBox.PlaceholderColor.set -> void
+SharpEquations.WinForms.MathEditBox.QuickSymbols.get -> System.Collections.Generic.IList<string!>!
+SharpEquations.WinForms.MathEditBox.SelectionColor.get -> System.Drawing.Color
+SharpEquations.WinForms.MathEditBox.SelectionColor.set -> void
+SharpEquations.WinForms.MathEditBox.SetMath(string! mathML) -> void
+SharpEquations.WinForms.MathEditBox.ShowContextMenu(System.Drawing.Point? point = null) -> bool
+SharpEquations.WinForms.MathEditBox.View.get -> SharpEquations.Rendering.MathEditorView!
+SharpEquations.WinForms.MathEditBox.ViewMode.get -> SharpEquations.WinForms.MathViewMode
+SharpEquations.WinForms.MathEditBox.ViewMode.set -> void
+SharpEquations.WinForms.MathEditBoxAccessibleObject
+SharpEquations.WinForms.MathEditBoxAccessibleObject.MathEditBoxAccessibleObject(SharpEquations.WinForms.MathEditBox! owner) -> void
+SharpEquations.WinForms.MathFonts
+SharpEquations.WinForms.MathView
+SharpEquations.WinForms.MathView.Equation.get -> SharpEquations.Equation?
+SharpEquations.WinForms.MathView.Equation.set -> void
+SharpEquations.WinForms.MathView.EquationLayout.get -> SharpEquations.Rendering.MathLayout?
+SharpEquations.WinForms.MathView.FontSize.get -> double
+SharpEquations.WinForms.MathView.FontSize.set -> void
+SharpEquations.WinForms.MathView.IsDisplay.get -> bool
+SharpEquations.WinForms.MathView.IsDisplay.set -> void
+SharpEquations.WinForms.MathView.MathFont.get -> SharpEquations.Rendering.OpenTypeMathFont?
+SharpEquations.WinForms.MathView.MathFont.set -> void
+SharpEquations.WinForms.MathView.MathML.get -> string?
+SharpEquations.WinForms.MathView.MathML.set -> void
+SharpEquations.WinForms.MathView.MathView() -> void
+SharpEquations.WinForms.MathViewMode
+SharpEquations.WinForms.MathViewMode.Linear = 1 -> SharpEquations.WinForms.MathViewMode
+SharpEquations.WinForms.MathViewMode.Professional = 0 -> SharpEquations.WinForms.MathViewMode
+const SharpEquations.WinForms.MathEditBox.MathMLClipboardFormat = "MathML" -> string!
+override SharpEquations.WinForms.MathEditBox.AutoSize.get -> bool
+override SharpEquations.WinForms.MathEditBox.AutoSize.set -> void
+override SharpEquations.WinForms.MathEditBox.CreateAccessibilityInstance() -> System.Windows.Forms.AccessibleObject!
+override SharpEquations.WinForms.MathEditBox.Dispose(bool disposing) -> void
+override SharpEquations.WinForms.MathEditBox.GetPreferredSize(System.Drawing.Size proposedSize) -> System.Drawing.Size
+override SharpEquations.WinForms.MathEditBox.IsInputKey(System.Windows.Forms.Keys keyData) -> bool
+override SharpEquations.WinForms.MathEditBox.OnDpiChangedAfterParent(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnFontChanged(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnForeColorChanged(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnGotFocus(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnHandleCreated(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnHandleDestroyed(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnKeyDown(System.Windows.Forms.KeyEventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnKeyPress(System.Windows.Forms.KeyPressEventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnLostFocus(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnMouseDown(System.Windows.Forms.MouseEventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnMouseMove(System.Windows.Forms.MouseEventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnMouseUp(System.Windows.Forms.MouseEventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnPaddingChanged(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnPaint(System.Windows.Forms.PaintEventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.OnResize(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathEditBox.ProcessDialogKey(System.Windows.Forms.Keys keyData) -> bool
+override SharpEquations.WinForms.MathEditBox.SetBoundsCore(int x, int y, int width, int height, System.Windows.Forms.BoundsSpecified specified) -> void
+override SharpEquations.WinForms.MathEditBox.WndProc(ref System.Windows.Forms.Message m) -> void
+override SharpEquations.WinForms.MathEditBoxAccessibleObject.Name.get -> string?
+override SharpEquations.WinForms.MathEditBoxAccessibleObject.Name.set -> void
+override SharpEquations.WinForms.MathEditBoxAccessibleObject.Role.get -> System.Windows.Forms.AccessibleRole
+override SharpEquations.WinForms.MathEditBoxAccessibleObject.State.get -> System.Windows.Forms.AccessibleStates
+override SharpEquations.WinForms.MathEditBoxAccessibleObject.Value.get -> string!
+override SharpEquations.WinForms.MathEditBoxAccessibleObject.Value.set -> void
+override SharpEquations.WinForms.MathView.AutoSize.get -> bool
+override SharpEquations.WinForms.MathView.AutoSize.set -> void
+override SharpEquations.WinForms.MathView.Dispose(bool disposing) -> void
+override SharpEquations.WinForms.MathView.GetPreferredSize(System.Drawing.Size proposedSize) -> System.Drawing.Size
+override SharpEquations.WinForms.MathView.OnDpiChangedAfterParent(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathView.OnFontChanged(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathView.OnHandleDestroyed(System.EventArgs! e) -> void
+override SharpEquations.WinForms.MathView.OnPaint(System.Windows.Forms.PaintEventArgs! e) -> void
+override SharpEquations.WinForms.MathView.OnResize(System.EventArgs! e) -> void
+static SharpEquations.WinForms.MathFonts.Default.get -> SharpEquations.Rendering.OpenTypeMathFont!
+static SharpEquations.WinForms.MathFonts.FromFile(byte[]! data) -> SharpEquations.Rendering.OpenTypeMathFont!
+static SharpEquations.WinForms.MathFonts.FromFile(string! path) -> SharpEquations.Rendering.OpenTypeMathFont!
+static SharpEquations.WinForms.MathFonts.LibertinusMath.get -> SharpEquations.Rendering.OpenTypeMathFont!
+virtual SharpEquations.WinForms.MathEditBox.CreateContextMenu() -> System.Windows.Forms.ContextMenuStrip!

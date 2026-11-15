@@ -1,0 +1,119 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:SharpEquations.Avalonia.MathTools"
+             xmlns:math="using:SharpEquations.Avalonia"
+             xmlns:se="using:SharpEquations"
+             x:Class="SharpEquations.Avalonia.MathTools.TrianglePage"
+             x:DataType="local:TrianglesViewModel">
+    <UserControl.Resources>
+        <!-- a side or an angle: its letter, its field and its unit -->
+        <DataTemplate x:Key="InputTemplate" x:DataType="local:TriangleInput">
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,12,0">
+                <math:MathView Width="18" FontSize="19" VerticalAlignment="Center" IsHitTestVisible="False" Equation="{Binding Name}" />
+                <TextBox Width="92" PlaceholderText="?" Text="{Binding Text}" />
+                <TextBlock Text="{Binding Unit}" VerticalAlignment="Center" Margin="-4,0,0,0" />
+            </StackPanel>
+        </DataTemplate>
+        <ItemsPanelTemplate x:Key="RowPanel">
+            <WrapPanel ItemSpacing="8" LineSpacing="8" />
+        </ItemsPanelTemplate>
+    </UserControl.Resources>
+
+    <StackPanel Spacing="20">
+        <local:Card Title="Triangles"
+                    Caption="Three of the sides and angles, at least one of them a side; each angle is opposite the side of its letter">
+            <StackPanel Spacing="14">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="14" RowSpacing="10">
+                    <TextBlock Classes="small" Text="Sides" VerticalAlignment="Center" />
+                    <ItemsControl Grid.Column="1"
+                                  ItemsSource="{Binding Sides}"
+                                  ItemTemplate="{StaticResource InputTemplate}"
+                                  ItemsPanel="{StaticResource RowPanel}" />
+                    <TextBlock Grid.Row="1" Classes="small" Text="Angles" VerticalAlignment="Center" />
+                    <ItemsControl Grid.Row="1"
+                                  Grid.Column="1"
+                                  ItemsSource="{Binding Angles}"
+                                  ItemTemplate="{StaticResource InputTemplate}"
+                                  ItemsPanel="{StaticResource RowPanel}" />
+                </Grid>
+                <WrapPanel Classes="row">
+                    <TextBlock Classes="muted" Text="Examples" />
+                    <ItemsControl ItemsSource="{Binding Examples}" ItemsPanel="{StaticResource RowPanel}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="local:TriangleExample">
+                                <Button CornerRadius="8" Padding="10,4" Content="{Binding Name}" Command="{Binding FillCommand}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button CornerRadius="8" Content="Clear" Command="{Binding ClearCommand}" />
+                </WrapPanel>
+            </StackPanel>
+        </local:Card>
+
+        <local:Card Title="Solution"
+                    Caption="The values found, the area, the perimeter and the radii of the circles through the vertices and inside">
+            <StackPanel Spacing="18">
+                <TextBlock Classes="muted" FontSize="14" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="muted"
+                           FontSize="13"
+                           Text="The angle given is opposite the shorter side: two triangles have these values."
+                           IsVisible="{Binding HasTwoTriangles}" />
+                <ItemsControl ItemsSource="{Binding Results}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="18" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:TriangleResult">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="24">
+                                <Border Classes="code" VerticalAlignment="Top">
+                                    <local:TriangleView Triangle="{Binding Triangle}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="10" VerticalAlignment="Center">
+                                    <TextBlock Classes="small" Text="{Binding Title}" IsVisible="{Binding Title, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <math:MathView FontSize="21" HorizontalAlignment="Left" IsHitTestVisible="False" Equation="{Binding Sides}" />
+                                    <math:MathView FontSize="21" HorizontalAlignment="Left" IsHitTestVisible="False" Equation="{Binding Angles}" />
+                                    <ItemsControl ItemsSource="{Binding Measures}" Margin="0,6,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Spacing="8" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="local:TriangleMeasure">
+                                                <Grid ColumnDefinitions="130,*">
+                                                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Name}" VerticalAlignment="Center" />
+                                                    <math:MathView Grid.Column="1" FontSize="17" HorizontalAlignment="Left" IsHitTestVisible="False" Equation="{Binding Value}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </local:Card>
+
+        <local:Card Title="How" Caption="The laws that give the values found">
+            <StackPanel Spacing="10">
+                <TextBlock Classes="muted" FontSize="13" Text="{Binding Case}" IsVisible="{Binding Case, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <ItemsControl ItemsSource="{Binding Steps}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="10" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="se:Equation">
+                            <math:MathView FontSize="19" HorizontalAlignment="Left" IsHitTestVisible="False" Equation="{Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="muted" FontSize="13" Text="Give three values, at least one of them a side." IsVisible="{Binding HasNoSteps}" />
+            </StackPanel>
+        </local:Card>
+    </StackPanel>
+</UserControl>

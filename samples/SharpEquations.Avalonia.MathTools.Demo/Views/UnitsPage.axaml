@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:SharpEquations.Avalonia.MathTools"
+             xmlns:math="using:SharpEquations.Avalonia"
+             x:Class="SharpEquations.Avalonia.MathTools.UnitsPage"
+             x:DataType="local:UnitsViewModel">
+    <StackPanel Spacing="20">
+        <local:Card Title="Units"
+                    Caption="A value in a unit, in another: length, area, volume, mass, time, speed, temperature, energy, pressure, angle and data">
+            <StackPanel Spacing="16">
+                <WrapPanel Classes="row">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="muted" Text="Quantity" VerticalAlignment="Center" />
+                        <ComboBox MinWidth="160" ItemsSource="{Binding Quantities}" SelectedItem="{Binding Quantity}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="muted" Text="Value" VerticalAlignment="Center" />
+                        <TextBox Width="150" PlaceholderText="A number" Text="{Binding Value}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="muted" Text="From" VerticalAlignment="Center" />
+                        <ComboBox MinWidth="220" ItemsSource="{Binding UnitList}" SelectedItem="{Binding From}" />
+                    </StackPanel>
+                    <Button Content="⇄" FontSize="17" Padding="12,2" CornerRadius="8" ToolTip.Tip="Swap the units" Command="{Binding SwapCommand}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="muted" Text="To" VerticalAlignment="Center" />
+                        <ComboBox MinWidth="220" ItemsSource="{Binding UnitList}" SelectedItem="{Binding To}" />
+                    </StackPanel>
+                </WrapPanel>
+                <Border Classes="code" Padding="18,14" MinHeight="76">
+                    <math:MathView FontSize="30" HorizontalAlignment="Left" Equation="{Binding ResultEquation}" />
+                </Border>
+            </StackPanel>
+        </local:Card>
+
+        <local:Card Title="In every unit" Caption="The value in all the units of the quantity">
+            <StackPanel Spacing="2">
+                <TextBlock Classes="muted" FontSize="12" Text="{Binding Message}" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <ItemsControl ItemsSource="{Binding Lines}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="2" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:UnitLine">
+                            <Grid ColumnDefinitions="220,*" MinHeight="32">
+                                <TextBlock Text="{Binding Name}" FontSize="13.5" VerticalAlignment="Center" Classes.strong="{Binding IsHighlighted}" />
+                                <math:MathView Grid.Column="1"
+                                               FontSize="17"
+                                               HorizontalAlignment="Left"
+                                               VerticalAlignment="Center"
+                                               IsHitTestVisible="False"
+                                               Equation="{Binding Value}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </local:Card>
+    </StackPanel>
+</UserControl>
