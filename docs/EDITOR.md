@@ -353,8 +353,8 @@ net481; the project builds on every system (`EnableWindowsTargeting`) and runs o
 
 ## Open points
 
-- **Public API of the core**: `EquationCommand` and `EquationCommands` are new public API of `SharpEquations` (in
-  `PublicAPI.Unshipped.txt`), which a minor version brings.
+- **Public API of the core**: `EquationCommand` and `EquationCommands` are public API of `SharpEquations` since
+  version 1.1.0.
 - **Packages**: the CI packs the six projects with the core, with its version, and publishes them with it; their
   public API is tracked in `PublicAPI.Shipped.txt`/`PublicAPI.Unshipped.txt`, as that of the core.
 - **Reference images**: the rendering is tested by the geometry of the layout, not by pictures; the tests write
