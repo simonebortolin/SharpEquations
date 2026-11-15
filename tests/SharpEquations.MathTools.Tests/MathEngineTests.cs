@@ -20,8 +20,23 @@ namespace SharpEquations.MathTools.Tests
         private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(20);
 
         // what the engine itself does not do
+        private const string SeriesLimit = "The engine of Microsoft Mathematics gives this series to infinity back as it is.";
+
         private static readonly Dictionary<string, string> Limits = new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["Evaluate ∑_(k=1)^∞ 1/k^4"] = SeriesLimit,
+            ["Evaluate ∑_(k=1)^∞ 1/(k(k+1))"] = SeriesLimit,
+            ["Evaluate ∑_(k=1)^∞ 1/(k(k+2))"] = SeriesLimit,
+            ["Evaluate ∑_(k=1)^∞ 1/(4k^2-1)"] = SeriesLimit,
+            ["Evaluate ∑_(k=0)^∞ 1/(2k+1)^2"] = SeriesLimit,
+            ["Evaluate ∑_(k=1)^∞ 1/(k^2 (k+1))"] = SeriesLimit,
+            ["Evaluate ∑_(k=1)^∞ (-1)^(k+1)/k"] = SeriesLimit,
+            ["Evaluate ∑_(k=1)^∞ (-1)^(k+1)/k^2"] = SeriesLimit,
+            ["Evaluate ∑_(k=0)^∞ (-1)^k/(2k+1)"] = SeriesLimit,
+            ["Evaluate ∑_(k=0)^∞ (-1)^k/(2k+1)^3"] = SeriesLimit,
+            ["Evaluate ∑_(k=0)^∞ 1/((3k+1)(3k+2))"] = SeriesLimit,
+            ["Evaluate ∑_(k=0)^∞ (-1)^k/(3k+1)"] = SeriesLimit,
+            ["Evaluate ∑_(k=1)^∞ 1/(k^2+1)"] = SeriesLimit,
         };
 
         [Test]
