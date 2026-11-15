@@ -6,8 +6,7 @@ Forms, each an adapter of one view) in the manner of the `RichEditBox` of WinUI 
 as it is typed, and the content is read and written as MathML (`GetMath`/`SetMath`, as in WinUI) or as an `Equation`.
 SharpEquations is the core under it: it reads what is typed, gives the MathML, and writes the linear form back when a
 part of the equation is built down. The editor edits one equation (math only), not math zones in a text document.
-
-Phases 1 to 6 of the plan below are done; the projects are published as NuGet packages with the version of the core
+The projects are published as NuGet packages with the version of the core
 (`SharpEquations.Editing`, `.Rendering`, and the controls: `.Avalonia`, `.Uno`, `.Wpf`, `.WinForms`).
 
 ## What the user sees
