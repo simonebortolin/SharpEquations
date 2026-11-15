@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:SharpEquations.Avalonia.MathTools"
+             xmlns:math="using:SharpEquations.Avalonia"
+             x:Class="SharpEquations.Avalonia.MathTools.FormulasPage"
+             x:DataType="local:FormulasViewModel">
+    <UserControl.Styles>
+        <!-- the subjects, a chip each -->
+        <Style Selector="ListBox.chips">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBox.chips ListBoxItem">
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="14,5" />
+            <Setter Property="Background" Value="{DynamicResource KeyBrush}" />
+        </Style>
+        <Style Selector="Button.formula">
+            <Setter Property="Width" Value="352" />
+            <Setter Property="MinHeight" Value="108" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Top" />
+            <Setter Property="Background" Value="{DynamicResource CodeBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+        </Style>
+        <!-- a formula that the subject or the search leave out takes no room -->
+        <Style Selector="ItemsControl.formulas > ContentPresenter" x:DataType="local:FormulaItem">
+            <Setter Property="IsVisible" Value="{Binding IsVisible}" />
+        </Style>
+    </UserControl.Styles>
+
+    <local:Card Title="Formulas"
+                Caption="A library of formulas of algebra, geometry, trigonometry, calculus, statistics and physics: click one to open it in the calculator, or draw its graph">
+        <StackPanel Spacing="16">
+            <DockPanel>
+                <TextBox DockPanel.Dock="Left"
+                         Width="260"
+                         Margin="0,0,8,0"
+                         VerticalAlignment="Top"
+                         PlaceholderText="Search a formula"
+                         Text="{Binding Search}" />
+                <ListBox Classes="chips" ItemsSource="{Binding Subjects}" SelectedItem="{Binding Subject}" SelectionMode="AlwaysSelected">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel ItemSpacing="8" LineSpacing="8" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="local:FormulaSubject">
+                            <TextBlock Text="{Binding Title}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <ItemsControl Classes="formulas" ItemsSource="{Binding Items}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel ItemSpacing="12" LineSpacing="12" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="local:FormulaItem">
+                        <Panel>
+                            <Button Classes="formula" ToolTip.Tip="Open in the calculator" Command="{Binding OpenCommand}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Classes="muted" FontSize="11.5" Text="{Binding Caption}" />
+                                    <math:MathView FontSize="19" HorizontalAlignment="Left" IsHitTestVisible="False" Equation="{Binding Equation}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Content="Graph"
+                                    FontSize="12"
+                                    CornerRadius="10"
+                                    Padding="10,2"
+                                    Margin="0,8,10,0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    IsVisible="{Binding HasGraph}"
+                                    ToolTip.Tip="Draw on the page of the graphs, with a slider for each parameter"
+                                    Command="{Binding GraphCommand}" />
+                        </Panel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </local:Card>
+</UserControl>

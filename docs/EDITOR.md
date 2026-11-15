@@ -280,7 +280,7 @@ of WinUI, the same code builds for WinUI 3 of the Windows App SDK (`net10.0-wind
 off Windows; `UnoDisableRemoveUnsupportedTargetFrameworks` keeps it, since a library needs none of the tools of Windows
 that an app does). The class that the XAML generator of Uno adds to a library (`GlobalStaticResources`) exists on the
 targets of Uno only, so its public API is in `PublicAPI/Uno/`. The demo runs on WinUI too, without a package and with
-the Windows App SDK in it (its own `Main` in `Platforms/Windows`, since the app has no XAML); it builds on Windows only.
+the Windows App SDK in it; it builds on Windows only.
 
 - **Drawing**: `MathCanvas` turns the `IMathCanvas` of the view into the children of a `Canvas`: rectangles, lines and
   ellipses as shapes, each glyph as a `Path` from its outline (`OpenTypeMathFont.GetOutline`: the charstrings of CFF,

@@ -1,0 +1,10 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:SharpEquations.Avalonia.MathTools"
+        x:Class="SharpEquations.Avalonia.MathTools.MainWindow"
+        x:DataType="local:MathToolsViewModel"
+        Title="SharpEquations Math Tools"
+        Width="1180"
+        Height="860">
+    <local:MathToolsView />
+</Window>

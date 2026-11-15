@@ -50,6 +50,7 @@ namespace SharpEquations.Uno.Tests
             window!.Content = new Grid
             {
                 Background = new SolidColorBrush(Microsoft.UI.Colors.White),
+                RequestedTheme = ElementTheme.Light,
                 Padding = new Thickness(20),
                 Children = { new StackPanel { Children = { element } } },
             };

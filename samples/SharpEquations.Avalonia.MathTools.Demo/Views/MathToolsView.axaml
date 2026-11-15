@@ -1,0 +1,286 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:SharpEquations.Avalonia.MathTools"
+             xmlns:math="using:SharpEquations.Avalonia"
+             x:Class="SharpEquations.Avalonia.MathTools.MathToolsView"
+             x:DataType="local:MathToolsViewModel">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <!-- the brushes of the light and the dark theme -->
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="PageBrush" Color="#F2F6F5" />
+                    <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="CardBorderBrush" Color="#DDE7E5" />
+                    <SolidColorBrush x:Key="MutedBrush" Color="#64748B" />
+                    <SolidColorBrush x:Key="EditorBrush" Color="#FBFEFD" />
+                    <SolidColorBrush x:Key="CodeBrush" Color="#F4F8F7" />
+                    <SolidColorBrush x:Key="KeyBrush" Color="#F1F5F4" />
+                    <SolidColorBrush x:Key="DigitBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="EditorBorderBrush" Color="#14B8A6" />
+                    <SolidColorBrush x:Key="GraphBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="GridBrush" Color="#E6EDEC" />
+                    <SolidColorBrush x:Key="AxisBrush" Color="#475569" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="PageBrush" Color="#0B1113" />
+                    <SolidColorBrush x:Key="CardBrush" Color="#141C1F" />
+                    <SolidColorBrush x:Key="CardBorderBrush" Color="#24302F" />
+                    <SolidColorBrush x:Key="MutedBrush" Color="#94A3B8" />
+                    <SolidColorBrush x:Key="EditorBrush" Color="#0F1618" />
+                    <SolidColorBrush x:Key="CodeBrush" Color="#0F1517" />
+                    <SolidColorBrush x:Key="KeyBrush" Color="#1A2427" />
+                    <SolidColorBrush x:Key="DigitBrush" Color="#222E31" />
+                    <SolidColorBrush x:Key="EditorBorderBrush" Color="#0D9488" />
+                    <SolidColorBrush x:Key="GraphBrush" Color="#0F1618" />
+                    <SolidColorBrush x:Key="GridBrush" Color="#1E292C" />
+                    <SolidColorBrush x:Key="AxisBrush" Color="#94A3B8" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <ControlTheme x:Key="{x:Type local:Card}" TargetType="local:Card">
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border CornerRadius="16"
+                                BorderThickness="1"
+                                Padding="22,18,22,22"
+                                BoxShadow="0 6 28 0 #12000000"
+                                Background="{DynamicResource CardBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}">
+                            <StackPanel Spacing="14">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{TemplateBinding Title}" FontSize="17" FontWeight="SemiBold" />
+                                    <ContentPresenter Content="{TemplateBinding Caption}"
+                                                      FontSize="12.5"
+                                                      Foreground="{DynamicResource MutedBrush}"
+                                                      TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ContentPresenter Name="PART_ContentPresenter"
+                                                  Content="{TemplateBinding Content}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}" />
+                            </StackPanel>
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.small">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.strong">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.tab">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="ScrollViewer.page">
+            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        </Style>
+        <Style Selector="Border.page">
+            <Setter Property="Padding" Value="0,12,0,32" />
+            <Setter Property="MaxWidth" Value="1180" />
+        </Style>
+        <Style Selector="WrapPanel.row">
+            <Setter Property="ItemSpacing" Value="8" />
+            <Setter Property="LineSpacing" Value="8" />
+        </Style>
+        <Style Selector="WrapPanel.row > :is(Control)">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <!-- the frame of an equation editor, and the editor in it -->
+        <Style Selector="Border.frame">
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="BorderThickness" Value="1.5" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="BorderBrush" Value="{DynamicResource EditorBorderBrush}" />
+        </Style>
+        <Style Selector="math|MathEditBox.entry">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource EditorBrush}" />
+        </Style>
+        <!-- what is computed, on a background of its own -->
+        <Style Selector="Border.code">
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource CodeBrush}" />
+        </Style>
+        <Style Selector="Border.outline">
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+        </Style>
+        <Style Selector="Button.tool">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,5" />
+        </Style>
+        <Style Selector="Button.mini">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,3" />
+        </Style>
+        <Style Selector="Button.action">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16,6" />
+        </Style>
+        <Style Selector="Button.header">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="#29FFFFFF" />
+            <Setter Property="BorderBrush" Value="#59FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="14,6" />
+        </Style>
+    </UserControl.Styles>
+
+    <!-- a graph drawn, in the plane or in space: its color, its equation and a slider for each parameter -->
+    <UserControl.DataTemplates>
+        <DataTemplate DataType="local:PlotItem" x:DataType="local:PlotItem">
+            <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Width="16" Height="16" CornerRadius="8" VerticalAlignment="Center" Background="{Binding Brush}" />
+                    <math:MathView FontSize="18" VerticalAlignment="Center" Equation="{Binding Equation}" />
+                    <Button Content="×"
+                            CornerRadius="8"
+                            Padding="8,2"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Removes this graph"
+                            Command="{Binding RemoveCommand}" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Parameters}" Margin="28,0,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:PlotParameter">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Left" Classes="muted" MinWidth="90" VerticalAlignment="Center" Text="{Binding Text}" />
+                                <Slider Minimum="{Binding Minimum}"
+                                        Maximum="{Binding Maximum}"
+                                        Value="{Binding Value}"
+                                        SmallChange="0.1"
+                                        LargeChange="1"
+                                        MinWidth="240" />
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+    <DockPanel Background="{DynamicResource PageBrush}">
+        <Border DockPanel.Dock="Top" Padding="28,20">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Color="#0F766E" Offset="0" />
+                    <GradientStop Color="#0891B2" Offset="0.55" />
+                    <GradientStop Color="#2563EB" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
+            <DockPanel SizeChanged="OnHeaderSizeChanged">
+                <StackPanel x:Name="HeaderButtons" DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Classes="header" Content="Theme" ToolTip.Tip="Light or dark theme" Click="OnThemeClick" />
+                    <Button Classes="header" Content="GitHub ↗" ToolTip.Tip="https://github.com/simonebortolin/SharpEquations" Click="OnGitHubClick" />
+                </StackPanel>
+                <math:MathView x:Name="Hero"
+                               DockPanel.Dock="Right"
+                               FontSize="24"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Margin="24,0"
+                               Equation="{local:UnicodeMath '∑_(k=1)^∞ 1/k^2=π^2/6', Display=True}" />
+                <StackPanel Spacing="4" VerticalAlignment="Center">
+                    <TextBlock Text="SharpEquations Math Tools" FontSize="26" FontWeight="Bold" Foreground="White" />
+                    <TextBlock Text="A scientific keypad, formulas, units, triangles, graphs and a worksheet around a real-time equation editor in .NET."
+                               FontSize="14"
+                               Foreground="#D9FFFFFF"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <TabControl x:Name="Pages" Margin="20,12,20,0" SelectedIndex="{Binding SelectedTab}">
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Classes="tab" Text="Calculator" />
+                </TabItem.Header>
+                <ScrollViewer Classes="page">
+                    <Border Classes="page">
+                        <local:CalculatorPage x:Name="CalculatorView" DataContext="{Binding Calculator}" />
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Classes="tab" Text="Formulas" />
+                </TabItem.Header>
+                <ScrollViewer Classes="page">
+                    <Border Classes="page">
+                        <local:FormulasPage x:Name="FormulasView" DataContext="{Binding FormulaLibrary}" />
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Classes="tab" Text="Units" />
+                </TabItem.Header>
+                <ScrollViewer Classes="page">
+                    <Border Classes="page">
+                        <local:UnitsPage x:Name="UnitsView" DataContext="{Binding Converter}" />
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Classes="tab" Text="Triangles" />
+                </TabItem.Header>
+                <ScrollViewer Classes="page">
+                    <Border Classes="page">
+                        <local:TrianglePage x:Name="TrianglesView" DataContext="{Binding TriangleSolver}" />
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Classes="tab" Text="Graphs" />
+                </TabItem.Header>
+                <ScrollViewer Classes="page">
+                    <Border Classes="page">
+                        <local:GraphsPage x:Name="GraphsView" DataContext="{Binding Graphs}" />
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Classes="tab" Text="3D" />
+                </TabItem.Header>
+                <ScrollViewer Classes="page">
+                    <Border Classes="page">
+                        <local:Graphs3DPage x:Name="SpaceView" DataContext="{Binding Space}" />
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock Classes="tab" Text="Worksheet" />
+                </TabItem.Header>
+                <ScrollViewer Classes="page">
+                    <Border Classes="page">
+                        <local:WorksheetPage x:Name="WorksheetView" DataContext="{Binding Worksheet}" />
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</UserControl>
