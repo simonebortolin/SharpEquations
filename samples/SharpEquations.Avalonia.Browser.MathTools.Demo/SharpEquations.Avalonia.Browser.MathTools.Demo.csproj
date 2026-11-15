@@ -13,13 +13,15 @@
     <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
     <WasmBuildNative>true</WasmBuildNative>
     <WasmEnableThreads>false</WasmEnableThreads>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- the views of the desktop app (every file but its window and its entry point); the engine and the tools are
-         in SharpEquations.MathTools.Core, the graphs in SharpEquations.MathTools.Graphing -->
-    <Compile Include="..\SharpEquations.Avalonia.MathTools.Demo\*.cs" Exclude="..\SharpEquations.Avalonia.MathTools.Demo\Program.cs;..\SharpEquations.Avalonia.MathTools.Demo\MainWindow.cs" LinkBase="MathTools" />
+    <!-- the view models and the views of the desktop app (every file but its app, its window and its entry point);
+         the engine and the tools are in SharpEquations.MathTools.Core, the graphs in SharpEquations.MathTools.Graphing -->
+    <Compile Include="..\SharpEquations.Avalonia.MathTools.Demo\MathToolsTheme.cs;..\SharpEquations.Avalonia.MathTools.Demo\ViewModels\*.cs;..\SharpEquations.Avalonia.MathTools.Demo\Views\*.cs" LinkBase="MathTools" />
+    <AvaloniaXaml Include="..\SharpEquations.Avalonia.MathTools.Demo\Views\*.axaml" LinkBase="MathTools" />
   </ItemGroup>
 
   <ItemGroup>

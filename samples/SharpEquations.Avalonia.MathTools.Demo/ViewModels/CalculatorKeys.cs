@@ -23,6 +23,11 @@ namespace SharpEquations.Avalonia.MathTools
         public Action<MathEditor> Press { get; }
 
         public bool IsMath { get; }
+
+        /// <summary>The face of the key as an equation, to draw; null when it is plain text.</summary>
+        public SharpEquations.Equation? Math => math ??= IsMath ? SharpEquations.Equation.Parse(Face, SharpEquations.EquationFormat.UnicodeMath) : null;
+
+        private SharpEquations.Equation? math;
     }
 
     /// <summary>

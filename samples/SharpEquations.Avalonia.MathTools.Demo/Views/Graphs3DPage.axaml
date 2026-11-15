@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:SharpEquations.Avalonia.MathTools"
+             xmlns:math="using:SharpEquations.Avalonia"
+             x:Class="SharpEquations.Avalonia.MathTools.Graphs3DPage"
+             x:DataType="local:Graphs3DViewModel">
+    <UserControl.Styles>
+        <Style Selector="math|MathView.caption">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="WrapPanel.caption > TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Spacing="20">
+        <local:Card Title="Graphs in space">
+            <local:Card.Caption>
+                <WrapPanel Classes="caption" ItemSpacing="4" LineSpacing="2">
+                    <math:MathView Classes="caption" Equation="{local:UnicodeMath 'z=f(x,y)'}" />
+                    <TextBlock Classes="muted" Text=", or" />
+                    <math:MathView Classes="caption" Equation="{local:UnicodeMath 'x=f(t)'}" />
+                    <TextBlock Classes="muted" Text="," />
+                    <math:MathView Classes="caption" Equation="{local:UnicodeMath 'y=g(t)'}" />
+                    <TextBlock Classes="muted" Text="and" />
+                    <math:MathView Classes="caption" Equation="{local:UnicodeMath 'z=h(t)'}" />
+                    <TextBlock Classes="muted" Text="on three lines," />
+                    <math:MathView Classes="caption" Equation="{local:UnicodeMath 't'}" />
+                    <TextBlock Classes="muted" Text="from" />
+                    <math:MathView Classes="caption" Equation="{local:UnicodeMath '0'}" />
+                    <TextBlock Classes="muted" Text="to" />
+                    <math:MathView Classes="caption" Equation="{local:UnicodeMath '2π'}" />
+                    <TextBlock Classes="muted" Text=": the other letters are parameters, with a slider each" />
+                </WrapPanel>
+            </local:Card.Caption>
+            <StackPanel Spacing="12">
+                <Border Classes="frame">
+                    <math:MathEditBox x:Name="EquationEditor"
+                                      Classes="entry"
+                                      FontSize="26"
+                                      MinHeight="70"
+                                      Padding="16,10"
+                                      Equation="{Binding Equation}" />
+                </Border>
+                <WrapPanel Classes="row">
+                    <Button Classes="action" Content="Add" ToolTip.Tip="Draws the equation of the editor" Command="{Binding AddCommand}" />
+                    <Button Classes="action" Content="Clear" ToolTip.Tip="Removes every graph" Command="{Binding ClearCommand}" />
+                    <Button Classes="action"
+                            Content="Reset view"
+                            ToolTip.Tip="Turns the box back and shows the region around the origin (a double click on the graph does the same)"
+                            Command="{Binding ResetCommand}" />
+                    <Button Classes="action" Content="Copy image" ToolTip.Tip="Copies the graphs as an image" Click="OnCopyImageClick" />
+                    <CheckBox Content="Same parameters for every graph"
+                              ToolTip.Tip="A letter is one parameter for all the graphs with it, or one per graph"
+                              IsChecked="{Binding SharedParameters}" />
+                </WrapPanel>
+                <TextBlock Classes="muted" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <ItemsControl ItemsSource="{Binding Items}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="10" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </local:Card>
+
+        <local:Card Title="Space" Caption="Drag to turn, the wheel to zoom the region of x and y, a double click to start again">
+            <Border Classes="outline">
+                <Border.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy image" Click="OnCopyImageClick" />
+                        <MenuItem Header="Reset view" Click="OnResetViewClick" />
+                    </ContextMenu>
+                </Border.ContextMenu>
+                <local:Graph3DView x:Name="Box" Height="480" />
+            </Border>
+        </local:Card>
+    </StackPanel>
+</UserControl>

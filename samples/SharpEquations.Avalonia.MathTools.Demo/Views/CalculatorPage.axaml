@@ -1,0 +1,104 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:SharpEquations.Avalonia.MathTools"
+             xmlns:math="using:SharpEquations.Avalonia"
+             x:Class="SharpEquations.Avalonia.MathTools.CalculatorPage"
+             x:DataType="local:CalculatorViewModel">
+    <UserControl.Resources>
+        <!-- a key of the keypad: its face drawn as an equation, or written -->
+        <DataTemplate x:Key="KeyTemplate" x:DataType="local:CalculatorKey">
+            <Button Classes="key" ToolTip.Tip="{Binding Tip}" Click="OnKeyClick">
+                <Panel>
+                    <math:MathView FontSize="18" IsHitTestVisible="False" Equation="{Binding Math}" IsVisible="{Binding IsMath}" />
+                    <TextBlock FontSize="15" Text="{Binding Face}" IsVisible="{Binding !IsMath}" />
+                </Panel>
+            </Button>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="Button.key">
+            <Setter Property="MinWidth" Value="58" />
+            <Setter Property="MinHeight" Value="46" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource KeyBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+        </Style>
+        <Style Selector="ItemsControl.digits Button.key">
+            <Setter Property="Background" Value="{DynamicResource DigitBrush}" />
+        </Style>
+        <Style Selector="TextBox.code">
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,Menlo,DejaVu Sans Mono,monospace" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="MinHeight" Value="44" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="PlaceholderText" Value="Not built up yet: finish the argument, or press Build up (Enter)" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Spacing="20">
+        <local:Card Title="Calculator"
+                    Caption="The keys type into the editor as the keyboard does: sin( waits for its argument, x² squares what is before the caret, a/b and √ take the selection">
+            <StackPanel Spacing="16">
+                <Border Classes="frame">
+                    <math:MathEditBox x:Name="EquationEditor"
+                                      Classes="entry"
+                                      FontSize="34"
+                                      MinHeight="110"
+                                      Padding="22,18"
+                                      Equation="{Binding Equation}" />
+                </Border>
+                <WrapPanel ItemSpacing="18" LineSpacing="12">
+                    <ItemsControl ItemsSource="{Binding Functions}" ItemTemplate="{StaticResource KeyTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="6" ColumnSpacing="6" RowSpacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <ItemsControl Classes="digits" ItemsSource="{Binding Numbers}" ItemTemplate="{StaticResource KeyTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="5" ColumnSpacing="6" RowSpacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </WrapPanel>
+                <ItemsControl ItemsSource="{Binding Editing}" ItemTemplate="{StaticResource KeyTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel ItemSpacing="8" LineSpacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </local:Card>
+
+        <local:Card Title="Compute" Caption="{Binding ComputeCaption}">
+            <local:AlgebraPanel x:Name="SolverView" DataContext="{Binding Solver}" />
+        </local:Card>
+
+        <local:Card Title="As text" Caption="The equation in the linear formats, as it is typed">
+            <Grid ColumnDefinitions="*,16,*">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="muted" FontSize="12" Text="UnicodeMath" />
+                    <TextBox Classes="code" Text="{Binding UnicodeMath, Mode=OneWay}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="6">
+                    <TextBlock Classes="muted" FontSize="12" Text="LaTeX" />
+                    <TextBox Classes="code" Text="{Binding LaTeX, Mode=OneWay}" />
+                </StackPanel>
+            </Grid>
+        </local:Card>
+    </StackPanel>
+</UserControl>

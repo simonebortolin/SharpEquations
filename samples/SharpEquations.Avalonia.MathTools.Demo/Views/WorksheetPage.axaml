@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:SharpEquations.Avalonia.MathTools"
+             xmlns:math="using:SharpEquations.Avalonia"
+             x:Class="SharpEquations.Avalonia.MathTools.WorksheetPage"
+             x:DataType="local:WorksheetViewModel">
+    <StackPanel Spacing="20">
+        <local:Card Title="Worksheet" Caption="Each entry what was typed, what was done and its result, kept from one session to the next">
+            <StackPanel Spacing="10">
+                <TextBlock Classes="muted" FontSize="13" Text="Nothing computed yet: type below and press Enter." IsVisible="{Binding IsEmpty}" />
+                <ItemsControl ItemsSource="{Binding Items}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="10" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:WorksheetItem">
+                            <Border Classes="code" Padding="16,10">
+                                <StackPanel Spacing="8">
+                                    <DockPanel>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                                            <Button Classes="mini"
+                                                    Content="To the editor"
+                                                    ToolTip.Tip="Puts the result in the editor"
+                                                    IsEnabled="{Binding HasOutput}"
+                                                    Command="{Binding UseCommand}" />
+                                            <Button Classes="mini"
+                                                    Content="Graph"
+                                                    ToolTip.Tip="Draws what was typed on the page of the graphs"
+                                                    Command="{Binding GraphCommand}" />
+                                            <Button Content="×" CornerRadius="8" Padding="8,2" ToolTip.Tip="Removes this entry" Command="{Binding RemoveCommand}" />
+                                        </StackPanel>
+                                        <TextBlock Classes="small" Text="{Binding Title}" />
+                                    </DockPanel>
+                                    <math:MathView FontSize="20" HorizontalAlignment="Left" Equation="{Binding Input}" />
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Left" Classes="muted" FontSize="18" Text="→" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                        <Panel>
+                                            <math:MathView FontSize="22" HorizontalAlignment="Left" Equation="{Binding Output}" IsVisible="{Binding HasOutput}" />
+                                            <SelectableTextBlock FontSize="14"
+                                                                 TextWrapping="Wrap"
+                                                                 Text="{Binding Text}"
+                                                                 Opacity="{Binding TextOpacity}"
+                                                                 IsVisible="{Binding !HasOutput}" />
+                                        </Panel>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </local:Card>
+
+        <local:Card Title="Input" Caption="Type an equation or an expression, choose what to do, and press Enter">
+            <StackPanel Spacing="12">
+                <Border Classes="frame">
+                    <math:MathEditBox x:Name="EquationEditor"
+                                      Classes="entry"
+                                      FontSize="26"
+                                      MinHeight="70"
+                                      Padding="16,10"
+                                      Equation="{Binding Equation}"
+                                      KeyDown="OnEditorKeyDown" />
+                </Border>
+                <WrapPanel Classes="row">
+                    <ComboBox MinWidth="150" ItemsSource="{Binding Actions}" SelectedIndex="{Binding ActionIndex}" ToolTip.Tip="What is done to the equation" />
+                    <TextBlock Classes="muted" Text="by" />
+                    <ComboBox MinWidth="70"
+                              ItemsSource="{Binding Letters}"
+                              SelectedItem="{Binding Letter}"
+                              ToolTip.Tip="The letter to solve for, and to differentiate and integrate by" />
+                    <Button Classes="action"
+                            Content="Enter"
+                            ToolTip.Tip="Computes and adds the entry to the worksheet (Ctrl+Enter)"
+                            Command="{Binding EnterCommand}" />
+                    <Button Classes="action"
+                            Content="Clear worksheet"
+                            ToolTip.Tip="Removes every entry (the letters defined stay)"
+                            Command="{Binding ClearCommand}" />
+                </WrapPanel>
+                <TextBlock Classes="muted" Text="{Binding Message}" IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+        </local:Card>
+    </StackPanel>
+</UserControl>

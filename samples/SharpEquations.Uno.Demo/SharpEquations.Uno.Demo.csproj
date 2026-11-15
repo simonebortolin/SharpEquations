@@ -19,12 +19,10 @@
     <NoWarn>$(NoWarn);CA1016</NoWarn>
   </PropertyGroup>
 
-  <!-- WinUI 3 of the Windows App SDK, built on Windows only: an app without a package, with the Windows App SDK in it,
-       and its own Main (Platforms/Windows), since the App has no XAML -->
+  <!-- WinUI 3 of the Windows App SDK, built on Windows only: an app without a package, with the Windows App SDK in it -->
   <PropertyGroup Condition=" '$([MSBuild]::GetTargetPlatformIdentifier($(TargetFramework)))' == 'windows' ">
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
