@@ -56,7 +56,7 @@ jobs:
           cp publish/wwwroot/index.html publish/wwwroot/404.html
           cp -r publish-math-tools/wwwroot publish/wwwroot/math
 
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: publish/wwwroot
 
