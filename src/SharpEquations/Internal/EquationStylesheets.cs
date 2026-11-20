@@ -1,7 +1,6 @@
 namespace SharpEquations.Internal
 {
     using System;
-    using System.Collections.Generic;
     using System.Xml.Linq;
     using SharpEquations.Internal.Xslt;
 
@@ -43,22 +42,43 @@ namespace SharpEquations.Internal
             }
         }
 
+        // without allocating: the input of every equation read goes through it (FirstNode would make an XText of
+        // the text of a token)
         private static int Depth(XElement root)
         {
-            var depth = 0;
-            var stack = new Stack<(XElement Element, int Depth)>();
-            stack.Push((root, 1));
-            while (stack.Count > 0)
+            int depth = 1, deepest = 1;
+            var element = root;
+            while (true)
             {
-                var (element, level) = stack.Pop();
-                if (level > depth)
-                    depth = level;
-                if (depth > MaxDepth)
-                    break;
-                foreach (var child in element.Elements())
-                    stack.Push((child, level + 1));
+                var child = element.HasElements ? NextElement(element.FirstNode) : null;
+                if (child != null)
+                {
+                    element = child;
+                    if (++depth > deepest && (deepest = depth) > MaxDepth)
+                        return deepest;
+                    continue;
+                }
+                while (true)
+                {
+                    if (element == root)
+                        return deepest;
+                    var sibling = NextElement(element.NextNode);
+                    if (sibling != null)
+                    {
+                        element = sibling;
+                        break;
+                    }
+                    element = element.Parent;
+                    depth--;
+                }
             }
-            return depth;
+        }
+
+        private static XElement NextElement(XNode node)
+        {
+            while (node != null && node is not XElement)
+                node = node.NextNode;
+            return (XElement)node;
         }
     }
 }
