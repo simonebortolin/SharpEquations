@@ -31,6 +31,7 @@ namespace SharpEquations
         /// <exception cref="ArgumentException"><paramref name="sourceFormat"/> is binary.</exception>
         /// <exception cref="ArgumentOutOfRangeException">A format is not a format.</exception>
         /// <exception cref="NotSupportedException"><paramref name="destinationFormat"/> cannot be written.</exception>
+        /// <exception cref="InsufficientExecutionStackException">The equation is nested too deeply to be written on the stack of this thread.</exception>
         /// <exception cref="FormatException"><paramref name="source"/> is not a valid equation in <paramref name="sourceFormat"/>.</exception>
         /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
         public static string Convert(string source, EquationFormat sourceFormat, EquationFormat destinationFormat,
@@ -51,6 +52,7 @@ namespace SharpEquations
         /// <exception cref="ArgumentException"><paramref name="sourceFormat"/> is not an XML format.</exception>
         /// <exception cref="ArgumentOutOfRangeException">A format is not a format.</exception>
         /// <exception cref="NotSupportedException"><paramref name="destinationFormat"/> cannot be written.</exception>
+        /// <exception cref="InsufficientExecutionStackException">The equation is nested too deeply to be written on the stack of this thread.</exception>
         /// <exception cref="FormatException"><paramref name="source"/> is not an equation in <paramref name="sourceFormat"/>.</exception>
         public static string Convert(XElement source, EquationFormat sourceFormat, EquationFormat destinationFormat, EquationOptions? options = null)
         {
@@ -68,6 +70,7 @@ namespace SharpEquations
         /// <exception cref="ArgumentException"><paramref name="sourceFormat"/> is not a binary format.</exception>
         /// <exception cref="ArgumentOutOfRangeException">A format is not a format.</exception>
         /// <exception cref="NotSupportedException"><paramref name="destinationFormat"/> cannot be written.</exception>
+        /// <exception cref="InsufficientExecutionStackException">The equation is nested too deeply to be written on the stack of this thread.</exception>
         /// <exception cref="InvalidDataException"><paramref name="source"/> is not a supported MTEF equation.</exception>
         public static string Convert(ReadOnlySpan<byte> source, EquationFormat sourceFormat, EquationFormat destinationFormat, EquationOptions? options = null)
         {
@@ -85,6 +88,7 @@ namespace SharpEquations
         /// <exception cref="ArgumentException"><paramref name="sourceFormat"/> is binary.</exception>
         /// <exception cref="ArgumentOutOfRangeException">A format is not a format.</exception>
         /// <exception cref="NotSupportedException"><paramref name="destinationFormat"/> cannot be written.</exception>
+        /// <exception cref="InsufficientExecutionStackException">The equation is nested too deeply to be written on the stack of this thread.</exception>
         public static bool TryConvert([NotNullWhen(true)] string? source, EquationFormat sourceFormat, EquationFormat destinationFormat,
             [NotNullWhen(true)] out string? result, EquationOptions? options = null)
         {

@@ -3,6 +3,7 @@ namespace SharpEquations.Internal.LaTeX
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using SharpEquations.Internal.UnicodeMath;
     using static SharpEquations.Internal.UnicodeMath.UnicodeMathText;
@@ -484,6 +485,7 @@ namespace SharpEquations.Internal.LaTeX
         /// </summary>
         private static string RewriteTeXOnly(string latex)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             var tex = new Text(latex);
             var result = new StringBuilder();
             // between ⟨ and ⟩ a bar parts a bra from a ket (│), as in UnicodeMath: ⟨a│b⟩
@@ -2096,6 +2098,7 @@ namespace SharpEquations.Internal.LaTeX
         /// <summary>TeX2UMath: pass 2, LaTeX with UnicodeMath characters to UnicodeMath.</summary>
         private string Pass2(string latex)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             var tex = new Text(latex);
             var uniTeX = new StringBuilder();
             int j, k;

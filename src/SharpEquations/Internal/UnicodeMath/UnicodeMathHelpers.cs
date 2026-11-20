@@ -4,6 +4,7 @@ namespace SharpEquations.Internal.UnicodeMath
     using System.Collections.Generic;
     using System.Globalization;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using static Js;
     using static UnicodeMathText;
@@ -54,6 +55,7 @@ namespace SharpEquations.Internal.UnicodeMath
 
         private static object DropOutermostParens(object uast)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             if (Truthy(Get(uast, "expr")))
                 return O("expr", DropOutermostParens(Get(uast, "expr")));
 
@@ -625,6 +627,7 @@ namespace SharpEquations.Internal.UnicodeMath
 
         private static object GetTextContent(object ast)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             if (Truthy(Get(ast, "expr")))
                 ast = Get(ast, "expr");
             if (!(ast is List<object> list))

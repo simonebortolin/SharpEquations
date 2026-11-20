@@ -3,6 +3,7 @@ namespace SharpEquations.Internal.UnicodeMath
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using static Js;
     using static UnicodeMathText;
 
@@ -39,6 +40,7 @@ namespace SharpEquations.Internal.UnicodeMath
 
         private object Preprocess(PreprocessStyle dsty, object uast, int? index = null, List<object> arr = null)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             bool intentSup = false;
 
             if (uast is List<object> list)

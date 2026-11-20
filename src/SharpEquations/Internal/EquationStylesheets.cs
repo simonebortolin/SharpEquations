@@ -16,12 +16,18 @@ namespace SharpEquations.Internal
         /// </summary>
         public const int MaxDepth = 512;
 
+        /// <summary>The message of the exceptions thrown for an equation nested more deeply than can be handled.</summary>
+        public const string TooDeep = "The equation is nested too deeply.";
+
+        /// <summary>Whether the element is nested more than <see cref="MaxDepth"/> levels deep.</summary>
+        public static bool IsTooDeep(XElement element) => Depth(element) > MaxDepth;
+
         /// <summary>Runs the stylesheet, or returns null when its output is empty.</summary>
-        /// <exception cref="ArgumentException">The input is nested more than <see cref="MaxDepth"/> levels deep.</exception>
+        /// <exception cref="InsufficientExecutionStackException">The input is nested more than <see cref="MaxDepth"/> levels deep.</exception>
         public static XElement Transform(string name, XElement input)
         {
-            if (Depth(input) > MaxDepth)
-                throw new ArgumentException("The equation is nested too deeply.", nameof(input));
+            if (IsTooDeep(input))
+                throw new InsufficientExecutionStackException(TooDeep);
             switch (name)
             {
                 case "omml2mml.xsl":

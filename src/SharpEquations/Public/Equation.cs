@@ -142,6 +142,7 @@ namespace SharpEquations
         /// <summary>
         /// The equation as OMML: an <c>m:oMathPara</c> element for a display equation, an <c>m:oMath</c> one otherwise.
         /// </summary>
+        /// <exception cref="InsufficientExecutionStackException">The equation is nested too deeply to be written on the stack of this thread.</exception>
         public XElement ToOmml() => (XElement)EquationSerializer.Serialize(mathML, EquationFormat.Omml, EquationOptions.Default);
 
         /// <summary>The equation in a format: MathML and OMML as XML text.</summary>
@@ -152,6 +153,7 @@ namespace SharpEquations
         /// </param>
         /// <exception cref="NotSupportedException"><paramref name="format"/> cannot be written.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="format"/> is not a format.</exception>
+        /// <exception cref="InsufficientExecutionStackException">The equation is nested too deeply to be written on the stack of this thread.</exception>
         public string ToString(EquationFormat format, EquationOptions? options = null)
         {
             if (format == EquationFormat.MathML)

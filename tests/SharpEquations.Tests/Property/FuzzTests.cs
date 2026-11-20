@@ -243,8 +243,8 @@ namespace SharpEquations.Tests.Property
             var math = new XElement(MathMLNamespaces.MathML + "mi", "x");
             for (int i = 0; i < 2000; i++)
                 math = new XElement(MathMLNamespaces.MathML + "msqrt", math);
-            var equation = Equation.Parse(new XElement(MathMLNamespaces.MathML + "math", math), EquationFormat.MathML);
-            await Assert.That(() => equation.ToOmml()).ThrowsException();
+            await Assert.That(() => Equation.Parse(new XElement(MathMLNamespaces.MathML + "math", math), EquationFormat.MathML))
+                .Throws<FormatException>();
         }
     }
 }
