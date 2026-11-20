@@ -375,7 +375,7 @@ namespace SharpEquations.Tests
             var inner = new XElement(Mml + "mi", "x");
             for (var i = 0; i < 2000; i++)
                 inner = new XElement(Mml + "mrow", inner);
-            await Assert.That(() => OmmlSerializer.Serialize(new XElement(Mml + "math", inner))).ThrowsExactly<ArgumentException>();
+            await Assert.That(() => OmmlSerializer.Serialize(new XElement(Mml + "math", inner))).ThrowsExactly<InsufficientExecutionStackException>();
         }
 
         [Test]

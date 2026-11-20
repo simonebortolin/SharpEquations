@@ -71,6 +71,11 @@ init-only record: `Display`, `Strict`, `PreserveFormatting`, `LaTeXFlavor` stand
 
 - `EquationPipeline` picks the parser of a format by pattern matching on the format and the source;
   `EquationSerializer` picks the serializer.
+- A stack overflow cannot be caught, and ends the process: the XML of a source and every equation read are refused
+  (`FormatException`, "The equation is nested too deeply.") beyond `EquationStylesheets.MaxDepth` levels, and every
+  method that recurses over an equation (the readers, the writers, the templates the XSLT generator compiles) starts
+  with `RuntimeHelpers.EnsureSufficientExecutionStack()`: its exception is a `FormatException` (`InvalidDataException`
+  for MTEF) when reading and an `InsufficientExecutionStackException` when writing. A new recursive method calls it too.
 - `MathMLParser.Normalize` gives every equation the one form an `Equation` holds and compares: MathML namespace without
   prefixes, no `mfenced`, `a` or invisible fences, no formatting unless kept, intents with plain letters, letters as
   MathML Core writes them (`<mi>x</mi>` for an italic letter, `𝐲` rather than `mathvariant="bold"`, plain letters with

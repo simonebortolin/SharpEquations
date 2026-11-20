@@ -4,6 +4,7 @@ namespace SharpEquations.Internal.UnicodeMath
     using System.Collections.Generic;
     using System.Globalization;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Text.RegularExpressions;
     using SharpEquations.Internal.Text;
@@ -333,6 +334,7 @@ namespace SharpEquations.Internal.UnicodeMath
         /// <summary>astMapFromPrivate: <see cref="MapFromPrivate"/> over every string of a syntax tree.</summary>
         public static object AstMapFromPrivate(object ast)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             switch (ast)
             {
                 case null:

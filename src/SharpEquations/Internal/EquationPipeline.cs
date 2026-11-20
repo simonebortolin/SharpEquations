@@ -38,10 +38,22 @@ namespace SharpEquations.Internal
                 throw new ArgumentNullException(nameof(source));
             CheckDefined(format);
             cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                return ReadSource(source, format, options, cancellationToken);
+            }
+            catch (InsufficientExecutionStackException e)
+            {
+                throw new FormatException(EquationStylesheets.TooDeep, e);
+            }
+        }
+
+        private static XElement ReadSource(object source, EquationFormat format, EquationOptions options, CancellationToken cancellationToken)
+        {
             var math = (format, source) switch
             {
-                (EquationFormat.MathML, XElement element) => element,
-                (EquationFormat.MathML, string text) => MathMLParser.ParseXml(text, format),
+                (EquationFormat.MathML, XElement element) => Shallow(element),
+                (EquationFormat.MathML, string text) => Shallow(MathMLParser.ParseXml(text, format)),
                 (EquationFormat.Omml, XElement element) => ReadOmml(element, options),
                 (EquationFormat.Omml, string text) => ReadOmml(MathMLParser.ParseXml(text, format), options),
                 (EquationFormat.UnicodeMath, string text) => UnicodeMathParser.Parse(text, options.Display, options.Strict, cancellationToken),
@@ -49,7 +61,7 @@ namespace SharpEquations.Internal
                 (EquationFormat.Mtef, _) => throw new ArgumentException("MTEF equations are binary: pass them as bytes.", nameof(format)),
                 _ => throw new ArgumentException(format + " equations are text, not XML: pass them as strings.", nameof(format)),
             };
-            return MathMLParser.Normalize(math, options, format == EquationFormat.MathML);
+            return Shallow(MathMLParser.Normalize(math, options, format == EquationFormat.MathML));
         }
 
         /// <summary>Reads a binary source, MTEF, without copying it.</summary>
@@ -58,8 +70,25 @@ namespace SharpEquations.Internal
             CheckDefined(format);
             if (format != EquationFormat.Mtef)
                 throw new ArgumentException(format + " equations are not binary: pass them as " + (IsXml(format) ? "text or XML." : "text."), nameof(format));
-            return MathMLParser.Normalize(MtefParser.Parse(source), options, false);
+            try
+            {
+                var math = MathMLParser.Normalize(MtefParser.Parse(source), options, false);
+                if (EquationStylesheets.IsTooDeep(math))
+                    throw new InvalidDataException("The MTEF equation is nested too deeply.");
+                return math;
+            }
+            catch (InsufficientExecutionStackException e)
+            {
+                throw new InvalidDataException("The MTEF equation is nested too deeply.", e);
+            }
         }
+
+        /// <summary>
+        /// The equation, unless it is nested more deeply than <see cref="EquationStylesheets.MaxDepth"/>: what reads and
+        /// writes it recurses over its tree, and a stack overflow cannot be caught.
+        /// </summary>
+        private static XElement Shallow(XElement math) =>
+            EquationStylesheets.IsTooDeep(math) ? throw new FormatException(EquationStylesheets.TooDeep) : math;
 
         private static void CheckDefined(EquationFormat format)
         {
@@ -69,6 +98,7 @@ namespace SharpEquations.Internal
 
         private static XElement ReadOmml(XElement omml, EquationOptions options)
         {
+            Shallow(omml);
             if (options.Strict)
                 OmmlParser.Validate(omml);
             try

@@ -261,6 +261,7 @@ namespace SharpEquations.Internal.UnicodeMath
 
         public static object Clone(object value)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             switch (value)
             {
                 case JsObject o: return o.Clone();
@@ -276,6 +277,7 @@ namespace SharpEquations.Internal.UnicodeMath
         /// <summary>The string conversion of JavaScript (String(value)).</summary>
         public static string Str(object value)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             switch (value)
             {
                 case null: return "undefined";
@@ -290,6 +292,7 @@ namespace SharpEquations.Internal.UnicodeMath
 
         public static string Stringify(object value)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             switch (value)
             {
                 case null: return "null";

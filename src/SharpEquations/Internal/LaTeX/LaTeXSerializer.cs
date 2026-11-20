@@ -3,6 +3,7 @@ namespace SharpEquations.Internal.LaTeX
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Xml.Linq;
     using SharpEquations.Internal.UnicodeMath;
     using static SharpEquations.Internal.UnicodeMath.Js;
@@ -229,6 +230,7 @@ namespace SharpEquations.Internal.LaTeX
 
         private string TeX(XElement value, bool noAddParens = false)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             if (value == null)
                 return "";
 

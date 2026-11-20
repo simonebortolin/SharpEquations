@@ -3,6 +3,7 @@ namespace SharpEquations.Internal.UnicodeMath
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using static Js;
     using static UnicodeMathText;
@@ -55,6 +56,7 @@ namespace SharpEquations.Internal.UnicodeMath
         /// <summary>pretty: the MathML text of a MathML syntax tree.</summary>
         private string Pretty(object mast)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             if (mast is List<object> list)
             {
                 var sb = new StringBuilder();

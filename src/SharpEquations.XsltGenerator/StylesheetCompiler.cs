@@ -305,6 +305,9 @@ namespace SharpEquations.XsltGenerator
 
         // templates
 
+        // the templates recurse over the input, and a stack overflow cannot be caught
+        private const string EnsureStack = "System.Runtime.CompilerServices.RuntimeHelpers.EnsureSufficientExecutionStack();";
+
         private void CompileTemplate(XElement template, int index)
         {
             var name = Attr(template, "name", false);
@@ -319,6 +322,7 @@ namespace SharpEquations.XsltGenerator
                 var signature = string.Concat(named.Parameters.Select((p, i) => ", object? a" + i));
                 var w = new CodeWriter(2);
                 w.Line().Open("private void " + named.Method + "(XObject n0, int p0, int s0" + signature + ")");
+                w.Line(EnsureStack);
                 CompileBody(template, parameters, i => "a" + i, w);
                 w.Close();
                 members.Append(w);
@@ -525,6 +529,7 @@ namespace SharpEquations.XsltGenerator
             w.Close();
 
             w.Line().Open("private void Dispatch" + mode + "(XObject node, int position, int size, TemplateArguments? args)");
+            w.Line(EnsureStack);
             w.Open("switch (node)");
 
             w.Line("case XElement element:").Open();

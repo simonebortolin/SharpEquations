@@ -2,6 +2,7 @@ namespace SharpEquations.Internal.UnicodeMath
 {
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text.RegularExpressions;
     using System.Xml.Linq;
     using SharpEquations.Internal.Text;
@@ -121,6 +122,7 @@ namespace SharpEquations.Internal.UnicodeMath
         /// </summary>
         internal static string Role(XElement e)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             var intent = Attr(e, "intent");
             if (intent != null)
                 return intent;
@@ -210,6 +212,7 @@ namespace SharpEquations.Internal.UnicodeMath
 
         private void FindLostIntents(XElement written, XElement read)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             if (Name(written) != Name(read))
             {
                 if (Name(written) == "mo" && Name(read) == "mi" && Text(written) == Text(read))
@@ -795,6 +798,7 @@ namespace SharpEquations.Internal.UnicodeMath
 
         private string Dump(XElement value, bool noAddParens = false)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             var ret = DumpCore(value, noAddParens);
             if (value == null || !explicitIntents.Contains(value) && !explicitArgs.Contains(value))
                 return ret;

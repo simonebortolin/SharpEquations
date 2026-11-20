@@ -4,6 +4,7 @@ namespace SharpEquations.Internal.UnicodeMath
     using System.Collections.Generic;
     using System.Globalization;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text.RegularExpressions;
     using static Js;
     using static UnicodeMathText;
@@ -139,6 +140,7 @@ namespace SharpEquations.Internal.UnicodeMath
         /// <summary>mtransform: the MathML syntax tree of a preprocessed UnicodeMath syntax tree (dsty: bit 0 display, bit 1 right to left).</summary>
         private object Transform(int dsty, object puast)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             if (puast is List<object> list && list.Count > 0)
                 return TransformList(dsty, list);
 
