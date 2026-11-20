@@ -31,7 +31,7 @@ namespace SharpEquations.Internal.UnicodeMath
         /// </summary>
         public static string ToMathML(string unicodemath, bool display, bool alignmentMarks = false, bool strict = false, CancellationToken cancellationToken = default)
         {
-            return ToMathML(unicodemath, display, alignmentMarks, false, strict, cancellationToken);
+            return ToMathML(unicodemath, display, alignmentMarks, null, strict, cancellationToken);
         }
 
         /// <summary>
@@ -71,11 +71,13 @@ namespace SharpEquations.Internal.UnicodeMath
                 display = true;
                 unicodemath = string.Concat(umChars.Skip(1));
             }
-            return ToMathML(unicodemath, display, alignmentMarks, true, strict, cancellationToken);
+            return ToMathML(unicodemath, display, alignmentMarks, tex, strict, cancellationToken);
         }
 
-        private static string ToMathML(string unicodemath, bool display, bool alignmentMarks, bool tex, bool strict, CancellationToken cancellationToken)
+        /// <param name="latex">The LaTeX the UnicodeMath was read from, or null when it was given as UnicodeMath.</param>
+        private static string ToMathML(string unicodemath, bool display, bool alignmentMarks, string latex, bool strict, CancellationToken cancellationToken)
         {
+            var tex = latex != null;
             unicodemath = unicodemath.Trim();
             var resolved = UnicodeMathInput.ResolveControlWords(unicodemath, strict
                 ? unknown => throw new FormatException("Unknown control word " + unknown + (tex ? " in the LaTeX." : "."))
@@ -87,7 +89,7 @@ namespace SharpEquations.Internal.UnicodeMath
             // a closing bracket that LaTeX leaves without its opening one (𝑣⌋𝐵, 𝑎)) is a character, which UnicodeMath escapes
             if (!UnicodeMathGrammar.TryParse(input, cancellationToken, out var uast) &&
                 !(tex && UnicodeMathGrammar.TryParse(UnicodeMathInput.MapToPrivate(UnicodeMathInput.SetBuilderBars(UnicodeMathInput.EscapeUnpairedClosers(resolved))), cancellationToken, out uast)))
-                throw new FormatException("Not valid UnicodeMath: " + unicodemath);
+                throw new FormatException(tex ? "Not valid LaTeX: " + latex : "Not valid UnicodeMath: " + unicodemath);
             uast = UnicodeMathInput.AstMapFromPrivate(uast);
 
             var translator = new UnicodeMathTranslator { alignmentMarks = alignmentMarks, FTeX = tex };

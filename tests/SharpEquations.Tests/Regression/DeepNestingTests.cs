@@ -58,6 +58,22 @@ namespace SharpEquations.Tests.Regression
         }
 
         [Test]
+        [Arguments("^x", 600)]
+        [Arguments("^x", 20000)]
+        [Arguments("_x", 600)]
+        [Arguments("_x", 20000)]
+        [Arguments(@"\sqrt", 600)]
+        [Arguments(@"\sqrt", 20000)]
+        public async Task RejectsLongLaTeXChains(string link, int links)
+        {
+            // no braces: the chain of scripts or commands nests what it builds
+            var latex = "x" + string.Concat(Enumerable.Repeat(link, links));
+            var thrown = OnThread(() => Equation.Parse(latex, EquationFormat.LaTeX, new EquationOptions { Strict = true }));
+            await Assert.That(thrown).IsTypeOf<FormatException>();
+            await Assert.That(thrown!.Message).DoesNotContain("UnicodeMath");
+        }
+
+        [Test]
         [Arguments("(", ")", 5000)]
         [Arguments("√(", ")", 5000)]
         [Arguments("1/(", ")", 1000)]
