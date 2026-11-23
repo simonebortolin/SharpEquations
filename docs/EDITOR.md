@@ -131,7 +131,7 @@ has the tools of the equations of Word: the structures and symbols to insert, th
 the number of the equation, undo, copy in every format, examples, and the equation as MathML, UnicodeMath, LaTeX and
 OMML as it is typed; a test opens it. Editing and Rendering have no dependency on a
 user interface (they target netstandard2.0 and net10.0, with no package, as the core), so that they are tested without
-a toolkit and could serve another one; only `SharpEquations.Avalonia` depends on Avalonia (12.1). Each is a project of
+a toolkit and could serve another one; only `SharpEquations.Avalonia` depends on Avalonia (12.2). Each is a project of
 its own in this repository; `samples/SharpEquations.Avalonia.Demo` is a window with the editor and the equation in every
 format, and `tests/SharpEquations.Avalonia.Tests` tests the three.
 
