@@ -10,28 +10,8 @@ namespace SharpEquations.Avalonia
 
     /// <summary>Shows an equation, laid out after MathML Core with a math font.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001", Justification = "The drawing is released when the equation is laid out again and when the control leaves the visual tree.")]
-    public class MathView : Control
+    public partial class MathView : Control
     {
-        /// <summary>The equation shown.</summary>
-        public static readonly StyledProperty<Equation?> EquationProperty =
-            AvaloniaProperty.Register<MathView, Equation?>(nameof(Equation));
-
-        /// <summary>The size of the font.</summary>
-        public static readonly StyledProperty<double> FontSizeProperty =
-            TextElement.FontSizeProperty.AddOwner<MathView>();
-
-        /// <summary>The brush of the equation.</summary>
-        public static readonly StyledProperty<IBrush?> ForegroundProperty =
-            TextElement.ForegroundProperty.AddOwner<MathView>();
-
-        /// <summary>The math font, a family with an OpenType MATH table; null for <see cref="MathFonts.Default"/>.</summary>
-        public static readonly StyledProperty<FontFamily?> MathFontFamilyProperty =
-            AvaloniaProperty.Register<MathView, FontFamily?>(nameof(MathFontFamily));
-
-        /// <summary>Whether the equation is laid out in display style even if it is inline.</summary>
-        public static readonly StyledProperty<bool> IsDisplayProperty =
-            AvaloniaProperty.Register<MathView, bool>(nameof(IsDisplay));
-
         private readonly MathLayoutCache layoutCache = new MathLayoutCache();
         private MathDrawing? drawing;
         private (Equation Equation, MathNode Root)? tree;
@@ -43,11 +23,8 @@ namespace SharpEquations.Avalonia
         }
 
         /// <summary>The equation shown.</summary>
-        public Equation? Equation
-        {
-            get => GetValue(EquationProperty);
-            set => SetValue(EquationProperty, value);
-        }
+        [GeneratedStyledProperty]
+        public partial Equation? Equation { get; set; }
 
         /// <summary>The MathML of the equation shown; setting it reads the MathML.</summary>
         /// <exception cref="FormatException">The MathML is not valid.</exception>
@@ -58,32 +35,20 @@ namespace SharpEquations.Avalonia
         }
 
         /// <summary>The size of the font.</summary>
-        public double FontSize
-        {
-            get => GetValue(FontSizeProperty);
-            set => SetValue(FontSizeProperty, value);
-        }
+        [GeneratedStyledProperty(AddOwnerFrom = typeof(TextElement))]
+        public partial double FontSize { get; set; }
 
         /// <summary>The brush of the equation.</summary>
-        public IBrush? Foreground
-        {
-            get => GetValue(ForegroundProperty);
-            set => SetValue(ForegroundProperty, value);
-        }
+        [GeneratedStyledProperty(AddOwnerFrom = typeof(TextElement))]
+        public partial IBrush? Foreground { get; set; }
 
         /// <summary>The math font; null for <see cref="MathFonts.Default"/>.</summary>
-        public FontFamily? MathFontFamily
-        {
-            get => GetValue(MathFontFamilyProperty);
-            set => SetValue(MathFontFamilyProperty, value);
-        }
+        [GeneratedStyledProperty]
+        public partial FontFamily? MathFontFamily { get; set; }
 
         /// <summary>Whether the equation is laid out in display style even if it is inline.</summary>
-        public bool IsDisplay
-        {
-            get => GetValue(IsDisplayProperty);
-            set => SetValue(IsDisplayProperty, value);
-        }
+        [GeneratedStyledProperty]
+        public partial bool IsDisplay { get; set; }
 
         /// <summary>The layout of the equation, after a measure; null without an equation.</summary>
         public MathLayout? Layout => drawing?.Layout;

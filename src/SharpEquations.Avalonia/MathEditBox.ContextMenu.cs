@@ -29,10 +29,6 @@ namespace SharpEquations.Avalonia
     /// <summary>The context menu of the editor: right click, long press on touch, the Menu key or Shift+F10.</summary>
     public partial class MathEditBox
     {
-        /// <summary>Whether the editor opens its context menu.</summary>
-        public static readonly StyledProperty<bool> IsContextMenuEnabledProperty =
-            AvaloniaProperty.Register<MathEditBox, bool>(nameof(IsContextMenuEnabled), true);
-
         private ContextMenu? openMenu;
 
         /// <summary>
@@ -42,11 +38,8 @@ namespace SharpEquations.Avalonia
         public event EventHandler<MathContextMenuEventArgs>? ContextMenuOpening;
 
         /// <summary>Whether the editor opens its context menu.</summary>
-        public bool IsContextMenuEnabled
-        {
-            get => GetValue(IsContextMenuEnabledProperty);
-            set => SetValue(IsContextMenuEnabledProperty, value);
-        }
+        [GeneratedStyledProperty(DefaultValue = true)]
+        public partial bool IsContextMenuEnabled { get; set; }
 
         /// <summary>The context menu while it is open, or null.</summary>
         public ContextMenu? OpenContextMenu => openMenu is { IsOpen: true } ? openMenu : null;
