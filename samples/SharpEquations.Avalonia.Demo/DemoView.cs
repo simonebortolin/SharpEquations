@@ -122,7 +122,6 @@ namespace SharpEquations.Avalonia.Demo
                 Padding = new Thickness(22, 18),
                 BorderThickness = 0,
             };
-            editor.Bind(MathEditBox.BackgroundProperty, editor.GetResourceObservable("EditorBrush"));
             preview = new MathView { FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center };
             outputs = new (string, Func<Equation, string>, TextBox)[]
             {
@@ -286,6 +285,7 @@ namespace SharpEquations.Avalonia.Demo
                 Child = editor,
             };
             editorFrame.Bind(Border.BorderBrushProperty, editorFrame.GetResourceObservable("EditorBorderBrush"));
+            editorFrame.Bind(Border.BackgroundProperty, editorFrame.GetResourceObservable("EditorBrush"));
 
             var hint = new TextBlock
             {

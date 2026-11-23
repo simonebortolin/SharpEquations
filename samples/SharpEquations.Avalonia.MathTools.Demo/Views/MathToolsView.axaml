@@ -103,10 +103,11 @@
             <Setter Property="BorderThickness" Value="1.5" />
             <Setter Property="ClipToBounds" Value="True" />
             <Setter Property="BorderBrush" Value="{DynamicResource EditorBorderBrush}" />
+            <!-- the background of the editor is the frame's: drawn by the editor, its corners would cover the rounded border -->
+            <Setter Property="Background" Value="{DynamicResource EditorBrush}" />
         </Style>
         <Style Selector="math|MathEditBox.entry">
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Background" Value="{DynamicResource EditorBrush}" />
         </Style>
         <!-- what is computed, on a background of its own -->
         <Style Selector="Border.code">
