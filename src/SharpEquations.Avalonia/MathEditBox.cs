@@ -29,45 +29,9 @@ namespace SharpEquations.Avalonia
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001", Justification = "The drawing is released when the equation is laid out again and when the control leaves the visual tree.")]
     public partial class MathEditBox : Control
     {
-        /// <summary>The equation edited; null when the editor is empty. Two-way by default.</summary>
-        public static readonly StyledProperty<Equation?> EquationProperty =
-            AvaloniaProperty.Register<MathEditBox, Equation?>(nameof(Equation), defaultBindingMode: BindingMode.TwoWay);
-
-        /// <summary>The format of what is typed: UnicodeMath (the default) or LaTeX.</summary>
-        public static readonly StyledProperty<EquationFormat> InputFormatProperty =
-            AvaloniaProperty.Register<MathEditBox, EquationFormat>(nameof(InputFormat), EquationFormat.UnicodeMath, validate: f => f is EquationFormat.UnicodeMath or EquationFormat.LaTeX);
-
-        /// <summary>Whether the equation is shown built up or as linear text.</summary>
-        public static readonly StyledProperty<MathViewMode> ViewModeProperty =
-            AvaloniaProperty.Register<MathEditBox, MathViewMode>(nameof(ViewMode));
-
-        /// <summary>Whether the equation is a display equation rather than inline.</summary>
-        public static readonly StyledProperty<bool> IsDisplayProperty =
-            AvaloniaProperty.Register<MathEditBox, bool>(nameof(IsDisplay), true);
-
-        /// <summary>Whether the user cannot change the equation.</summary>
-        public static readonly StyledProperty<bool> IsReadOnlyProperty =
-            AvaloniaProperty.Register<MathEditBox, bool>(nameof(IsReadOnly));
-
-        /// <summary>The size of the font.</summary>
-        public static readonly StyledProperty<double> FontSizeProperty =
-            TextElement.FontSizeProperty.AddOwner<MathEditBox>();
-
-        /// <summary>The brush of the equation.</summary>
-        public static readonly StyledProperty<IBrush?> ForegroundProperty =
-            TextElement.ForegroundProperty.AddOwner<MathEditBox>();
-
         /// <summary>The brush of the background.</summary>
         public static readonly StyledProperty<IBrush?> BackgroundProperty =
             AvaloniaProperty.Register<MathEditBox, IBrush?>(nameof(Background), Brushes.Transparent);
-
-        /// <summary>The brush of the border.</summary>
-        public static readonly StyledProperty<IBrush?> BorderBrushProperty =
-            AvaloniaProperty.Register<MathEditBox, IBrush?>(nameof(BorderBrush));
-
-        /// <summary>The thickness of the border.</summary>
-        public static readonly StyledProperty<double> BorderThicknessProperty =
-            AvaloniaProperty.Register<MathEditBox, double>(nameof(BorderThickness), 1);
 
         /// <summary>The space between the border and the equation.</summary>
         public static readonly StyledProperty<Thickness> PaddingProperty =
@@ -77,32 +41,9 @@ namespace SharpEquations.Avalonia
         public static readonly StyledProperty<IBrush?> SelectionBrushProperty =
             AvaloniaProperty.Register<MathEditBox, IBrush?>(nameof(SelectionBrush), new ImmutableSolidColorBrush(Color.FromArgb(0x60, 0x33, 0x99, 0xFF)));
 
-        /// <summary>The brush of the caret; null for the foreground.</summary>
-        public static readonly StyledProperty<IBrush?> CaretBrushProperty =
-            AvaloniaProperty.Register<MathEditBox, IBrush?>(nameof(CaretBrush));
-
         /// <summary>The brush of the boxes of the empty slots.</summary>
         public static readonly StyledProperty<IBrush?> PlaceholderBrushProperty =
             AvaloniaProperty.Register<MathEditBox, IBrush?>(nameof(PlaceholderBrush), Brushes.Gray);
-
-        /// <summary>The math font, a family with an OpenType MATH table; null for <see cref="MathFonts.Default"/>.</summary>
-        public static readonly StyledProperty<FontFamily?> MathFontFamilyProperty =
-            AvaloniaProperty.Register<MathEditBox, FontFamily?>(nameof(MathFontFamily));
-
-        /// <summary>
-        /// The format of the text that <see cref="CopyAsync"/> puts on the clipboard; null (the default) for the input
-        /// format. MathML pastes as an equation into Word.
-        /// </summary>
-        public static readonly StyledProperty<EquationFormat?> CopyTextFormatProperty =
-            AvaloniaProperty.Register<MathEditBox, EquationFormat?>(nameof(CopyTextFormat), validate: f => f != EquationFormat.Mtef);
-
-        /// <summary>Whether the floating bar shows completions, structures, table commands and symbols at the caret.</summary>
-        public static readonly StyledProperty<bool> IsQuickBarEnabledProperty =
-            AvaloniaProperty.Register<MathEditBox, bool>(nameof(IsQuickBarEnabled), true);
-
-        /// <summary>Whether the math autocorrect (<see cref="AutoCorrect"/>) replaces sequences by their symbols as they are typed.</summary>
-        public static readonly StyledProperty<bool> IsAutoCorrectEnabledProperty =
-            AvaloniaProperty.Register<MathEditBox, bool>(nameof(IsAutoCorrectEnabled), true);
 
         /// <summary>The gesture that switches between the built up and the linear view.</summary>
         public static readonly StyledProperty<KeyGesture?> ToggleViewModeGestureProperty =
@@ -123,6 +64,10 @@ namespace SharpEquations.Avalonia
             AffectsMeasure<MathEditBox>(FontSizeProperty, MathFontFamilyProperty, PaddingProperty, BorderThicknessProperty);
             AffectsRender<MathEditBox>(ForegroundProperty, BackgroundProperty, BorderBrushProperty, SelectionBrushProperty, CaretBrushProperty, PlaceholderBrushProperty);
         }
+
+        private static bool IsValidInputFormat(EquationFormat f) => f is EquationFormat.UnicodeMath or EquationFormat.LaTeX;
+
+        private static bool IsValidCopyTextFormat(EquationFormat? f) => f != EquationFormat.Mtef;
 
         /// <summary>An empty editor.</summary>
         public MathEditBox()
@@ -181,53 +126,32 @@ namespace SharpEquations.Avalonia
         public MathEditorView View { get; }
 
         /// <summary>The equation edited, with what is not built up yet built up where it parses; null when empty.</summary>
-        public Equation? Equation
-        {
-            get => GetValue(EquationProperty);
-            set => SetValue(EquationProperty, value);
-        }
+        [GeneratedStyledProperty(DefaultBindingMode = BindingMode.TwoWay)]
+        public partial Equation? Equation { get; set; }
 
         /// <summary>The format of what is typed.</summary>
-        public EquationFormat InputFormat
-        {
-            get => GetValue(InputFormatProperty);
-            set => SetValue(InputFormatProperty, value);
-        }
+        [GeneratedStyledProperty(DefaultValue = EquationFormat.UnicodeMath, ValidateMethodName = nameof(IsValidInputFormat))]
+        public partial EquationFormat InputFormat { get; set; }
 
         /// <summary>Whether the equation is shown built up or as linear text.</summary>
-        public MathViewMode ViewMode
-        {
-            get => GetValue(ViewModeProperty);
-            set => SetValue(ViewModeProperty, value);
-        }
+        [GeneratedStyledProperty]
+        public partial MathViewMode ViewMode { get; set; }
 
         /// <summary>Whether the equation is a display equation rather than inline.</summary>
-        public bool IsDisplay
-        {
-            get => GetValue(IsDisplayProperty);
-            set => SetValue(IsDisplayProperty, value);
-        }
+        [GeneratedStyledProperty(DefaultValue = true)]
+        public partial bool IsDisplay { get; set; }
 
         /// <summary>Whether the user cannot change the equation.</summary>
-        public bool IsReadOnly
-        {
-            get => GetValue(IsReadOnlyProperty);
-            set => SetValue(IsReadOnlyProperty, value);
-        }
+        [GeneratedStyledProperty]
+        public partial bool IsReadOnly { get; set; }
 
         /// <summary>The size of the font.</summary>
-        public double FontSize
-        {
-            get => GetValue(FontSizeProperty);
-            set => SetValue(FontSizeProperty, value);
-        }
+        [GeneratedStyledProperty(AddOwnerFrom = typeof(TextElement))]
+        public partial double FontSize { get; set; }
 
         /// <summary>The brush of the equation.</summary>
-        public IBrush? Foreground
-        {
-            get => GetValue(ForegroundProperty);
-            set => SetValue(ForegroundProperty, value);
-        }
+        [GeneratedStyledProperty(AddOwnerFrom = typeof(TextElement))]
+        public partial IBrush? Foreground { get; set; }
 
         /// <summary>The brush of the background.</summary>
         public IBrush? Background
@@ -237,18 +161,12 @@ namespace SharpEquations.Avalonia
         }
 
         /// <summary>The brush of the border.</summary>
-        public IBrush? BorderBrush
-        {
-            get => GetValue(BorderBrushProperty);
-            set => SetValue(BorderBrushProperty, value);
-        }
+        [GeneratedStyledProperty]
+        public partial IBrush? BorderBrush { get; set; }
 
         /// <summary>The thickness of the border.</summary>
-        public double BorderThickness
-        {
-            get => GetValue(BorderThicknessProperty);
-            set => SetValue(BorderThicknessProperty, value);
-        }
+        [GeneratedStyledProperty(DefaultValue = 1)]
+        public partial double BorderThickness { get; set; }
 
         /// <summary>The space between the border and the equation.</summary>
         public Thickness Padding
@@ -265,11 +183,8 @@ namespace SharpEquations.Avalonia
         }
 
         /// <summary>The brush of the caret; null for the foreground.</summary>
-        public IBrush? CaretBrush
-        {
-            get => GetValue(CaretBrushProperty);
-            set => SetValue(CaretBrushProperty, value);
-        }
+        [GeneratedStyledProperty]
+        public partial IBrush? CaretBrush { get; set; }
 
         /// <summary>The brush of the boxes of the empty slots.</summary>
         public IBrush? PlaceholderBrush
@@ -279,11 +194,8 @@ namespace SharpEquations.Avalonia
         }
 
         /// <summary>The math font; null for <see cref="MathFonts.Default"/>.</summary>
-        public FontFamily? MathFontFamily
-        {
-            get => GetValue(MathFontFamilyProperty);
-            set => SetValue(MathFontFamilyProperty, value);
-        }
+        [GeneratedStyledProperty]
+        public partial FontFamily? MathFontFamily { get; set; }
 
         /// <summary>The gesture that switches between the built up and the linear view (Ctrl+Shift+L by default).</summary>
         public KeyGesture? ToggleViewModeGesture
@@ -293,11 +205,8 @@ namespace SharpEquations.Avalonia
         }
 
         /// <summary>Whether the floating bar (<see cref="QuickBar"/>) shows at the caret.</summary>
-        public bool IsQuickBarEnabled
-        {
-            get => GetValue(IsQuickBarEnabledProperty);
-            set => SetValue(IsQuickBarEnabledProperty, value);
-        }
+        [GeneratedStyledProperty(DefaultValue = true)]
+        public partial bool IsQuickBarEnabled { get; set; }
 
         /// <summary>The floating bar at the caret: completions of commands, structures for the selection, table commands, symbols.</summary>
         public MathQuickBar QuickBar { get; }
@@ -309,11 +218,8 @@ namespace SharpEquations.Avalonia
         public IList<string> QuickSymbols { get; } = new List<string> { "α", "β", "θ", "π", "∞", "±", "×", "≤", "≥", "≠", "≈", "→", "∈", "∂", "∑", "∫" };
 
         /// <summary>The format of the text copied to the clipboard; null for the input format.</summary>
-        public EquationFormat? CopyTextFormat
-        {
-            get => GetValue(CopyTextFormatProperty);
-            set => SetValue(CopyTextFormatProperty, value);
-        }
+        [GeneratedStyledProperty(ValidateMethodName = nameof(IsValidCopyTextFormat))]
+        public partial EquationFormat? CopyTextFormat { get; set; }
 
         /// <summary>The layout of the equation, after a measure.</summary>
         public MathLayout? Layout => View.Layout;
@@ -344,11 +250,8 @@ namespace SharpEquations.Avalonia
         }
 
         /// <summary>Whether the math autocorrect (<see cref="AutoCorrect"/>) replaces sequences as they are typed; true by default.</summary>
-        public bool IsAutoCorrectEnabled
-        {
-            get => GetValue(IsAutoCorrectEnabledProperty);
-            set => SetValue(IsAutoCorrectEnabledProperty, value);
-        }
+        [GeneratedStyledProperty(DefaultValue = true)]
+        public partial bool IsAutoCorrectEnabled { get; set; }
 
         /// <summary>The number of the equation, shown at the right of its line; null without one (<see cref="MathEditor.EquationNumber"/>).</summary>
         public string? EquationNumber
